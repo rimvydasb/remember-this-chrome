@@ -19,11 +19,33 @@ on your computer. Requirements: [docs/todo.md](docs/todo.md).
 - **Filters:** saved date (7 days, 30 days, year), channels (any of the selected), topics (all of the selected, with a
   finder for less common ones), and type when the library has more than one. Counts update with the results. Click
   any keyword pill in the list or reader to filter by it. <kbd>F</kbd> shows or hides the filter panel.
+- **Love and forget:** mark an item as *loved* (a favorite) or *forgotten* (hidden from the normal library view). Both
+  have filters. Only forgotten items can be deleted permanently, which protects against accidental deletion.
+- **Video details:** channel, description, chapters, links from the description, view count and duration are saved
+  with the transcript and shown in the reader.
+- **AI summary (optional):** generate a summary of a transcript, rendered as Markdown, with a local LLM. Copy,
+  regenerate, or delete it. Regenerating replaces the earlier summary.
+- **AI tags (optional):** while the dashboard is open, a local LLM can generate tags for items in the background,
+  one at a time (the open item first, then newest first). Until then, items show keyword-extraction tags.
 - **Markdown export** for one item, the selected items, or all transcripts.
 - **JSON export / import** for sync between computers (for example through iCloud Drive). Import validates every
   record and lets you merge (newer copy wins, nothing is deleted) or replace the library.
-- **Private:** data stays in `chrome.storage.local`. No telemetry, no third-party services. The only network requests
-  are same-origin requests from the YouTube tab to youtube.com.
+- **Private:** data stays in `chrome.storage.local`. No telemetry, no third-party services. Network requests are
+  same-origin requests from the YouTube tab to youtube.com, and, only if you use the AI features, requests to the LLM
+  server that you configure.
+
+## AI features (local LLM)
+
+Summaries and tags use an OpenAI-compatible server that you run yourself, for example
+[LM Studio](https://lmstudio.ai) (Developer → Start server). The transcript is sent only to that server.
+
+1. Open the dashboard and click the settings button.
+2. Enter the **server address** (for example `http://192.168.1.220:1234`) and, optionally, a **model** (empty means the
+   model the server has loaded). **Test connection** lists the available models.
+3. Edit the **summary prompt** if you want, and turn **Use LLM for tagging** on or off.
+
+Chrome asks for permission to access the server's host the first time (the extension declares it as an optional host
+permission). If the server is unreachable, background tagging pauses and retries later. Calls time out after 3 minutes.
 
 Web page article capture is a Phase II feature. On other pages the popup shows "Not implemented yet".
 
