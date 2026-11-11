@@ -133,10 +133,20 @@ body {
   line-height: 1.6;
 }
 
-.rt-follow-up p {
-  white-space: pre-wrap;
+.rt-follow-up :is(p, li) {
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
-.rt-follow-up p:last-child {
+.rt-follow-up :is(h1, h2, h3, h4, h5, h6) {
+  font-size: 1.0625rem;
+  margin: 1em 0 0.4em;
+}
+
+.rt-follow-up > :first-child {
+  margin-top: 0;
+}
+
+.rt-follow-up > :last-child {
   margin-bottom: 0;
 }

@@ -13,7 +13,8 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconClipboard, IconClipboardCheck, IconSparkles, IconSubtask, IconTrash } from '@tabler/icons-react';
-import { useState } from 'react';
+import { Markdown } from '@tanstack/markdown/react';
+import { useState, type ComponentPropsWithoutRef } from 'react';
 import { LlmError, requestLlmPermission, summarize } from '../shared/llm';
 import { addFollowUp, deleteFollowUp } from '../shared/storage';
 import type { FollowUp, FollowUpType, SavedItem } from '../shared/types';
@@ -98,8 +99,12 @@ export function FollowUps({ item }: { item: SavedItem }) {
   );
 }
 
+/** Links in LLM output open in a new tab, so they do not replace the dashboard. */
+const MARKDOWN_COMPONENTS = {
+  a: (props: ComponentPropsWithoutRef<'a'>) => <a {...props} target="_blank" rel="noreferrer" />,
+};
+
 function FollowUpCard({ itemId, followUp }: { itemId: string; followUp: FollowUp }) {
-  const paragraphs = followUp.content.split(/\n{2,}/);
   return (
     <Paper withBorder radius="md" p="md">
       <Stack gap="sm">
@@ -136,9 +141,7 @@ function FollowUpCard({ itemId, followUp }: { itemId: string; followUp: FollowUp
           </Group>
         </Group>
         <Typography className="rt-reader rt-follow-up">
-          {paragraphs.map((paragraph, i) => (
-            <p key={i}>{paragraph}</p>
-          ))}
+          <Markdown components={MARKDOWN_COMPONENTS}>{followUp.content}</Markdown>
         </Typography>
       </Stack>
     </Paper>

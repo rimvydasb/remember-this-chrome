@@ -1,7 +1,20 @@
 import type { LlmSettings } from './settings';
 
-/** Time limit of one call to the local LLM. */
-export const LLM_TIMEOUT_MS = 30_000;
+/** Time limit of one generation call to the local LLM. Long transcripts on local hardware are slow. */
+export const LLM_TIMEOUT_MS = 3 * 60_000;
+
+/** Time limit of a connection test (model list), which does not generate text. */
+export const LLM_CONNECT_TIMEOUT_MS = 10_000;
+
+/** Formats a timeout for messages: "45 seconds", "3 minutes". */
+export function formatTimeout(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  if (seconds >= 60 && seconds % 60 === 0) {
+    const minutes = seconds / 60;
+    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+  }
+  return `${seconds} ${seconds === 1 ? 'second' : 'seconds'}`;
+}
 
 export class LlmError extends Error {}
 
@@ -54,7 +67,7 @@ async function request(settings: LlmSettings, path: string, init: RequestInit, o
     response = await doFetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   } catch (error) {
     if (error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
-      throw new LlmError(`The LLM did not answer within ${Math.round(timeoutMs / 1000)} seconds.`);
+      throw new LlmError(`The LLM did not answer within ${formatTimeout(timeoutMs)}.`);
     }
     throw new LlmError(`Cannot reach the LLM server at ${normalizeBaseUrl(settings.baseUrl)}. Is it running?`);
   }
@@ -112,7 +125,12 @@ export async function summarize(
 
 /** Lists the model identifiers that the server offers. Used to test the connection. */
 export async function listModels(settings: LlmSettings, options: LlmOptions = {}): Promise<string[]> {
-  const data = (await request(settings, '/v1/models', { method: 'GET' }, options)) as { data?: { id?: unknown }[] };
+  const data = (await request(
+    settings,
+    '/v1/models',
+    { method: 'GET' },
+    { timeoutMs: LLM_CONNECT_TIMEOUT_MS, ...options },
+  )) as { data?: { id?: unknown }[] };
   return (data.data ?? []).flatMap((entry) => (typeof entry.id === 'string' ? [entry.id] : []));
 }
 

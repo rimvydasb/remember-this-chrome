@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   buildSummaryMessage,
+  formatTimeout,
   hostPermissionPattern,
   listModels,
   LLM_TIMEOUT_MS,
@@ -69,8 +70,15 @@ describe('summarize', () => {
     expect(stripReasoning('No reasoning.')).toBe('No reasoning.');
   });
 
-  it('times out after 30 seconds by default', async () => {
-    expect(LLM_TIMEOUT_MS).toBe(30_000);
+  it('formats timeouts for messages', () => {
+    expect(formatTimeout(LLM_TIMEOUT_MS)).toBe('3 minutes');
+    expect(formatTimeout(60_000)).toBe('1 minute');
+    expect(formatTimeout(10_000)).toBe('10 seconds');
+    expect(formatTimeout(90_000)).toBe('90 seconds');
+  });
+
+  it('times out after 3 minutes by default', async () => {
+    expect(LLM_TIMEOUT_MS).toBe(180_000);
     const fetch = vi.fn(
       (_url: RequestInfo | URL, init?: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
