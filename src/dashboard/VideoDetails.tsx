@@ -1,6 +1,7 @@
-import { Anchor, Badge, Group, Paper, Spoiler, Stack, Text, Title, UnstyledButton } from '@mantine/core';
+import { Anchor, Badge, Group, Spoiler, Stack, Text, UnstyledButton } from '@mantine/core';
 import { IconExternalLink, IconLink, IconListNumbers, IconAlignLeft } from '@tabler/icons-react';
 import { useMemo } from 'react';
+import { ContentBlock } from './ContentBlock';
 import { formatDuration } from '../shared/markdown';
 import type { SavedItem, VideoChapter, VideoLink } from '../shared/types';
 import { chapterUrl, splitLinks } from '../shared/videoDetails';
@@ -16,52 +17,29 @@ export function VideoDetails({ item }: { item: SavedItem }) {
   if (chapters.length === 0 && links.length === 0 && !description) return null;
 
   return (
-    <Stack gap="lg">
+    <>
       {chapters.length > 0 && (
-        <Section icon={<IconListNumbers size={17} />} title="Chapters" count={chapters.length}>
+        <ContentBlock
+          storageKey="chapters"
+          icon={<IconListNumbers size={17} />}
+          title="Chapters"
+          count={chapters.length}
+          flush
+        >
           <ChapterList chapters={chapters} videoId={videoId} durationSec={meta?.durationSec} />
-        </Section>
+        </ContentBlock>
       )}
       {links.length > 0 && (
-        <Section icon={<IconLink size={17} />} title="Links" count={links.length}>
+        <ContentBlock storageKey="links" icon={<IconLink size={17} />} title="Links" count={links.length} flush>
           <LinkList links={links} />
-        </Section>
+        </ContentBlock>
       )}
       {description && (
-        <Section icon={<IconAlignLeft size={17} />} title="Description">
+        <ContentBlock storageKey="description" icon={<IconAlignLeft size={17} />} title="Description">
           <Description text={description} />
-        </Section>
+        </ContentBlock>
       )}
-    </Stack>
-  );
-}
-
-function Section({
-  icon,
-  title,
-  count,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  count?: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <Stack gap="xs" component="section">
-      <Group gap={8} c="dimmed">
-        {icon}
-        <Title order={4} size="h6" tt="uppercase" fw={600} lts={0.4}>
-          {title}
-        </Title>
-        {count !== undefined && (
-          <Badge size="xs" variant="light" color="gray">
-            {count}
-          </Badge>
-        )}
-      </Group>
-      {children}
-    </Stack>
+    </>
   );
 }
 
@@ -75,7 +53,7 @@ function ChapterList({
   durationSec: number | undefined;
 }) {
   return (
-    <Paper withBorder radius="md" className="rt-detail-list">
+    <div className="rt-detail-list">
       {chapters.map((chapter, i) => {
         const end = chapters[i + 1]?.startSec ?? durationSec;
         const length = end !== undefined && end > chapter.startSec ? formatDuration(end - chapter.startSec) : undefined;
@@ -110,7 +88,7 @@ function ChapterList({
           <div key={chapter.startSec}>{content}</div>
         );
       })}
-    </Paper>
+    </div>
   );
 }
 
@@ -126,7 +104,7 @@ function displayUrl(url: string): { host: string; rest: string } {
 
 function LinkList({ links }: { links: readonly VideoLink[] }) {
   return (
-    <Paper withBorder radius="md" className="rt-detail-list">
+    <div className="rt-detail-list">
       {links.map((link) => {
         const { host, rest } = displayUrl(link.url);
         return (
@@ -158,7 +136,7 @@ function LinkList({ links }: { links: readonly VideoLink[] }) {
           </UnstyledButton>
         );
       })}
-    </Paper>
+    </div>
   );
 }
 

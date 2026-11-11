@@ -4,7 +4,6 @@ import {
   Badge,
   Button,
   CopyButton,
-  Divider,
   Group,
   Highlight,
   Stack,
@@ -14,12 +13,13 @@ import {
   Typography,
 } from '@mantine/core';
 import {
-  IconArrowDown,
+  IconArticle,
   IconCalendar,
   IconClipboard,
   IconClipboardCheck,
   IconClock,
   IconExternalLink,
+  IconFileText,
   IconEye,
   IconEyeOff,
   IconHeart,
@@ -37,8 +37,10 @@ import type { SavedItem } from '../shared/types';
 import { formatDateTime, formatNumber, formatShortDate, readingTime } from '../ui/format';
 import { confirmDelete, exportMarkdown, markItems } from './actions';
 import { AiTagsButton } from './AiTagsButton';
-import { FOLLOW_UPS_ANCHOR, FollowUps } from './FollowUps';
+import { ClampedText } from './ClampedText';
+import { ContentBlock } from './ContentBlock';
 import { KeywordBadges } from './KeywordBadges';
+import { Summary } from './Summary';
 import { VideoDetails } from './VideoDetails';
 
 interface ItemReaderProps {
@@ -74,6 +76,7 @@ export function ItemReader({
   const highlight = terms as string[];
   const loved = item.mark === 'loved';
   const forgotten = item.mark === 'forgotten';
+  const isTranscript = item.type === 'youtube_transcript';
 
   return (
     <Stack gap="lg" maw={760} mx="auto" pb="xl">
@@ -165,22 +168,6 @@ export function ItemReader({
           >
             Open source
           </Button>
-          <Button
-            size="xs"
-            variant="light"
-            color="violet"
-            leftSection={<IconArrowDown size={15} />}
-            onClick={() =>
-              document.getElementById(FOLLOW_UPS_ANCHOR)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
-          >
-            Jump to follow-ups
-            {item.followUps?.length ? (
-              <Badge size="xs" variant="filled" color="violet" ml={6} circle>
-                {item.followUps.length}
-              </Badge>
-            ) : null}
-          </Button>
           <Tooltip label={loved ? 'Remove from loved' : 'Love'} withArrow>
             <ActionIcon
               variant={loved ? 'light' : 'subtle'}
@@ -224,25 +211,36 @@ export function ItemReader({
         </Anchor>
       </Stack>
 
-      <VideoDetails item={item} />
+      <Stack gap="md">
+        <Summary item={item} />
 
-      <Divider />
+        <VideoDetails item={item} />
 
-      <Typography className="rt-reader">
-        {paragraphs.map((paragraph, i) =>
-          highlight.length ? (
-            <Highlight key={i} component="p" highlight={highlight} inherit>
-              {paragraph}
-            </Highlight>
-          ) : (
-            <p key={i}>{paragraph}</p>
-          ),
-        )}
-      </Typography>
-
-      <Divider />
-
-      <FollowUps item={item} />
+        <ContentBlock
+          storageKey="content"
+          icon={isTranscript ? <IconFileText size={17} /> : <IconArticle size={17} />}
+          title={isTranscript ? 'Transcript' : 'Content'}
+          actions={
+            <Text size="xs" c="dimmed" className="rt-tabular">
+              {formatNumber(words)} words
+            </Text>
+          }
+        >
+          <ClampedText key={item.id} unclamped={highlight.length > 0}>
+            <Typography className="rt-reader">
+              {paragraphs.map((paragraph, i) =>
+                highlight.length ? (
+                  <Highlight key={i} component="p" highlight={highlight} inherit>
+                    {paragraph}
+                  </Highlight>
+                ) : (
+                  <p key={i}>{paragraph}</p>
+                ),
+              )}
+            </Typography>
+          </ClampedText>
+        </ContentBlock>
+      </Stack>
     </Stack>
   );
 }

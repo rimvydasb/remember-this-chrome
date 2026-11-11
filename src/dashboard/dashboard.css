@@ -150,3 +150,100 @@ body {
 .rt-follow-up > :last-child {
   margin-bottom: 0;
 }
+
+/* Collapsible content blocks in the item view. */
+.rt-block {
+  overflow: hidden;
+  background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
+  transition: box-shadow 120ms ease;
+  scroll-margin-top: 80px;
+}
+
+.rt-block:hover {
+  box-shadow: var(--mantine-shadow-xs);
+}
+
+.rt-block-header {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.rt-block[data-expanded] .rt-block-header {
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+}
+
+.rt-block-toggle {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-dark-0));
+}
+
+.rt-block-toggle:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+.rt-block-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--mantine-radius-sm);
+  color: var(--mantine-color-indigo-6);
+  background: light-dark(var(--mantine-color-indigo-0), rgba(76, 110, 245, 0.15));
+  flex-shrink: 0;
+}
+
+.rt-block-chevron {
+  margin-left: auto;
+  opacity: 0.55;
+  transform: rotate(-90deg);
+  transition: transform 150ms ease;
+}
+
+.rt-block[data-expanded] .rt-block-chevron {
+  transform: none;
+}
+
+.rt-block-body {
+  padding: 14px 16px;
+}
+
+.rt-block-body-flush {
+  padding: 0;
+}
+
+.rt-follow-up-card {
+  border: 1px solid light-dark(var(--mantine-color-violet-1), rgba(121, 80, 242, 0.25));
+  background: light-dark(var(--mantine-color-violet-0), rgba(121, 80, 242, 0.06));
+}
+
+/* Long text preview with a fade-out. */
+.rt-clamp-content {
+  overflow: hidden;
+  position: relative;
+}
+
+.rt-clamp-content[data-clamped]::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 96px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    light-dark(var(--mantine-color-white), var(--mantine-color-dark-7))
+  );
+}
+
+.rt-clamp-toggle {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.rt-reader > p:last-child {
+  margin-bottom: 0;
+}
