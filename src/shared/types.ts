@@ -1,3 +1,5 @@
+import type { CaptureField } from './mergeCapture';
+
 export type ItemType = 'youtube_transcript' | 'webpage_text';
 
 export const ITEM_TYPES: readonly ItemType[] = ['youtube_transcript', 'webpage_text'];
@@ -24,8 +26,10 @@ export interface ItemMeta {
   durationSec?: number;
   /** The video description, as the author wrote it. */
   description?: string;
-  /** View count at capture time (`SavedItem.timestamp`). */
+  /** View count when it was last read. */
   viewCount?: number;
+  /** ISO date when `viewCount` was read. Older items lack it; then `SavedItem.timestamp` applies. */
+  viewCountAt?: string;
   chapters?: VideoChapter[];
   /** URLs mentioned in the description, in order of first appearance. */
   links?: VideoLink[];
@@ -54,7 +58,14 @@ export type CaptureErrorCode =
   'not_implemented' | 'not_watch_page' | 'no_captions' | 'extraction_failed' | 'injection_failed' | 'empty_transcript';
 
 export type CaptureResponse =
-  | { ok: true; item: SavedItem; created: boolean; stats: CaptureStats }
+  | {
+      ok: true;
+      item: SavedItem;
+      created: boolean;
+      /** For an update: what changed compared to the stored item. */
+      changed: CaptureField[];
+      stats: CaptureStats;
+    }
   | { ok: false; code: CaptureErrorCode; error: string };
 
 export type RuntimeMessage = { type: 'capture-tab'; tabId: number };

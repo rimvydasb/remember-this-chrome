@@ -1,6 +1,7 @@
 import { planImport, type ImportMode, type ImportPlan } from './importExport';
 import { sortByRecent } from './search';
-import type { SavedItem } from './types';
+import { mergeCapture, type Capture, type CaptureField } from './mergeCapture';
+import type { ItemType, SavedItem } from './types';
 
 /**
  * Each record is stored under its own key (`item:<id>`) in `chrome.storage.local`, so saving
@@ -49,21 +50,28 @@ export async function clearLibrary(): Promise<void> {
   await chrome.storage.local.remove(keys.filter(isItemKey));
 }
 
+/** Returns the saved item of `type` for `url`, if the library has one. */
+export async function findCapture(url: string, type: ItemType): Promise<SavedItem | undefined> {
+  return (await getAllItems()).find((item) => item.url === url && item.type === type);
+}
+
 /**
  * Saves a capture. When the library already has an item of the same type for the same URL, the
- * item keeps its ID and gets the new content and timestamp.
+ * item keeps its ID and is updated by the rules of `mergeCapture`: parts that the new capture
+ * could not read keep their stored values.
  */
 export async function upsertCapture(
-  capture: Omit<SavedItem, 'id' | 'timestamp'>,
-): Promise<{ item: SavedItem; created: boolean }> {
-  const existing = (await getAllItems()).find((item) => item.url === capture.url && item.type === capture.type);
-  const item: SavedItem = {
-    ...capture,
+  capture: Capture,
+  options: { fallbackTitle?: string } = {},
+): Promise<{ item: SavedItem; created: boolean; changed: CaptureField[] }> {
+  const existing = await findCapture(capture.url, capture.type);
+  const { item, changed } = mergeCapture(existing, capture, {
     id: existing?.id ?? crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
-  };
+    now: new Date(),
+    fallbackTitle: options.fallbackTitle,
+  });
   await putItems([item]);
-  return { item, created: !existing };
+  return { item, created: !existing, changed };
 }
 
 /** Applies an import. New data is written before stale records are removed, so a failure cannot lose data. */

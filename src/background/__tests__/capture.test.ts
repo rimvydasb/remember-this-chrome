@@ -77,10 +77,57 @@ describe('captureTab', () => {
     await captureTab(1);
     givenTab(WATCH_URL, { ...success, viewCount: '500000' });
     const response = await captureTab(1);
-    expect(response).toMatchObject({ ok: true, created: false });
+    expect(response).toMatchObject({ ok: true, created: false, changed: ['views'] });
     const items = await getAllItems();
     expect(items).toHaveLength(1);
     expect(items[0]!.meta?.viewCount).toBe(500000);
+  });
+
+  it('an update keeps the parts that the second capture could not read', async () => {
+    givenTab(WATCH_URL, success);
+    await captureTab(1);
+    // Second capture: page data missing, so no description, views, or channel; and no title.
+    givenTab(WATCH_URL, {
+      ...success,
+      title: '',
+      channel: undefined,
+      description: undefined,
+      viewCount: undefined,
+      segments: [{ startMs: 0, durationMs: 1000, text: 'Hello and welcome. Let us begin now.' }],
+    });
+    const response = await captureTab(1);
+    expect(response).toMatchObject({ ok: true, created: false, changed: ['content'] });
+    const [saved] = await getAllItems();
+    expect(saved).toMatchObject({
+      title: success.title,
+      content: 'Hello and welcome. Let us begin now.',
+      meta: {
+        channel: 'Anthropic',
+        viewCount: 407883,
+        description: success.description,
+        chapters: [
+          { startSec: 0, title: 'Start' },
+          { startSec: 61, title: 'Middle' },
+        ],
+        links: [{ url: 'https://code.claude.com/docs/en/skills', label: 'Docs' }],
+      },
+    });
+  });
+
+  it('an update picks up an edited description with its new links and chapters', async () => {
+    givenTab(WATCH_URL, success);
+    await captureTab(1);
+    givenTab(WATCH_URL, { ...success, description: 'Edited.\nhttps://new.example/page\n0:00 Begin\n0:30 End' });
+    const response = await captureTab(1);
+    expect(response).toMatchObject({ ok: true, changed: ['description', 'links', 'chapters'] });
+    const [saved] = await getAllItems();
+    expect(saved!.meta).toMatchObject({
+      links: [{ url: 'https://new.example/page' }],
+      chapters: [
+        { startSec: 0, title: 'Begin' },
+        { startSec: 30, title: 'End' },
+      ],
+    });
   });
 
   it('reports non-YouTube pages as not implemented without injecting', async () => {

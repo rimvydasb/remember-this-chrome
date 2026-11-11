@@ -62,7 +62,7 @@ describe('markdown export of video details', () => {
 
   it('renders views, chapters with jump links, links, and the description before the transcript', () => {
     const md = itemToMarkdown(video);
-    expect(md).toContain('- **Views:** 407,883 (at capture)');
+    expect(md).toContain('- **Views:** 407,883 (as of 2026-11-11T10:00:00.000Z)');
     expect(md).toContain(
       [
         '## Chapters',

@@ -45,6 +45,9 @@ function parseMeta(value: unknown): ItemMeta | undefined {
   if (typeof value.description === 'string') meta.description = value.description;
   if (typeof value.viewCount === 'number' && Number.isInteger(value.viewCount) && value.viewCount >= 0) {
     meta.viewCount = value.viewCount;
+    if (typeof value.viewCountAt === 'string' && !Number.isNaN(Date.parse(value.viewCountAt))) {
+      meta.viewCountAt = new Date(value.viewCountAt).toISOString();
+    }
   }
   const chapters = parseList(value.chapters, (entry) =>
     typeof entry.startSec === 'number' &&

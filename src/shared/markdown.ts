@@ -33,7 +33,8 @@ export function itemToMarkdown(item: SavedItem, headingLevel = 1): string {
   if (item.meta?.durationSec) lines.push(`- **Duration:** ${formatDuration(item.meta.durationSec)}`);
   if (item.meta?.language) lines.push(`- **Language:** ${escapeInline(item.meta.language)}`);
   if (item.meta?.viewCount !== undefined) {
-    lines.push(`- **Views:** ${item.meta.viewCount.toLocaleString('en-US')} (at capture)`);
+    const asOf = item.meta.viewCountAt ?? item.timestamp;
+    lines.push(`- **Views:** ${item.meta.viewCount.toLocaleString('en-US')} (as of ${asOf})`);
   }
   lines.push(`- **Type:** ${TYPE_LABELS[item.type]}`);
   lines.push(`- **Saved:** ${item.timestamp}`);

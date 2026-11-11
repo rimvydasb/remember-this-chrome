@@ -29,7 +29,7 @@ import { formatDuration, TYPE_LABELS } from '../shared/markdown';
 import { countWords } from '../shared/transcript';
 import type { Keyword } from '../shared/keywords';
 import type { SavedItem } from '../shared/types';
-import { formatDateTime, formatNumber, readingTime } from '../ui/format';
+import { formatDateTime, formatNumber, formatShortDate, readingTime } from '../ui/format';
 import { confirmDelete, exportMarkdown } from './actions';
 import { KeywordBadges } from './KeywordBadges';
 import { VideoDetails } from './VideoDetails';
@@ -90,10 +90,11 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
             {item.meta?.durationSec ? ` · ${formatDuration(item.meta.durationSec)} video` : ''}
           </Meta>
           {item.meta?.viewCount !== undefined && (
-            <Tooltip label={`View count when captured (${formatDateTime(item.timestamp)})`} withArrow>
+            <Tooltip label={`View count on ${formatDateTime(item.meta.viewCountAt ?? item.timestamp)}`} withArrow>
               <div>
                 <Meta icon={<IconEye size={15} />}>
-                  {formatNumber(item.meta.viewCount)} {item.meta.viewCount === 1 ? 'view' : 'views'} at capture
+                  {formatNumber(item.meta.viewCount)} {item.meta.viewCount === 1 ? 'view' : 'views'} as of{' '}
+                  {formatShortDate(item.meta.viewCountAt ?? item.timestamp)}
                 </Meta>
               </div>
             </Tooltip>

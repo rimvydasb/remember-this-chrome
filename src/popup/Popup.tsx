@@ -21,14 +21,16 @@ import {
   IconClipboardCheck,
   IconFileText,
   IconInfoCircle,
+  IconRefresh,
   IconWorld,
 } from '@tabler/icons-react';
 import { useCallback, useEffect, useState } from 'react';
-import { countItems, isItemKey } from '../shared/storage';
-import type { CaptureResponse, RuntimeMessage } from '../shared/types';
-import { isYouTubeWatchUrl } from '../shared/youtube';
+import type { CaptureField } from '../shared/mergeCapture';
+import { countItems, findCapture, isItemKey } from '../shared/storage';
+import type { CaptureResponse, RuntimeMessage, SavedItem } from '../shared/types';
+import { canonicalYouTubeUrl, getYouTubeVideoId } from '../shared/youtube';
 import { Logo } from '../ui/Logo';
-import { formatNumber } from '../ui/format';
+import { formatDateTime, formatNumber } from '../ui/format';
 
 interface ActiveTab {
   id: number;
@@ -46,21 +48,32 @@ export function Popup() {
   const [count, setCount] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CaptureResponse | null>(null);
+  /** The library item for this video: undefined while loading, null when not saved yet. */
+  const [saved, setSaved] = useState<SavedItem | null | undefined>(undefined);
+
+  const videoId = getYouTubeVideoId(tab?.url);
+  const isYouTube = videoId !== null;
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }).then(([active]) => {
       if (active?.id !== undefined) setTab({ id: active.id, url: active.url, title: active.title });
     });
-    const refreshCount = () => countItems().then(setCount);
-    refreshCount();
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      countItems().then(setCount);
+      if (videoId)
+        findCapture(canonicalYouTubeUrl(videoId), 'youtube_transcript').then((item) => setSaved(item ?? null));
+      else setSaved(null);
+    };
+    refresh();
     const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
-      if (area === 'local' && Object.keys(changes).some(isItemKey)) refreshCount();
+      if (area === 'local' && Object.keys(changes).some(isItemKey)) refresh();
     };
     chrome.storage.onChanged.addListener(onChanged);
     return () => chrome.storage.onChanged.removeListener(onChanged);
-  }, []);
-
-  const isYouTube = isYouTubeWatchUrl(tab?.url);
+  }, [videoId]);
 
   const capture = useCallback(async () => {
     if (!tab) return;
@@ -98,18 +111,25 @@ export function Popup() {
             {isYouTube ? 'YouTube video' : 'Current page'}
           </Text>
         </Group>
-        <Text size="sm" fw={600} lineClamp={2} mb="sm">
+        <Text size="sm" fw={600} lineClamp={2} mb={saved ? 4 : 'sm'}>
           {isYouTube ? (tab?.title?.replace(/^\(\d+\)\s*/, '').replace(/\s*-\s*YouTube$/, '') ?? 'Video') : 'Web page'}
         </Text>
+        {saved && (
+          <Text size="xs" c="dimmed" mb="sm">
+            In your library · last updated {formatDateTime(saved.timestamp)}
+          </Text>
+        )}
         <Button
           fullWidth
           loading={busy}
-          disabled={!tab}
+          disabled={!tab || (isYouTube && saved === undefined)}
           onClick={capture}
-          leftSection={isYouTube ? <IconBrandYoutube size={18} /> : <IconFileText size={18} />}
+          leftSection={
+            !isYouTube ? <IconFileText size={18} /> : saved ? <IconRefresh size={18} /> : <IconBrandYoutube size={18} />
+          }
           variant={isYouTube ? 'filled' : 'light'}
         >
-          {isYouTube ? 'Save transcript' : 'Capture page text'}
+          {!isYouTube ? 'Capture page text' : saved ? 'Update transcript' : 'Save transcript'}
         </Button>
       </Card>
 
@@ -143,7 +163,7 @@ function CaptureResult({ result }: { result: CaptureResponse }) {
     );
   }
 
-  const { item, stats, created } = result;
+  const { item, stats, created, changed } = result;
   return (
     <Alert
       variant="light"
@@ -162,6 +182,11 @@ function CaptureResult({ result }: { result: CaptureResponse }) {
           {stats.extractMs} ms
         </Badge>
       </Group>
+      {!created && (
+        <Text size="xs" mb="sm">
+          {changed.length > 0 ? `Changed: ${describeChanges(changed)}.` : 'No changes since the last capture.'}
+        </Text>
+      )}
       <Group gap="xs" grow>
         <CopyButton value={item.content} timeout={2000}>
           {({ copied, copy }) => (
@@ -182,4 +207,20 @@ function CaptureResult({ result }: { result: CaptureResponse }) {
       </Group>
     </Alert>
   );
+}
+
+const FIELD_LABELS: Record<CaptureField, string> = {
+  title: 'title',
+  content: 'transcript',
+  channel: 'channel',
+  duration: 'duration',
+  language: 'language',
+  views: 'view count',
+  description: 'description',
+  links: 'links',
+  chapters: 'chapters',
+};
+
+function describeChanges(changed: readonly CaptureField[]): string {
+  return changed.map((field) => FIELD_LABELS[field]).join(', ');
 }

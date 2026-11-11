@@ -50,18 +50,22 @@ export async function captureTab(tabId: number): Promise<CaptureResponse> {
     return { ok: false, code: 'empty_transcript', error: 'The transcript is empty after cleanup.' };
   }
 
-  const { item, created } = await upsertCapture({
-    title: result.title || `YouTube video ${result.videoId}`,
-    url: canonicalYouTubeUrl(result.videoId),
-    type: 'youtube_transcript',
-    content,
-    meta: buildVideoMeta(result),
-  });
+  const { item, created, changed } = await upsertCapture(
+    {
+      title: result.title,
+      url: canonicalYouTubeUrl(result.videoId),
+      type: 'youtube_transcript',
+      content,
+      meta: buildVideoMeta(result),
+    },
+    { fallbackTitle: `YouTube video ${result.videoId}` },
+  );
 
   return {
     ok: true,
     item,
     created,
+    changed,
     stats: {
       extractMs: result.elapsedMs,
       words: countWords(content),
