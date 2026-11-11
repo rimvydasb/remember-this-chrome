@@ -1,7 +1,7 @@
 import { planImport, type ImportMode, type ImportPlan } from './importExport';
 import { sortByRecent } from './search';
 import { mergeCapture, type Capture, type CaptureField } from './mergeCapture';
-import type { ItemType, SavedItem } from './types';
+import type { FollowUp, ItemType, SavedItem } from './types';
 
 /**
  * Each record is stored under its own key (`item:<id>`) in `chrome.storage.local`, so saving
@@ -72,6 +72,24 @@ export async function upsertCapture(
   });
   await putItems([item]);
   return { item, created: !existing, changed };
+}
+
+/** Attaches a follow-up to an item. Returns false when the item no longer exists. */
+export async function addFollowUp(itemId: string, followUp: FollowUp): Promise<boolean> {
+  const item = await getItem(itemId);
+  if (!item) return false;
+  await putItems([{ ...item, followUps: [...(item.followUps ?? []), followUp] }]);
+  return true;
+}
+
+/** Removes a follow-up from an item. */
+export async function deleteFollowUp(itemId: string, followUpId: string): Promise<void> {
+  const item = await getItem(itemId);
+  if (!item?.followUps) return;
+  const followUps = item.followUps.filter((followUp) => followUp.id !== followUpId);
+  const next: SavedItem = { ...item, followUps };
+  if (followUps.length === 0) delete next.followUps;
+  await putItems([next]);
 }
 
 /** Applies an import. New data is written before stale records are removed, so a failure cannot lose data. */

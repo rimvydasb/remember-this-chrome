@@ -25,6 +25,7 @@
   "options_page": "dashboard.html",
   "permissions": ["storage", "unlimitedStorage", "scripting"],
   "host_permissions": ["https://www.youtube.com/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "commands": {
     "capture-current-tab": {
       "suggested_key": { "default": "Alt+Shift+S" },

@@ -14,6 +14,7 @@ import {
   Typography,
 } from '@mantine/core';
 import {
+  IconArrowDown,
   IconCalendar,
   IconClipboard,
   IconClipboardCheck,
@@ -31,6 +32,7 @@ import type { Keyword } from '../shared/keywords';
 import type { SavedItem } from '../shared/types';
 import { formatDateTime, formatNumber, formatShortDate, readingTime } from '../ui/format';
 import { confirmDelete, exportMarkdown } from './actions';
+import { FOLLOW_UPS_ANCHOR, FollowUps } from './FollowUps';
 import { KeywordBadges } from './KeywordBadges';
 import { VideoDetails } from './VideoDetails';
 
@@ -153,6 +155,25 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
 
       <Divider />
 
+      <Group gap="xs">
+        <Button
+          size="xs"
+          variant="light"
+          color="violet"
+          leftSection={<IconArrowDown size={15} />}
+          onClick={() =>
+            document.getElementById(FOLLOW_UPS_ANCHOR)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        >
+          Jump to follow-ups
+          {item.followUps?.length ? (
+            <Badge size="xs" variant="filled" color="violet" ml={6} circle>
+              {item.followUps.length}
+            </Badge>
+          ) : null}
+        </Button>
+      </Group>
+
       <Typography className="rt-reader">
         {paragraphs.map((paragraph, i) =>
           highlight.length ? (
@@ -164,6 +185,10 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
           ),
         )}
       </Typography>
+
+      <Divider />
+
+      <FollowUps item={item} />
     </Stack>
   );
 }

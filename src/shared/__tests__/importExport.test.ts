@@ -106,3 +106,39 @@ describe('video details in import files', () => {
     });
   });
 });
+
+describe('follow-ups in import files', () => {
+  it('keeps valid follow-ups and drops invalid ones', () => {
+    const raw = {
+      id: 'a',
+      title: 'T',
+      url: 'https://www.youtube.com/watch?v=a',
+      type: 'youtube_transcript',
+      content: 'C',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      followUps: [
+        { id: 'f1', type: 'llm-summary', content: 'Sum', createdAt: '2026-01-02T00:00:00Z', model: 'qwen' },
+        { id: 'f2', type: 'unknown-kind', content: 'x', createdAt: '2026-01-02T00:00:00Z' },
+        { id: 'f3', type: 'llm-summary', content: 'x', createdAt: 'not a date' },
+        'junk',
+      ],
+    };
+    const { items } = parseImport(JSON.stringify([raw]));
+    expect(items[0]!.followUps).toEqual([
+      { id: 'f1', type: 'llm-summary', content: 'Sum', createdAt: '2026-01-02T00:00:00.000Z', model: 'qwen' },
+    ]);
+  });
+
+  it('round-trips follow-ups through export', () => {
+    const item: SavedItem = {
+      id: 'a',
+      title: 'T',
+      url: 'u',
+      type: 'youtube_transcript',
+      content: 'C',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      followUps: [{ id: 'f1', type: 'llm-summary', content: 'Sum', createdAt: '2026-01-02T00:00:00.000Z' }],
+    };
+    expect(parseImport(JSON.stringify(buildExportPayload([item]))).items).toEqual([item]);
+  });
+});

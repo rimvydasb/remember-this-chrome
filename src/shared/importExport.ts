@@ -1,4 +1,12 @@
-import { ITEM_TYPES, type ItemMeta, type ItemType, type SavedItem } from './types';
+import {
+  FOLLOW_UP_TYPES,
+  ITEM_TYPES,
+  type FollowUp,
+  type FollowUpType,
+  type ItemMeta,
+  type ItemType,
+  type SavedItem,
+} from './types';
 
 export const EXPORT_FORMAT = 'remember-this-library';
 export const EXPORT_VERSION = 1;
@@ -107,7 +115,25 @@ export function validateItem(value: unknown): SavedItem | string {
   };
   const meta = parseMeta(value.meta);
   if (meta) item.meta = meta;
+  const followUps = parseList(value.followUps, parseFollowUp);
+  if (followUps) item.followUps = followUps;
   return item;
+}
+
+function parseFollowUp(entry: Record<string, unknown>): FollowUp | undefined {
+  const { id, type, content, createdAt, model } = entry;
+  if (typeof id !== 'string' || id.trim() === '') return undefined;
+  if (typeof type !== 'string' || !FOLLOW_UP_TYPES.includes(type as FollowUpType)) return undefined;
+  if (typeof content !== 'string') return undefined;
+  if (typeof createdAt !== 'string' || Number.isNaN(Date.parse(createdAt))) return undefined;
+  const followUp: FollowUp = {
+    id,
+    type: type as FollowUpType,
+    content,
+    createdAt: new Date(createdAt).toISOString(),
+  };
+  if (typeof model === 'string' && model !== '') followUp.model = model;
+  return followUp;
 }
 
 /**

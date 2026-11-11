@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeChrome, type FakeChrome } from '../../test/fakeChrome';
 import {
+  addFollowUp,
   applyImport,
   clearLibrary,
   countItems,
+  deleteFollowUp,
   deleteItems,
   getAllItems,
   getItem,
@@ -122,5 +124,47 @@ describe('applyImport', () => {
     expect(chrome.storage.local.set.mock.invocationCallOrder[0]!).toBeLessThan(
       chrome.storage.local.remove.mock.invocationCallOrder[0]!,
     );
+  });
+});
+
+describe('follow-ups', () => {
+  const summary = (id: string) => ({
+    id,
+    type: 'llm-summary' as const,
+    content: `Summary ${id}`,
+    createdAt: '2026-03-01T00:00:00.000Z',
+  });
+
+  it('adds follow-ups in order and keeps the item timestamp', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z')]);
+    expect(await addFollowUp('a', summary('f1'))).toBe(true);
+    expect(await addFollowUp('a', summary('f2'))).toBe(true);
+    const stored = await getItem('a');
+    expect(stored?.followUps?.map((f) => f.id)).toEqual(['f1', 'f2']);
+    expect(stored?.timestamp).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('does nothing for a missing item', async () => {
+    expect(await addFollowUp('missing', summary('f1'))).toBe(false);
+    expect(chrome.storage.local.set).not.toHaveBeenCalled();
+  });
+
+  it('deletes a follow-up and drops the empty list', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z', { followUps: [summary('f1'), summary('f2')] })]);
+    await deleteFollowUp('a', 'f1');
+    expect((await getItem('a'))?.followUps?.map((f) => f.id)).toEqual(['f2']);
+    await deleteFollowUp('a', 'f2');
+    expect(await getItem('a')).toEqual(item('a', '2026-01-01T00:00:00.000Z'));
+  });
+
+  it('keeps follow-ups when the item is captured again', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z', { followUps: [summary('f1')] })]);
+    const { item: updated } = await upsertCapture({
+      title: 'New title',
+      url: 'https://www.youtube.com/watch?v=a',
+      type: 'youtube_transcript',
+      content: 'New content',
+    });
+    expect(updated.followUps).toEqual([summary('f1')]);
   });
 });

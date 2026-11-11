@@ -18,14 +18,17 @@ import {
   IconMarkdown,
   IconMoon,
   IconSearch,
+  IconSettings,
   IconSun,
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
+import { useDisclosure } from '@mantine/hooks';
 import type { Ref } from 'react';
 import type { SavedItem } from '../shared/types';
 import { Logo } from '../ui/Logo';
 import { confirmClearLibrary, exportLibraryJson, exportMarkdown } from './actions';
+import { SettingsDialog } from './SettingsDialog';
 
 interface AppHeaderProps {
   all: readonly SavedItem[];
@@ -41,6 +44,7 @@ export function AppHeader({ all, query, onQueryChange, searchRef, navOpened, onT
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('light');
   const empty = all.length === 0;
+  const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);
 
   return (
     <Group h="100%" justify="space-between" wrap="nowrap" gap="md">
@@ -92,6 +96,12 @@ export function AppHeader({ all, query, onQueryChange, searchRef, navOpened, onT
         >
           Export JSON
         </Button>
+        <Tooltip label="Settings" withArrow>
+          <ActionIcon variant="default" size="lg" aria-label="Settings" onClick={openSettings}>
+            <IconSettings size={18} />
+          </ActionIcon>
+        </Tooltip>
+        <SettingsDialog opened={settingsOpened} onClose={closeSettings} />
         <Tooltip label={colorScheme === 'dark' ? 'Light mode' : 'Dark mode'} withArrow>
           <ActionIcon
             variant="default"

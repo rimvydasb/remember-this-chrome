@@ -132,3 +132,11 @@ body {
   overflow-wrap: anywhere;
   line-height: 1.6;
 }
+
+.rt-follow-up p {
+  white-space: pre-wrap;
+}
+
+.rt-follow-up p:last-child {
+  margin-bottom: 0;
+}
