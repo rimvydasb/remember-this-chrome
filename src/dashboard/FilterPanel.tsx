@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import type { Keyword, KeywordCount, KeywordIndex } from '../shared/keywords';
 import type { ItemType } from '../shared/types';
 import { KeywordBadge } from './KeywordBadges';
-import type { DateRange, LibraryFilters, TypeFilter } from './useLibraryFilters';
+import type { DateRange, LibraryFilters, MarkFilter, TypeFilter } from './useLibraryFilters';
 
 const DATE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: 'any', label: 'Any time' },
@@ -17,6 +17,12 @@ const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'youtube_transcript', label: 'YouTube' },
   { value: 'webpage_text', label: 'Web pages' },
+];
+
+const MARK_OPTIONS: { value: MarkFilter; label: string }[] = [
+  { value: 'library', label: 'Library' },
+  { value: 'loved', label: 'Loved' },
+  { value: 'forgotten', label: 'Forgotten' },
 ];
 
 const CHANNELS_COLLAPSED = 6;
@@ -48,6 +54,16 @@ export function FilterPanel({ filters, types, keywordsReady }: FilterPanelProps)
           </Anchor>
         </Group>
       )}
+
+      <FilterSection label="Show">
+        <SegmentedControl
+          size="xs"
+          fullWidth
+          data={MARK_OPTIONS}
+          value={filters.mark}
+          onChange={(value) => filters.setMark(value as MarkFilter)}
+        />
+      </FilterSection>
 
       <FilterSection label="Saved">
         <SegmentedControl
@@ -100,7 +116,7 @@ export function FilterPanel({ filters, types, keywordsReady }: FilterPanelProps)
 
 /** Compact, removable list of the active filters. Shown when the filter panel is collapsed. */
 export function ActiveFilters({ filters, keywordIndex }: { filters: LibraryFilters; keywordIndex: KeywordIndex }) {
-  const { keywords, dateRange, type, activeCount } = filters;
+  const { keywords, dateRange, type, mark, activeCount } = filters;
   const labels = useMemo(() => {
     const found = new Map<string, Keyword>();
     if (keywords.size === 0) return found;
@@ -114,6 +130,11 @@ export function ActiveFilters({ filters, keywordIndex }: { filters: LibraryFilte
   if (activeCount === 0) return null;
   return (
     <Group gap={4} className="rt-active-filters">
+      {mark !== 'library' && (
+        <Pill size="sm" withRemoveButton onRemove={() => filters.setMark('library')}>
+          {MARK_OPTIONS.find((o) => o.value === mark)?.label}
+        </Pill>
+      )}
       {dateRange !== 'any' && (
         <Pill size="sm" withRemoveButton onRemove={() => filters.setDateRange('any')}>
           Saved: {DATE_OPTIONS.find((o) => o.value === dateRange)?.label}

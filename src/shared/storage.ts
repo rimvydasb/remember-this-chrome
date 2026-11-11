@@ -1,7 +1,7 @@
 import { planImport, type ImportMode, type ImportPlan } from './importExport';
 import { sortByRecent } from './search';
 import { mergeCapture, type Capture, type CaptureField } from './mergeCapture';
-import type { FollowUp, ItemType, SavedItem } from './types';
+import type { FollowUp, ItemMark, ItemType, SavedItem } from './types';
 
 /**
  * Each record is stored under its own key (`item:<id>`) in `chrome.storage.local`, so saving
@@ -90,6 +90,31 @@ export async function deleteFollowUp(itemId: string, followUpId: string): Promis
   const next: SavedItem = { ...item, followUps };
   if (followUps.length === 0) delete next.followUps;
   await putItems([next]);
+}
+
+/** Sets the mark of the given items, or removes it when `mark` is undefined. Missing items are skipped. */
+export async function setItemsMark(ids: readonly string[], mark: ItemMark | undefined): Promise<void> {
+  if (ids.length === 0) return;
+  const keys = ids.map(keyFor);
+  const stored = await chrome.storage.local.get(keys);
+  const next: SavedItem[] = [];
+  for (const key of keys) {
+    const item = stored[key] as SavedItem | undefined;
+    if (!item) continue;
+    const updated: SavedItem = { ...item, mark };
+    if (!mark) delete updated.mark;
+    next.push(updated);
+  }
+  await putItems(next);
+}
+
+/** Deletes the given items, but only those marked as forgotten. Returns the IDs that were deleted. */
+export async function deleteForgottenItems(ids: readonly string[]): Promise<string[]> {
+  const keys = ids.map(keyFor);
+  const stored = await chrome.storage.local.get(keys);
+  const forgotten = ids.filter((id) => (stored[keyFor(id)] as SavedItem | undefined)?.mark === 'forgotten');
+  await deleteItems(forgotten);
+  return forgotten;
 }
 
 /** Applies an import. New data is written before stale records are removed, so a failure cannot lose data. */

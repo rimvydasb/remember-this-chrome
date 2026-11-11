@@ -6,11 +6,13 @@ import {
   clearLibrary,
   countItems,
   deleteFollowUp,
+  deleteForgottenItems,
   deleteItems,
   getAllItems,
   getItem,
   isItemKey,
   putItems,
+  setItemsMark,
   upsertCapture,
 } from '../storage';
 import type { SavedItem } from '../types';
@@ -166,5 +168,38 @@ describe('follow-ups', () => {
       content: 'New content',
     });
     expect(updated.followUps).toEqual([summary('f1')]);
+  });
+});
+
+describe('marks', () => {
+  it('sets and clears a mark without changing the timestamp', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z'), item('b', '2026-01-02T00:00:00.000Z')]);
+    await setItemsMark(['a', 'b', 'missing'], 'loved');
+    expect((await getItem('a'))?.mark).toBe('loved');
+    expect((await getItem('b'))?.timestamp).toBe('2026-01-02T00:00:00.000Z');
+    expect(await getItem('missing')).toBeUndefined();
+    await setItemsMark(['a'], undefined);
+    expect(await getItem('a')).toEqual(item('a', '2026-01-01T00:00:00.000Z'));
+  });
+
+  it('deletes only forgotten items', async () => {
+    await putItems([
+      item('a', '2026-01-01T00:00:00.000Z', { mark: 'forgotten' }),
+      item('b', '2026-01-01T00:00:00.000Z', { mark: 'loved' }),
+      item('c', '2026-01-01T00:00:00.000Z'),
+    ]);
+    expect(await deleteForgottenItems(['a', 'b', 'c'])).toEqual(['a']);
+    expect((await getAllItems()).map((i) => i.id).sort()).toEqual(['b', 'c']);
+  });
+
+  it('keeps the mark when the item is captured again', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z', { mark: 'loved' })]);
+    const { item: updated } = await upsertCapture({
+      title: 'New title',
+      url: 'https://www.youtube.com/watch?v=a',
+      type: 'youtube_transcript',
+      content: 'New content',
+    });
+    expect(updated.mark).toBe('loved');
   });
 });

@@ -5,6 +5,13 @@ import type { ItemType, SavedItem } from '../shared/types';
 
 export type DateRange = 'any' | '7d' | '30d' | '1y';
 export type TypeFilter = 'all' | ItemType;
+/** `library` shows every item that is not forgotten. */
+export type MarkFilter = 'library' | 'loved' | 'forgotten';
+
+function filterByMark(items: readonly SavedItem[], mark: MarkFilter): SavedItem[] {
+  if (mark === 'library') return items.filter((item) => item.mark !== 'forgotten');
+  return items.filter((item) => item.mark === mark);
+}
 
 const RANGE_DAYS: Record<Exclude<DateRange, 'any'>, number> = { '7d': 7, '30d': 30, '1y': 365 };
 
@@ -28,6 +35,8 @@ export interface LibraryFilters {
   setDateRange: (range: DateRange) => void;
   type: TypeFilter;
   setType: (type: TypeFilter) => void;
+  mark: MarkFilter;
+  setMark: (mark: MarkFilter) => void;
   /** Number of active filters, not counting the search query. */
   activeCount: number;
   clearFilters: () => void;
@@ -49,18 +58,20 @@ export function useLibraryFilters(all: readonly SavedItem[], keywordIndex: Keywo
   const [keywords, setKeywords] = useState<ReadonlySet<string>>(() => new Set());
   const [dateRange, setDateRange] = useState<DateRange>('any');
   const [type, setType] = useState<TypeFilter>('all');
+  const [mark, setMark] = useState<MarkFilter>('library');
   const searchIndexRef = useRef<SearchIndex | undefined>(undefined);
 
   const searchIndex = useMemo(() => (searchIndexRef.current = buildSearchIndex(all, searchIndexRef.current)), [all]);
   const terms = useMemo(() => parseQuery(deferredQuery), [deferredQuery]);
 
-  // Base: search + date + type. Keyword filters and facets are computed on top of it.
+  // Base: search + mark + date + type. Keyword filters and facets are computed on top of it.
   const base = useMemo(() => {
     let result = filterItems(all, searchIndex, terms);
+    result = filterByMark(result, mark);
     result = filterByDate(result, dateRange);
     if (type !== 'all') result = result.filter((item) => item.type === type);
     return result;
-  }, [all, searchIndex, terms, dateRange, type]);
+  }, [all, searchIndex, terms, mark, dateRange, type]);
 
   const filtered = useMemo(() => filterByKeywords(base, keywordIndex, keywords), [base, keywordIndex, keywords]);
 
@@ -84,9 +95,11 @@ export function useLibraryFilters(all: readonly SavedItem[], keywordIndex: Keywo
     setKeywords(new Set());
     setDateRange('any');
     setType('all');
+    setMark('library');
   }, []);
 
-  const activeCount = keywords.size + (dateRange === 'any' ? 0 : 1) + (type === 'all' ? 0 : 1);
+  const activeCount =
+    keywords.size + (dateRange === 'any' ? 0 : 1) + (type === 'all' ? 0 : 1) + (mark === 'library' ? 0 : 1);
 
   return {
     query,
@@ -100,6 +113,8 @@ export function useLibraryFilters(all: readonly SavedItem[], keywordIndex: Keywo
     setDateRange,
     type,
     setType,
+    mark,
+    setMark,
     activeCount,
     clearFilters,
     filtered,

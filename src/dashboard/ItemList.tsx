@@ -1,5 +1,5 @@
 import { Checkbox, Group, Highlight, Text } from '@mantine/core';
-import { IconBrandYoutube, IconFileText } from '@tabler/icons-react';
+import { IconBrandYoutube, IconEyeOff, IconFileText, IconHeartFilled } from '@tabler/icons-react';
 import { memo, useMemo } from 'react';
 import { displayKeywords, type Keyword, type KeywordIndex } from '../shared/keywords';
 import { getIndexEntry, makeSnippet, type SearchIndex } from '../shared/search';
@@ -117,6 +117,15 @@ const ItemRow = memo(function ItemRow({
           <Text size="xs" c="dimmed" truncate>
             {formatShortDate(item.timestamp)}
           </Text>
+          {item.mark === 'loved' && (
+            <IconHeartFilled
+              size={13}
+              color="var(--mantine-color-pink-6)"
+              aria-label="Loved"
+              style={{ flexShrink: 0 }}
+            />
+          )}
+          {item.mark === 'forgotten' && <IconEyeOff size={13} aria-label="Forgotten" style={{ flexShrink: 0 }} />}
         </Group>
         {shown.length > 0 && (
           <div style={{ marginTop: 6 }}>

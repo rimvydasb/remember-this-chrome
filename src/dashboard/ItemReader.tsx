@@ -21,7 +21,11 @@ import {
   IconClock,
   IconExternalLink,
   IconEye,
+  IconEyeOff,
+  IconHeart,
+  IconHeartFilled,
   IconMarkdown,
+  IconRestore,
   IconTrash,
   IconUser,
 } from '@tabler/icons-react';
@@ -31,7 +35,7 @@ import { countWords } from '../shared/transcript';
 import type { Keyword } from '../shared/keywords';
 import type { SavedItem } from '../shared/types';
 import { formatDateTime, formatNumber, formatShortDate, readingTime } from '../ui/format';
-import { confirmDelete, exportMarkdown } from './actions';
+import { confirmDelete, exportMarkdown, markItems } from './actions';
 import { FOLLOW_UPS_ANCHOR, FollowUps } from './FollowUps';
 import { KeywordBadges } from './KeywordBadges';
 import { VideoDetails } from './VideoDetails';
@@ -58,6 +62,8 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
   const words = useMemo(() => countWords(item.content), [item.content]);
   const matches = useMemo(() => (terms.length ? countMatches(item.content, terms) : 0), [item.content, terms]);
   const highlight = terms as string[];
+  const loved = item.mark === 'loved';
+  const forgotten = item.mark === 'forgotten';
 
   return (
     <Stack gap="lg" maw={760} mx="auto" pb="xl">
@@ -69,6 +75,11 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
           {item.meta?.language && (
             <Badge variant="light" color="gray">
               {item.meta.language}
+            </Badge>
+          )}
+          {forgotten && (
+            <Badge variant="light" color="gray" leftSection={<IconEyeOff size={12} />}>
+              Forgotten
             </Badge>
           )}
           {terms.length > 0 && (
@@ -140,11 +151,59 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
           >
             Open source
           </Button>
-          <Tooltip label="Delete" withArrow>
-            <ActionIcon variant="subtle" color="red" aria-label="Delete item" onClick={() => confirmDelete([item])}>
-              <IconTrash size={17} />
+          <Button
+            size="xs"
+            variant="light"
+            color="violet"
+            leftSection={<IconArrowDown size={15} />}
+            onClick={() =>
+              document.getElementById(FOLLOW_UPS_ANCHOR)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          >
+            Jump to follow-ups
+            {item.followUps?.length ? (
+              <Badge size="xs" variant="filled" color="violet" ml={6} circle>
+                {item.followUps.length}
+              </Badge>
+            ) : null}
+          </Button>
+          <Tooltip label={loved ? 'Remove from loved' : 'Love'} withArrow>
+            <ActionIcon
+              variant={loved ? 'light' : 'subtle'}
+              color="pink"
+              aria-label={loved ? 'Remove from loved' : 'Love'}
+              aria-pressed={loved}
+              onClick={() => markItems([item], loved ? undefined : 'loved')}
+            >
+              {loved ? <IconHeartFilled size={17} /> : <IconHeart size={17} />}
             </ActionIcon>
           </Tooltip>
+          {forgotten ? (
+            <Button
+              size="xs"
+              variant="default"
+              leftSection={<IconRestore size={15} />}
+              onClick={() => markItems([item], undefined)}
+            >
+              Restore
+            </Button>
+          ) : (
+            <Button
+              size="xs"
+              variant="default"
+              leftSection={<IconEyeOff size={15} />}
+              onClick={() => markItems([item], 'forgotten')}
+            >
+              Forget
+            </Button>
+          )}
+          {forgotten && (
+            <Tooltip label="Delete permanently" withArrow>
+              <ActionIcon variant="subtle" color="red" aria-label="Delete item" onClick={() => confirmDelete([item])}>
+                <IconTrash size={17} />
+              </ActionIcon>
+            </Tooltip>
+          )}
         </Group>
         <Anchor href={item.url} target="_blank" rel="noreferrer" size="xs" c="dimmed" truncate="end">
           {item.url}
@@ -154,25 +213,6 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
       <VideoDetails item={item} />
 
       <Divider />
-
-      <Group gap="xs">
-        <Button
-          size="xs"
-          variant="light"
-          color="violet"
-          leftSection={<IconArrowDown size={15} />}
-          onClick={() =>
-            document.getElementById(FOLLOW_UPS_ANCHOR)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }
-        >
-          Jump to follow-ups
-          {item.followUps?.length ? (
-            <Badge size="xs" variant="filled" color="violet" ml={6} circle>
-              {item.followUps.length}
-            </Badge>
-          ) : null}
-        </Button>
-      </Group>
 
       <Typography className="rt-reader">
         {paragraphs.map((paragraph, i) =>

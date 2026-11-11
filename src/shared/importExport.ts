@@ -1,8 +1,10 @@
 import {
   FOLLOW_UP_TYPES,
+  ITEM_MARKS,
   ITEM_TYPES,
   type FollowUp,
   type FollowUpType,
+  type ItemMark,
   type ItemMeta,
   type ItemType,
   type SavedItem,
@@ -117,6 +119,7 @@ export function validateItem(value: unknown): SavedItem | string {
   if (meta) item.meta = meta;
   const followUps = parseList(value.followUps, parseFollowUp);
   if (followUps) item.followUps = followUps;
+  if (typeof value.mark === 'string' && ITEM_MARKS.includes(value.mark as ItemMark)) item.mark = value.mark as ItemMark;
   return item;
 }
 

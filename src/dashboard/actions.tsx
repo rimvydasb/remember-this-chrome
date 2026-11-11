@@ -3,8 +3,8 @@ import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { buildExportPayload } from '../shared/importExport';
 import { itemsToMarkdown, markdownFileName } from '../shared/markdown';
-import { clearLibrary, deleteItems, getAllItems } from '../shared/storage';
-import type { SavedItem } from '../shared/types';
+import { clearLibrary, deleteForgottenItems, getAllItems, setItemsMark } from '../shared/storage';
+import type { ItemMark, SavedItem } from '../shared/types';
 import { downloadTextFile } from '../ui/download';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -31,7 +31,25 @@ export function exportMarkdown(items: readonly SavedItem[]): void {
   });
 }
 
-export function confirmDelete(items: readonly SavedItem[], onDeleted?: () => void): void {
+/** Loves, forgets, or unmarks items. Forgetting tells the user where the items went. */
+export async function markItems(items: readonly SavedItem[], mark: ItemMark | undefined): Promise<void> {
+  if (items.length === 0) return;
+  await setItemsMark(
+    items.map((item) => item.id),
+    mark,
+  );
+  if (mark === 'forgotten') {
+    notifications.show({
+      color: 'gray',
+      title: `${plural(items.length, 'item')} forgotten`,
+      message: 'Find forgotten items under Filters → Forgotten. Only forgotten items can be deleted.',
+    });
+  }
+}
+
+/** Asks to delete items. Only forgotten items are deleted; others are left alone. */
+export function confirmDelete(all: readonly SavedItem[], onDeleted?: () => void): void {
+  const items = all.filter((item) => item.mark === 'forgotten');
   if (items.length === 0) return;
   const single = items.length === 1;
   modals.openConfirmModal({
@@ -52,9 +70,9 @@ export function confirmDelete(items: readonly SavedItem[], onDeleted?: () => voi
     labels: { confirm: 'Delete', cancel: 'Cancel' },
     confirmProps: { color: 'red' },
     onConfirm: async () => {
-      await deleteItems(items.map((item) => item.id));
+      const deleted = await deleteForgottenItems(items.map((item) => item.id));
       onDeleted?.();
-      notifications.show({ color: 'gray', message: `${plural(items.length, 'item')} deleted.` });
+      notifications.show({ color: 'gray', message: `${plural(deleted.length, 'item')} deleted.` });
     },
   });
 }

@@ -51,6 +51,14 @@ export interface FollowUp {
   model?: string;
 }
 
+/**
+ * A mark that the user puts on an item. `loved` items are favorites. `forgotten` items are hidden
+ * from the library view; only forgotten items can be deleted.
+ */
+export type ItemMark = 'loved' | 'forgotten';
+
+export const ITEM_MARKS: readonly ItemMark[] = ['loved', 'forgotten'];
+
 /** A captured record, as defined in the PRD data schema (section 3). */
 export interface SavedItem {
   id: string;
@@ -63,6 +71,8 @@ export interface SavedItem {
   meta?: ItemMeta;
   /** Follow-ups attached to the item, oldest first. Older or imported items can omit it. */
   followUps?: FollowUp[];
+  /** The user's mark. Unmarked items omit it. */
+  mark?: ItemMark;
 }
 
 export interface CaptureStats {

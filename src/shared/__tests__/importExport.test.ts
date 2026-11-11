@@ -142,3 +142,21 @@ describe('follow-ups in import files', () => {
     expect(parseImport(JSON.stringify(buildExportPayload([item]))).items).toEqual([item]);
   });
 });
+
+describe('marks in import files', () => {
+  const raw = (mark: unknown) => ({
+    id: 'a',
+    title: 'T',
+    url: 'u',
+    type: 'youtube_transcript',
+    content: 'C',
+    timestamp: '2026-01-01T00:00:00.000Z',
+    mark,
+  });
+
+  it('keeps known marks and drops unknown ones', () => {
+    expect(parseImport(JSON.stringify([raw('loved')])).items[0]!.mark).toBe('loved');
+    expect(parseImport(JSON.stringify([raw('forgotten')])).items[0]!.mark).toBe('forgotten');
+    expect(parseImport(JSON.stringify([raw('starred')])).items[0]).not.toHaveProperty('mark');
+  });
+});

@@ -1,8 +1,8 @@
-import { Badge, Button, Checkbox, CloseButton, Group, Loader, Text } from '@mantine/core';
-import { IconFilter, IconMarkdown, IconTrash } from '@tabler/icons-react';
+import { Badge, Button, Checkbox, CloseButton, Group, Loader, Text, Tooltip } from '@mantine/core';
+import { IconEyeOff, IconFilter, IconMarkdown, IconRestore, IconTrash } from '@tabler/icons-react';
 import type { SavedItem } from '../shared/types';
 import { formatNumber } from '../ui/format';
-import { confirmDelete, exportMarkdown } from './actions';
+import { confirmDelete, exportMarkdown, markItems } from './actions';
 
 interface ListToolbarProps {
   total: number;
@@ -34,6 +34,8 @@ export function ListToolbar({
 }: ListToolbarProps) {
   const allVisibleChecked = visible.length > 0 && visible.every((item) => checked.has(item.id));
   const someVisibleChecked = visible.some((item) => checked.has(item.id));
+  const forgottenCount = checkedItems.filter((item) => item.mark === 'forgotten').length;
+  const allForgotten = checkedItems.length > 0 && forgottenCount === checkedItems.length;
 
   if (checked.size > 0) {
     return (
@@ -59,15 +61,43 @@ export function ListToolbar({
           >
             Markdown
           </Button>
-          <Button
-            size="compact-xs"
-            variant="light"
-            color="red"
-            leftSection={<IconTrash size={14} />}
-            onClick={() => confirmDelete(checkedItems, onClearChecked)}
-          >
-            Delete
-          </Button>
+          {allForgotten ? (
+            <Button
+              size="compact-xs"
+              variant="light"
+              color="gray"
+              leftSection={<IconRestore size={14} />}
+              onClick={() => markItems(checkedItems, undefined)}
+            >
+              Restore
+            </Button>
+          ) : (
+            <Button
+              size="compact-xs"
+              variant="light"
+              color="gray"
+              leftSection={<IconEyeOff size={14} />}
+              onClick={() => markItems(checkedItems, 'forgotten').then(onClearChecked)}
+            >
+              Forget
+            </Button>
+          )}
+          {forgottenCount > 0 && (
+            <Tooltip
+              label={allForgotten ? 'Delete permanently' : `Deletes only the ${forgottenCount} forgotten`}
+              withArrow
+            >
+              <Button
+                size="compact-xs"
+                variant="light"
+                color="red"
+                leftSection={<IconTrash size={14} />}
+                onClick={() => confirmDelete(checkedItems, onClearChecked)}
+              >
+                Delete
+              </Button>
+            </Tooltip>
+          )}
           <CloseButton size="sm" aria-label="Clear selection" onClick={onClearChecked} />
         </Group>
       </Group>
@@ -87,7 +117,7 @@ export function ListToolbar({
         <Text size="sm" c="dimmed">
           {narrowed
             ? `${formatNumber(visible.length)} of ${formatNumber(total)} items`
-            : `${formatNumber(total)} ${total === 1 ? 'item' : 'items'}`}
+            : `${formatNumber(visible.length)} ${visible.length === 1 ? 'item' : 'items'}`}
         </Text>
         {busy && <Loader size={14} />}
       </Group>
