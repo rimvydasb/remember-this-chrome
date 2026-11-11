@@ -1,49 +1,20 @@
-import {
-  ActionIcon,
-  AppShell,
-  Burger,
-  Button,
-  Center,
-  Checkbox,
-  CloseButton,
-  EmptyState,
-  FileButton,
-  Group,
-  Kbd,
-  Loader,
-  Menu,
-  ScrollArea,
-  Text,
-  TextInput,
-  Tooltip,
-  useComputedColorScheme,
-  useMantineColorScheme,
-} from '@mantine/core';
-import { useDisclosure, useHotkeys } from '@mantine/hooks';
+import { AppShell, Button, Center, Collapse, EmptyState, Loader, ScrollArea, Stack, Text } from '@mantine/core';
+import { useDisclosure, useHotkeys, useLocalStorage } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import {
-  IconBookmark,
-  IconBrandYoutube,
-  IconDots,
-  IconDownload,
-  IconMarkdown,
-  IconMoon,
-  IconSearch,
-  IconSearchOff,
-  IconSun,
-  IconTrash,
-  IconUpload,
-} from '@tabler/icons-react';
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { IconSearchOff } from '@tabler/icons-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ImportError, parseImport, type ParsedImport } from '../shared/importExport';
-import { buildSearchIndex, filterItems, parseQuery, type SearchIndex } from '../shared/search';
-import { Logo } from '../ui/Logo';
-import { formatNumber } from '../ui/format';
-import { confirmClearLibrary, confirmDelete, exportLibraryJson, exportMarkdown } from './actions';
+import { ITEM_TYPES } from '../shared/types';
+import { AppHeader } from './AppHeader';
+import { EmptyLibrary } from './EmptyLibrary';
+import { ActiveFilters, FilterPanel } from './FilterPanel';
 import { ImportDialog } from './ImportDialog';
 import { ItemList } from './ItemList';
 import { ItemReader } from './ItemReader';
+import { ListToolbar } from './ListToolbar';
+import { useKeywordIndex } from './useKeywordIndex';
 import { useLibrary } from './useLibrary';
+import { useLibraryFilters } from './useLibraryFilters';
 
 function itemIdFromHash(): string | undefined {
   const match = /item=([^&]+)/.exec(location.hash);
@@ -52,23 +23,22 @@ function itemIdFromHash(): string | undefined {
 
 export function App() {
   const items = useLibrary();
-  const [query, setQuery] = useState('');
-  const deferredQuery = useDeferredValue(query);
+  const all = useMemo(() => items ?? [], [items]);
+  const { index: keywordIndex, ready: keywordsReady } = useKeywordIndex(all);
+  const filters = useLibraryFilters(all, keywordIndex);
+  const { filtered, terms } = filters;
+
   const [selectedId, setSelectedId] = useState<string | undefined>(itemIdFromHash);
   const [checked, setChecked] = useState<Set<string>>(() => new Set());
   const [pendingImport, setPendingImport] = useState<{ fileName: string; parsed: ParsedImport } | null>(null);
   const [navOpened, { toggle: toggleNav, close: closeNav }] = useDisclosure(false);
+  const [filtersOpen, setFiltersOpen] = useLocalStorage({ key: 'rt-filters-open', defaultValue: true });
   const searchRef = useRef<HTMLInputElement>(null);
-  const indexRef = useRef<SearchIndex | undefined>(undefined);
-  const { setColorScheme } = useMantineColorScheme();
-  const colorScheme = useComputedColorScheme('light');
 
-  const all = useMemo(() => items ?? [], [items]);
-  const index = useMemo(() => (indexRef.current = buildSearchIndex(all, indexRef.current)), [all]);
-  const terms = useMemo(() => parseQuery(deferredQuery), [deferredQuery]);
-  const filtered = useMemo(() => filterItems(all, index, terms), [all, index, terms]);
   const selected = filtered.find((item) => item.id === selectedId) ?? filtered[0];
   const checkedItems = useMemo(() => all.filter((item) => checked.has(item.id)), [all, checked]);
+  const types = useMemo(() => ITEM_TYPES.filter((type) => all.some((item) => item.type === type)), [all]);
+  const narrowed = terms.length > 0 || filters.activeCount > 0;
 
   // Deep links from the popup: dashboard.html#item=<id>
   useEffect(() => {
@@ -106,6 +76,18 @@ export function App() {
     });
   }, []);
 
+  const toggleAllVisible = () => {
+    const allVisibleChecked = filtered.length > 0 && filtered.every((item) => checked.has(item.id));
+    setChecked((previous) => {
+      const next = new Set(previous);
+      for (const item of filtered) {
+        if (allVisibleChecked) next.delete(item.id);
+        else next.add(item.id);
+      }
+      return next;
+    });
+  };
+
   const moveSelection = (delta: number) => {
     if (filtered.length === 0) return;
     const current = selected ? filtered.indexOf(selected) : -1;
@@ -122,6 +104,7 @@ export function App() {
     ['ArrowUp', () => moveSelection(-1)],
     ['J', () => moveSelection(1)],
     ['K', () => moveSelection(-1)],
+    ['F', () => setFiltersOpen((open) => !open)],
   ]);
 
   const handleImportFile = async (file: File | null) => {
@@ -137,17 +120,9 @@ export function App() {
     }
   };
 
-  const allVisibleChecked = filtered.length > 0 && filtered.every((item) => checked.has(item.id));
-  const someVisibleChecked = filtered.some((item) => checked.has(item.id));
-  const toggleAllVisible = () => {
-    setChecked((previous) => {
-      const next = new Set(previous);
-      for (const item of filtered) {
-        if (allVisibleChecked) next.delete(item.id);
-        else next.add(item.id);
-      }
-      return next;
-    });
+  const resetAll = () => {
+    filters.setQuery('');
+    filters.clearFilters();
   };
 
   return (
@@ -157,180 +132,68 @@ export function App() {
       padding={0}
     >
       <AppShell.Header px="md">
-        <Group h="100%" justify="space-between" wrap="nowrap" gap="md">
-          <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>
-            <Burger opened={navOpened} onClick={toggleNav} hiddenFrom="sm" size="sm" aria-label="Toggle list" />
-            <Logo />
-          </Group>
-
-          <TextInput
-            ref={searchRef}
-            value={query}
-            onChange={(event) => setQuery(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                setQuery('');
-                event.currentTarget.blur();
-              }
-            }}
-            placeholder="Search titles and transcripts…"
-            aria-label="Search library"
-            leftSection={<IconSearch size={16} />}
-            rightSectionWidth={query ? 36 : 44}
-            rightSection={
-              query ? (
-                <CloseButton size="sm" aria-label="Clear search" onClick={() => setQuery('')} />
-              ) : (
-                <Kbd size="xs">/</Kbd>
-              )
-            }
-            radius="xl"
-            style={{ flex: 1, maxWidth: 560 }}
-          />
-
-          <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
-            <FileButton onChange={handleImportFile} accept="application/json,.json">
-              {(props) => (
-                <Button {...props} variant="default" size="sm" leftSection={<IconUpload size={16} />} visibleFrom="md">
-                  Import JSON
-                </Button>
-              )}
-            </FileButton>
-            <Button
-              variant="light"
-              size="sm"
-              leftSection={<IconDownload size={16} />}
-              onClick={exportLibraryJson}
-              disabled={all.length === 0}
-              visibleFrom="md"
-            >
-              Export JSON
-            </Button>
-            <Tooltip label={colorScheme === 'dark' ? 'Light mode' : 'Dark mode'} withArrow>
-              <ActionIcon
-                variant="default"
-                size="lg"
-                aria-label="Toggle color scheme"
-                onClick={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
-              >
-                {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
-              </ActionIcon>
-            </Tooltip>
-            <Menu position="bottom-end" width={230} withArrow>
-              <Menu.Target>
-                <ActionIcon variant="default" size="lg" aria-label="More actions">
-                  <IconDots size={18} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Label>Library</Menu.Label>
-                <FileButton onChange={handleImportFile} accept="application/json,.json">
-                  {(props) => (
-                    <Menu.Item {...props} leftSection={<IconUpload size={16} />}>
-                      Import JSON…
-                    </Menu.Item>
-                  )}
-                </FileButton>
-                <Menu.Item
-                  leftSection={<IconDownload size={16} />}
-                  onClick={exportLibraryJson}
-                  disabled={all.length === 0}
-                >
-                  Export JSON
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconMarkdown size={16} />}
-                  onClick={() => exportMarkdown(all.filter((item) => item.type === 'youtube_transcript'))}
-                  disabled={all.length === 0}
-                >
-                  Export all transcripts as Markdown
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item
-                  color="red"
-                  leftSection={<IconTrash size={16} />}
-                  onClick={() => confirmClearLibrary(all.length)}
-                  disabled={all.length === 0}
-                >
-                  Clear library…
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          </Group>
-        </Group>
+        <AppHeader
+          all={all}
+          query={filters.query}
+          onQueryChange={filters.setQuery}
+          searchRef={searchRef}
+          navOpened={navOpened}
+          onToggleNav={toggleNav}
+          onImport={handleImportFile}
+        />
       </AppShell.Header>
 
       <AppShell.Navbar>
         <AppShell.Section className="rt-list-toolbar">
-          {checked.size > 0 ? (
-            <Group justify="space-between" wrap="nowrap" gap="xs">
-              <Group gap="xs" wrap="nowrap">
-                <Checkbox
-                  size="xs"
-                  checked={allVisibleChecked}
-                  indeterminate={!allVisibleChecked && someVisibleChecked}
-                  onChange={toggleAllVisible}
-                  aria-label="Select all visible items"
-                />
-                <Text size="sm" fw={600}>
-                  {checked.size} selected
-                </Text>
-              </Group>
-              <Group gap={4} wrap="nowrap">
-                <Button
-                  size="compact-xs"
-                  variant="light"
-                  leftSection={<IconMarkdown size={14} />}
-                  onClick={() => exportMarkdown(checkedItems)}
-                >
-                  Markdown
-                </Button>
-                <Button
-                  size="compact-xs"
-                  variant="light"
-                  color="red"
-                  leftSection={<IconTrash size={14} />}
-                  onClick={() => confirmDelete(checkedItems, () => setChecked(new Set()))}
-                >
-                  Delete
-                </Button>
-                <CloseButton size="sm" aria-label="Clear selection" onClick={() => setChecked(new Set())} />
-              </Group>
-            </Group>
-          ) : (
-            <Group justify="space-between" wrap="nowrap">
-              <Group gap="xs" wrap="nowrap">
-                <Checkbox
-                  size="xs"
-                  checked={false}
-                  disabled={filtered.length === 0}
-                  onChange={toggleAllVisible}
-                  aria-label="Select all visible items"
-                />
-                <Text size="sm" c="dimmed">
-                  {terms.length > 0
-                    ? `${formatNumber(filtered.length)} of ${formatNumber(all.length)} items`
-                    : `${formatNumber(all.length)} ${all.length === 1 ? 'item' : 'items'}`}
-                </Text>
-              </Group>
-              {query !== deferredQuery && <Loader size={14} />}
-            </Group>
-          )}
+          <ListToolbar
+            total={all.length}
+            visible={filtered}
+            checked={checked}
+            checkedItems={checkedItems}
+            onToggleAllVisible={toggleAllVisible}
+            onClearChecked={() => setChecked(new Set())}
+            busy={filters.query !== filters.deferredQuery || !keywordsReady}
+            narrowed={narrowed}
+            filtersOpen={filtersOpen}
+            activeFilters={filters.activeCount}
+            onToggleFilters={() => setFiltersOpen((open) => !open)}
+          />
         </AppShell.Section>
+
+        {all.length > 0 && (
+          <AppShell.Section className="rt-filters-section">
+            <Collapse expanded={filtersOpen}>
+              <ScrollArea.Autosize mah="45vh" scrollbarSize={6} type="hover">
+                <FilterPanel filters={filters} types={types} keywordsReady={keywordsReady} />
+              </ScrollArea.Autosize>
+            </Collapse>
+            {!filtersOpen && <ActiveFilters filters={filters} keywordIndex={keywordIndex} />}
+          </AppShell.Section>
+        )}
+
         <AppShell.Section grow component={ScrollArea} scrollbarSize={8}>
           {items !== null && filtered.length === 0 && all.length > 0 && (
-            <Text size="sm" c="dimmed" ta="center" p="xl">
-              No items match “{deferredQuery}”.
-            </Text>
+            <Stack align="center" gap="xs" p="xl">
+              <Text size="sm" c="dimmed" ta="center">
+                No items match{filters.deferredQuery ? ` “${filters.deferredQuery}”` : ''}
+                {filters.activeCount > 0 ? ' with these filters' : ''}.
+              </Text>
+              <Button size="compact-xs" variant="subtle" onClick={resetAll}>
+                Reset search and filters
+              </Button>
+            </Stack>
           )}
           <ItemList
             items={filtered}
-            index={index}
+            searchIndex={filters.searchIndex}
+            keywordIndex={keywordIndex}
             terms={terms}
+            activeKeywords={filters.keywords}
             selectedId={selected?.id}
             checked={checked}
             onSelect={select}
             onToggle={toggleChecked}
+            onToggleKeyword={filters.toggleKeyword}
           />
         </AppShell.Section>
       </AppShell.Navbar>
@@ -348,11 +211,18 @@ export function App() {
               <EmptyState
                 icon={<IconSearchOff size={28} />}
                 title="Nothing found"
-                description="Try different words, or put a phrase in double quotes."
+                description="Try different words, put a phrase in double quotes, or remove a filter."
               />
             </Center>
           ) : (
-            <ItemReader key={selected.id} item={selected} terms={terms} />
+            <ItemReader
+              key={selected.id}
+              item={selected}
+              terms={terms}
+              keywords={keywordIndex.get(selected.id)}
+              activeKeywords={filters.keywords}
+              onToggleKeyword={filters.toggleKeyword}
+            />
           )}
         </div>
       </AppShell.Main>
@@ -366,42 +236,5 @@ export function App() {
         />
       )}
     </AppShell>
-  );
-}
-
-function EmptyLibrary({ onImport }: { onImport: (file: File | null) => void }) {
-  return (
-    <Center h="70vh">
-      <EmptyState
-        icon={<IconBookmark size={30} />}
-        title="Your library is empty"
-        description={
-          <>
-            Open a YouTube video, click the <b>Remember This</b> toolbar button, and choose <b>Save transcript</b>. Or
-            press <Kbd size="xs">Alt</Kbd> + <Kbd size="xs">Shift</Kbd> + <Kbd size="xs">S</Kbd> on the video page.
-          </>
-        }
-        maw={460}
-      >
-        <EmptyState.Actions>
-          <Button
-            component="a"
-            href="https://www.youtube.com/"
-            target="_blank"
-            rel="noreferrer"
-            leftSection={<IconBrandYoutube size={18} />}
-          >
-            Go to YouTube
-          </Button>
-          <FileButton onChange={onImport} accept="application/json,.json">
-            {(props) => (
-              <Button {...props} variant="default" leftSection={<IconUpload size={18} />}>
-                Import JSON
-              </Button>
-            )}
-          </FileButton>
-        </EmptyState.Actions>
-      </EmptyState>
-    </Center>
   );
 }

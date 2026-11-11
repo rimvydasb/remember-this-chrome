@@ -19,6 +19,7 @@
     "@mantine/modals": "^9.8.0",
     "@mantine/notifications": "^9.8.0",
     "@tabler/icons-react": "^3.51.0",
+    "keyword-extractor": "^0.3.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

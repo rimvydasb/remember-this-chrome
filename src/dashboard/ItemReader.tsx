@@ -26,13 +26,18 @@ import {
 import { useMemo } from 'react';
 import { formatDuration, TYPE_LABELS } from '../shared/markdown';
 import { countWords } from '../shared/transcript';
+import type { Keyword } from '../shared/keywords';
 import type { SavedItem } from '../shared/types';
 import { formatDateTime, formatNumber, readingTime } from '../ui/format';
 import { confirmDelete, exportMarkdown } from './actions';
+import { KeywordBadges } from './KeywordBadges';
 
 interface ItemReaderProps {
   item: SavedItem;
   terms: readonly string[];
+  keywords: readonly Keyword[] | undefined;
+  activeKeywords: ReadonlySet<string>;
+  onToggleKeyword: (key: string) => void;
 }
 
 function countMatches(text: string, terms: readonly string[]): number {
@@ -44,7 +49,7 @@ function countMatches(text: string, terms: readonly string[]): number {
   return total;
 }
 
-export function ItemReader({ item, terms }: ItemReaderProps) {
+export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyword }: ItemReaderProps) {
   const paragraphs = useMemo(() => item.content.split(/\n{2,}/), [item.content]);
   const words = useMemo(() => countWords(item.content), [item.content]);
   const matches = useMemo(() => (terms.length ? countMatches(item.content, terms) : 0), [item.content, terms]);
@@ -83,6 +88,10 @@ export function ItemReader({ item, terms }: ItemReaderProps) {
             {item.meta?.durationSec ? ` · ${formatDuration(item.meta.durationSec)} video` : ''}
           </Meta>
         </Group>
+
+        {keywords && keywords.length > 0 && (
+          <KeywordBadges keywords={keywords} active={activeKeywords} onToggle={onToggleKeyword} size="sm" />
+        )}
 
         <Group gap="xs" mt={4}>
           <CopyButton value={item.content} timeout={2000}>

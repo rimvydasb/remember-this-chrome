@@ -12,6 +12,13 @@ on your computer. Requirements: [docs/todo.md](docs/todo.md).
   paragraphs.
 - **Library dashboard** (`dashboard.html`, also the extension's options page): newest first, real-time full-text search
   (use `"quotes"` for phrases), reader view with highlighted matches, copy to clipboard, delete one, many, or all items.
+- **Keywords:** each item gets up to 10 keywords, extracted locally with
+  [keyword-extractor](https://www.npmjs.com/package/keyword-extractor) and ranked by TF-IDF across the library. The
+  channel is always the first keyword. The list shows the top 5 instead of the start of the text (while searching,
+  it also shows the matching excerpt).
+- **Filters:** saved date (7 days, 30 days, year), channels (any of the selected), topics (all of the selected, with a
+  finder for less common ones), and type when the library has more than one. Counts update with the results. Click
+  any keyword pill in the list or reader to filter by it. <kbd>F</kbd> shows or hides the filter panel.
 - **Markdown export** for one item, the selected items, or all transcripts.
 - **JSON export / import** for sync between computers (for example through iCloud Drive). Import validates every
   record and lets you merge (newer copy wins, nothing is deleted) or replace the library.
