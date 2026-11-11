@@ -146,3 +146,25 @@ describe('mergeCapture: update', () => {
     expect(changed).toEqual(['views']);
   });
 });
+
+describe('mergeCapture: thumbnail', () => {
+  const capture = (meta: Capture['meta']): Capture => ({
+    title: 'T',
+    url: URL_,
+    type: 'youtube_transcript',
+    content: 'text',
+    meta,
+  });
+  const options = { id: 'id-1', now: LATER };
+
+  it('adds a thumbnail to an item that had none, and keeps it when a later capture has none', () => {
+    const withThumb = mergeCapture(
+      stored,
+      capture({ videoId: 'abc', thumbnail: 'data:image/jpeg;base64,AAAA' }),
+      options,
+    ).item;
+    expect(withThumb.meta?.thumbnail).toBe('data:image/jpeg;base64,AAAA');
+    const kept = mergeCapture(withThumb, capture({ videoId: 'abc' }), options).item;
+    expect(kept.meta?.thumbnail).toBe('data:image/jpeg;base64,AAAA');
+  });
+});

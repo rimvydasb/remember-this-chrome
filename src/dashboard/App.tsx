@@ -130,7 +130,7 @@ export function App() {
   return (
     <AppShell
       header={{ height: 64 }}
-      navbar={{ width: { base: 340, lg: 400 }, breakpoint: 'sm', collapsed: { mobile: !navOpened } }}
+      navbar={{ width: { base: 420, lg: 520 }, breakpoint: 'sm', collapsed: { mobile: !navOpened } }}
       padding={0}
     >
       <AppShell.Header px="md">

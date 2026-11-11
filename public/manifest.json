@@ -24,7 +24,7 @@
   },
   "options_page": "dashboard.html",
   "permissions": ["storage", "unlimitedStorage", "scripting"],
-  "host_permissions": ["https://www.youtube.com/*"],
+  "host_permissions": ["https://www.youtube.com/*", "https://i.ytimg.com/*"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "commands": {
     "capture-current-tab": {

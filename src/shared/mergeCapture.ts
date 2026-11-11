@@ -56,6 +56,7 @@ export function mergeCapture(
   const old: ItemMeta = existing.meta ?? {};
   const meta: ItemMeta = { ...old };
   if (hasText(incoming.videoId)) meta.videoId = incoming.videoId;
+  if (hasText(incoming.thumbnail)) meta.thumbnail = incoming.thumbnail;
   if (hasText(incoming.channel)) meta.channel = incoming.channel;
   if (hasText(incoming.language)) meta.language = incoming.language;
   if (incoming.durationSec) meta.durationSec = incoming.durationSec;

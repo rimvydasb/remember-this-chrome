@@ -24,6 +24,17 @@ body {
   contain-intrinsic-size: auto 104px;
 }
 
+.rt-item-thumb {
+  flex-shrink: 0;
+  /* The row stretches its children; without this the image grows taller than 16:9 and gets cropped. */
+  align-self: flex-start;
+  width: 120px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 4px;
+  background: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+}
+
 .rt-item:hover {
   background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
 }

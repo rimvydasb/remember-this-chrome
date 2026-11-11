@@ -1,5 +1,6 @@
 import { extractYouTubeTranscript, type ExtractionResult } from '../content/youtubeExtractor';
 import { upsertCapture } from '../shared/storage';
+import { fetchThumbnail } from '../shared/thumbnail';
 import { countWords, formatTranscript } from '../shared/transcript';
 import type { CaptureResponse } from '../shared/types';
 import { buildVideoMeta } from '../shared/videoDetails';
@@ -50,13 +51,18 @@ export async function captureTab(tabId: number): Promise<CaptureResponse> {
     return { ok: false, code: 'empty_transcript', error: 'The transcript is empty after cleanup.' };
   }
 
+  const meta = buildVideoMeta(result);
+  // A failed download must not fail the capture; the item then has no thumbnail.
+  const thumbnail = await fetchThumbnail(result.videoId);
+  if (thumbnail) meta.thumbnail = thumbnail;
+
   const { item, created, changed } = await upsertCapture(
     {
       title: result.title,
       url: canonicalYouTubeUrl(result.videoId),
       type: 'youtube_transcript',
       content,
-      meta: buildVideoMeta(result),
+      meta,
     },
     { fallbackTitle: `YouTube video ${result.videoId}` },
   );

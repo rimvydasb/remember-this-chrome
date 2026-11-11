@@ -1,10 +1,13 @@
 import { Alert, Anchor, Badge, Button, Checkbox, Group, Modal, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconCircleCheck, IconPlugConnected } from '@tabler/icons-react';
+import { IconAlertCircle, IconCircleCheck, IconDatabase, IconPlugConnected } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
+import { backfillThumbnails, countMissingThumbnails } from '../shared/thumbnail';
 import { listModels, LlmError, requestLlmPermission } from '../shared/llm';
 import { DEFAULT_SETTINGS, saveSettings, type LlmSettings } from '../shared/settings';
 import { useSettings } from './useSettings';
+
+const formatMb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes < 10 * 1024 * 1024 ? 2 : 1)} MB`;
 
 interface SettingsDialogProps {
   opened: boolean;
@@ -31,6 +34,36 @@ export function SettingsDialog({ opened, onClose }: SettingsDialogProps) {
       setTest({ status: 'idle' });
     }
   }, [opened, stored]);
+
+  const [usage, setUsage] = useState<{ bytes: number; missing: number } | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const refreshUsage = () =>
+    Promise.all([chrome.storage.local.getBytesInUse(null), countMissingThumbnails()]).then(([bytes, missing]) =>
+      setUsage({ bytes, missing }),
+    );
+
+  useEffect(() => {
+    if (opened) void refreshUsage();
+  }, [opened]);
+
+  const downloadThumbnails = async () => {
+    setDownloading(true);
+    try {
+      const { saved, failed } = await backfillThumbnails();
+      notifications.show(
+        failed > 0
+          ? {
+              color: 'red',
+              message: `Saved ${saved}, failed ${failed}. If all failed, reload the extension at chrome://extensions and approve the new permission.`,
+            }
+          : { color: 'teal', message: `Saved ${saved} thumbnail${saved === 1 ? '' : 's'}.` },
+      );
+      await refreshUsage();
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const update = (patch: Partial<LlmSettings>) => setDraft((previous) => ({ ...previous, ...patch }));
 
@@ -146,6 +179,27 @@ export function SettingsDialog({ opened, onClose }: SettingsDialogProps) {
           checked={draft.useForTags}
           onChange={(event) => update({ useForTags: event.currentTarget.checked })}
         />
+
+        <Stack gap={6}>
+          <Group gap={6}>
+            <IconDatabase size={16} />
+            <Text size="sm" fw={500}>
+              Storage
+            </Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Everything is stored on this computer in the browser's extension storage (chrome.storage.local): your
+            transcripts, summaries, tags and small video thumbnails. Nothing is uploaded. Space is not limited.
+          </Text>
+          <Text size="sm">Used now: {usage ? formatMb(usage.bytes) : '…'}</Text>
+          {usage !== null && usage.missing > 0 && (
+            <Group gap="xs">
+              <Button variant="light" size="xs" loading={downloading} onClick={downloadThumbnails}>
+                Download {usage.missing} missing thumbnail{usage.missing === 1 ? '' : 's'}
+              </Button>
+            </Group>
+          )}
+        </Stack>
 
         <Group justify="flex-end" mt="sm">
           <Button variant="default" onClick={onClose}>

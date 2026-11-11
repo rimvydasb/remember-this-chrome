@@ -22,6 +22,8 @@ export interface VideoLink {
 export interface ItemMeta {
   channel?: string;
   videoId?: string;
+  /** Small JPEG thumbnail of the video as a data URL, saved at capture time so the list needs no network. */
+  thumbnail?: string;
   language?: string;
   durationSec?: number;
   /** The video description, as the author wrote it. */

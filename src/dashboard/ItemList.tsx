@@ -85,6 +85,7 @@ const ItemRow = memo(function ItemRow({
   onToggleKeyword,
 }: ItemRowProps) {
   const highlight = terms as string[];
+  const thumbnail = item.meta?.thumbnail;
   const shown = useMemo(() => displayKeywords(keywords, activeKeywords, LIST_KEYWORDS), [keywords, activeKeywords]);
   return (
     <div
@@ -104,6 +105,14 @@ const ItemRow = memo(function ItemRow({
         onClick={(event) => event.stopPropagation()}
         onChange={() => onToggle(item.id)}
       />
+      {thumbnail && (
+        <img
+          className="rt-item-thumb"
+          src={thumbnail}
+          alt=""
+          draggable={false}
+        />
+      )}
       <div style={{ minWidth: 0, flex: 1 }}>
         <Highlight highlight={highlight} size="sm" fw={600} lineClamp={2} lh={1.35}>
           {item.title || 'Untitled'}

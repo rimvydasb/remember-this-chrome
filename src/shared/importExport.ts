@@ -49,6 +49,9 @@ function parseMeta(value: unknown): ItemMeta | undefined {
   const meta: ItemMeta = {};
   if (typeof value.channel === 'string') meta.channel = value.channel;
   if (typeof value.videoId === 'string') meta.videoId = value.videoId;
+  if (typeof value.thumbnail === 'string' && value.thumbnail.startsWith('data:image/')) {
+    meta.thumbnail = value.thumbnail;
+  }
   if (typeof value.language === 'string') meta.language = value.language;
   if (typeof value.durationSec === 'number' && Number.isFinite(value.durationSec)) {
     meta.durationSec = value.durationSec;
