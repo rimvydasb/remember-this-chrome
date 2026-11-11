@@ -150,3 +150,5 @@ vite.config.ts.timestamp-*
 
 # IDE
 .idea
+# Extension build output
+dist/

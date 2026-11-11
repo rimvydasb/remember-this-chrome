@@ -1,0 +1,58 @@
+body {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+}
+
+.rt-list-toolbar {
+  padding: 10px 14px;
+  min-height: 46px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+}
+
+.rt-item {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6));
+  border-left: 3px solid transparent;
+  transition: background-color 80ms ease;
+  /* Lets the browser skip layout and paint for off-screen rows (large libraries). */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 104px;
+}
+
+.rt-item:hover {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.rt-item[data-selected] {
+  background: light-dark(var(--mantine-color-indigo-0), rgba(76, 110, 245, 0.14));
+  border-left-color: var(--mantine-color-indigo-6);
+}
+
+.rt-main-inner {
+  padding: 40px 32px 64px;
+  min-height: calc(100vh - 64px);
+  background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
+}
+
+@media (max-width: 48em) {
+  .rt-main-inner {
+    padding: 24px 16px 48px;
+  }
+}
+
+.rt-reader p {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  margin-bottom: 1.1em;
+  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-dark-0));
+}
+
+.rt-reader mark {
+  border-radius: 3px;
+  padding: 0 1px;
+}

@@ -1,0 +1,162 @@
+import { ITEM_TYPES, type ItemMeta, type ItemType, type SavedItem } from './types';
+
+export const EXPORT_FORMAT = 'remember-this-library';
+export const EXPORT_VERSION = 1;
+
+export interface ExportPayload {
+  format: typeof EXPORT_FORMAT;
+  version: number;
+  exportedAt: string;
+  count: number;
+  items: SavedItem[];
+}
+
+export function buildExportPayload(items: readonly SavedItem[], now = new Date()): ExportPayload {
+  return {
+    format: EXPORT_FORMAT,
+    version: EXPORT_VERSION,
+    exportedAt: now.toISOString(),
+    count: items.length,
+    items: [...items],
+  };
+}
+
+export class ImportError extends Error {}
+
+export interface ParsedImport {
+  items: SavedItem[];
+  /** Records that failed validation and were skipped. */
+  rejected: { index: number; reason: string }[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseMeta(value: unknown): ItemMeta | undefined {
+  if (!isRecord(value)) return undefined;
+  const meta: ItemMeta = {};
+  if (typeof value.channel === 'string') meta.channel = value.channel;
+  if (typeof value.videoId === 'string') meta.videoId = value.videoId;
+  if (typeof value.language === 'string') meta.language = value.language;
+  if (typeof value.durationSec === 'number' && Number.isFinite(value.durationSec)) {
+    meta.durationSec = value.durationSec;
+  }
+  return Object.keys(meta).length > 0 ? meta : undefined;
+}
+
+/** Validates one record. Returns the normalized item, or a reason string when it is invalid. */
+export function validateItem(value: unknown): SavedItem | string {
+  if (!isRecord(value)) return 'not an object';
+  const { id, title, url, type, content, timestamp } = value;
+  if (typeof id !== 'string' || id.trim() === '') return 'missing "id"';
+  if (typeof title !== 'string') return 'missing "title"';
+  if (typeof url !== 'string') return 'missing "url"';
+  if (typeof type !== 'string' || !ITEM_TYPES.includes(type as ItemType)) return `unknown "type"`;
+  if (typeof content !== 'string') return 'missing "content"';
+  if (typeof timestamp !== 'string' || Number.isNaN(Date.parse(timestamp))) return 'invalid "timestamp"';
+
+  const item: SavedItem = {
+    id,
+    title,
+    url,
+    type: type as ItemType,
+    content,
+    timestamp: new Date(timestamp).toISOString(),
+  };
+  const meta = parseMeta(value.meta);
+  if (meta) item.meta = meta;
+  return item;
+}
+
+/**
+ * Parses an import file. Accepts the export envelope (`{ format, items: [...] }`) or a bare array
+ * of items. Throws `ImportError` when the file is not a usable library; skips invalid records.
+ */
+export function parseImport(text: string): ParsedImport {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new ImportError('The file is not valid JSON.');
+  }
+
+  let rawItems: unknown;
+  if (Array.isArray(data)) {
+    rawItems = data;
+  } else if (isRecord(data) && Array.isArray(data.items)) {
+    if (data.format !== undefined && data.format !== EXPORT_FORMAT) {
+      throw new ImportError(`Unknown file format "${String(data.format)}".`);
+    }
+    if (typeof data.version === 'number' && data.version > EXPORT_VERSION) {
+      throw new ImportError(
+        `The file was made by a newer version of Remember This (format v${data.version}). Update the extension first.`,
+      );
+    }
+    rawItems = data.items;
+  } else {
+    throw new ImportError('The file does not contain a Remember This library.');
+  }
+
+  const byId = new Map<string, SavedItem>();
+  const rejected: ParsedImport['rejected'] = [];
+  (rawItems as unknown[]).forEach((raw, index) => {
+    const result = validateItem(raw);
+    if (typeof result === 'string') {
+      rejected.push({ index, reason: result });
+      return;
+    }
+    const existing = byId.get(result.id);
+    if (!existing || existing.timestamp < result.timestamp) byId.set(result.id, result);
+  });
+
+  if (byId.size === 0 && rejected.length > 0) {
+    throw new ImportError(`No valid records found (${rejected.length} invalid).`);
+  }
+  return { items: [...byId.values()], rejected };
+}
+
+export type ImportMode = 'merge' | 'replace';
+
+export interface ImportPlan {
+  toWrite: SavedItem[];
+  toDelete: string[];
+  added: number;
+  updated: number;
+  unchanged: number;
+  removed: number;
+}
+
+/**
+ * Computes the storage changes for an import.
+ * - `merge`: adds new records; replaces an existing record only when the imported copy is newer.
+ * - `replace`: the library becomes exactly the imported records.
+ */
+export function planImport(
+  existing: readonly SavedItem[],
+  incoming: readonly SavedItem[],
+  mode: ImportMode,
+): ImportPlan {
+  const existingById = new Map(existing.map((item) => [item.id, item]));
+  const plan: ImportPlan = { toWrite: [], toDelete: [], added: 0, updated: 0, unchanged: 0, removed: 0 };
+
+  for (const item of incoming) {
+    const current = existingById.get(item.id);
+    if (!current) {
+      plan.toWrite.push(item);
+      plan.added++;
+    } else if (mode === 'replace' || Date.parse(item.timestamp) > Date.parse(current.timestamp)) {
+      plan.toWrite.push(item);
+      plan.updated++;
+    } else {
+      plan.unchanged++;
+    }
+  }
+
+  if (mode === 'replace') {
+    const incomingIds = new Set(incoming.map((item) => item.id));
+    plan.toDelete = existing.filter((item) => !incomingIds.has(item.id)).map((item) => item.id);
+    plan.removed = plan.toDelete.length;
+  }
+  return plan;
+}

@@ -58,14 +58,14 @@ interface SavedItem {
 
 ### Privacy & Security
 
-- [ ] **NFR-1 Zero external telemetry:** All content and metadata stay on the user's machine unless the user explicitly
+- [x] **NFR-1 Zero external telemetry:** All content and metadata stay on the user's machine unless the user explicitly
   exports them as a file download.
-- [ ] **NFR-2 No third-party services:** No external API keys or third-party tracking services are required or allowed.
+- [x] **NFR-2 No third-party services:** No external API keys or third-party tracking services are required or allowed.
 
 ### Performance
 
-- [ ] **NFR-3:** Content extraction on YouTube and general web pages completes in under 500 ms.
-- [ ] **NFR-4:** Full-text search in the dashboard stays smooth across at least 1,000 saved transcript records.
+- [x] **NFR-3:** Content extraction on YouTube and general web pages completes in under 500 ms.
+- [x] **NFR-4:** Full-text search in the dashboard stays smooth across at least 1,000 saved transcript records.
 
 ---
 
@@ -73,57 +73,61 @@ interface SavedItem {
 
 ### 5.1 Project Setup
 
-- [ ] Initialize the TypeScript + Vite project with multi-entry build (content script, background/service worker, popup,
+- [x] Initialize the TypeScript + Vite project with multi-entry build (content script, background/service worker, popup,
   dashboard).
-- [ ] Create `manifest.json` (Manifest V3) with the required permissions.
-- [ ] **FR-3.2** Declare the `"unlimitedStorage"` permission to prevent local storage quota failures.
+- [x] Create `manifest.json` (Manifest V3) with the required permissions.
+- [x] **FR-3.2** Declare the `"unlimitedStorage"` permission to prevent local storage quota failures.
 
 ### 5.2 YouTube Transcript Extraction
 
-- [ ] **FR-1.1** Run the content script on `https://www.youtube.com/watch*` inside the active browser context, so it
+- [x] **FR-1.1** Run the content script on `https://www.youtube.com/watch*` inside the active browser context, so it
   inherits the user's logged-in cookies and YouTube Premium privileges.
-- [ ] **FR-1.2** Query internal player contexts (`window.ytInitialPlayerResponse` or track endpoints) to retrieve
+    - Implementation: the extractor is injected on demand with `chrome.scripting.executeScript` into the page's MAIN
+      world, not declared as a permanent content script. It runs only when the user captures.
+- [x] **FR-1.2** Query internal player contexts (`window.ytInitialPlayerResponse` or track endpoints) to retrieve
   transcript caption tracks.
-- [ ] **FR-1.3** Sanitize extracted XML/JSON lines:
-    - [ ] Decode HTML entities (for example `&#39;` to `'`).
-    - [ ] Remove timestamp gaps and redundant carriage returns.
-    - [ ] Concatenate fragments into continuous, readable paragraph blocks.
-- [ ] **FR-1.4** *(Should)* Let the user copy the clean transcript to the system clipboard.
+    - Caption URLs now need a player-signed `pot` token. The extractor reuses or triggers the player's signed URL.
+      InnerTube `get_transcript` returned `400 FAILED_PRECONDITION` (November 2026) and is a fallback only.
+- [x] **FR-1.3** Sanitize extracted XML/JSON lines:
+    - [x] Decode HTML entities (for example `&#39;` to `'`).
+    - [x] Remove timestamp gaps and redundant carriage returns.
+    - [x] Concatenate fragments into continuous, readable paragraph blocks.
+- [x] **FR-1.4** *(Should)* Let the user copy the clean transcript to the system clipboard.
 
 ### 5.3 General Web Content Capture (Placeholder)
 
-- [ ] **FR-2.1** On non-YouTube pages (`<all_urls>`), show a "Not Implemented" message. Real extraction is deferred to
+- [x] **FR-2.1** On non-YouTube pages (`<all_urls>`), show a "Not Implemented" message. Real extraction is deferred to
   Phase II.
 
 ### 5.4 Storage & Data Management
 
-- [ ] **FR-3.1** Persist captured items in `chrome.storage.local`.
-- [ ] **FR-3.3** Store records using the `SavedItem` schema above.
+- [x] **FR-3.1** Persist captured items in `chrome.storage.local`.
+- [x] **FR-3.3** Store records using the `SavedItem` schema above.
 
 ### 5.5 Dashboard UI
 
-- [ ] **FR-4.1** Provide a full-page dashboard, reachable through `chrome.runtime.getURL('dashboard.html')` or
+- [x] **FR-4.1** Provide a full-page dashboard, reachable through `chrome.runtime.getURL('dashboard.html')` or
   `options_page`.
-- [ ] **FR-4.2** Render all stored captures, sorted by most recent first.
-- [ ] **FR-4.3** Provide a real-time full-text search input that filters across item titles and content.
-- [ ] **FR-4.4** Let users delete individual items or clear the entire library.
-- [ ] Build the dashboard with React and Mantine, with a well-designed, polished UI.
-- [ ] Export one or many YouTube transcripts as Markdown.
+- [x] **FR-4.2** Render all stored captures, sorted by most recent first.
+- [x] **FR-4.3** Provide a real-time full-text search input that filters across item titles and content.
+- [x] **FR-4.4** Let users delete individual items or clear the entire library.
+- [x] Build the dashboard with React and Mantine, with a well-designed, polished UI.
+- [x] Export one or many YouTube transcripts as Markdown.
 
 ### 5.6 Cross-Device Sync (Import / Export)
 
-- [ ] **FR-5.1 Export:** Provide an **"Export JSON"** button that compiles `chrome.storage.local` data into a formatted
+- [x] **FR-5.1 Export:** Provide an **"Export JSON"** button that compiles `chrome.storage.local` data into a formatted
   `.json` file and triggers a browser download, so the user can save it to iCloud Drive or another cloud folder.
-- [ ] **FR-5.2 Import:** Provide an **"Import JSON"** file uploader that:
-    - [ ] Validates the imported payload structure.
-    - [ ] Merges or replaces local records without data corruption.
-    - [ ] Updates the dashboard view after import.
+- [x] **FR-5.2 Import:** Provide an **"Import JSON"** file uploader that:
+    - [x] Validates the imported payload structure.
+    - [x] Merges or replaces local records without data corruption.
+    - [x] Updates the dashboard view after import.
 
 ### 5.7 Phase I Quality Checks
 
-- [ ] Verify NFR-3 (extraction under 500 ms).
-- [ ] Verify NFR-4 (search with 1,000+ records).
-- [ ] Confirm no network requests leave the extension (NFR-1, NFR-2).
+- [x] Verify NFR-3 (extraction under 500 ms). Measured 202–284 ms on live videos.
+- [x] Verify NFR-4 (search with 1,000+ records). Unit test: ~27 ms over 1,000 records (~50 MB).
+- [x] Confirm no network requests leave the extension (NFR-1, NFR-2). Only same-origin youtube.com requests.
 
 ---
 
