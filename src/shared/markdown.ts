@@ -1,5 +1,7 @@
 import type { SavedItem } from './types';
 import { countWords } from './transcript';
+import { chapterUrl } from './videoDetails';
+import { getYouTubeVideoId } from './youtube';
 
 export const TYPE_LABELS: Record<SavedItem['type'], string> = {
   youtube_transcript: 'YouTube transcript',
@@ -30,11 +32,47 @@ export function itemToMarkdown(item: SavedItem, headingLevel = 1): string {
   if (item.meta?.channel) lines.push(`- **Channel:** ${escapeInline(item.meta.channel)}`);
   if (item.meta?.durationSec) lines.push(`- **Duration:** ${formatDuration(item.meta.durationSec)}`);
   if (item.meta?.language) lines.push(`- **Language:** ${escapeInline(item.meta.language)}`);
+  if (item.meta?.viewCount !== undefined) {
+    lines.push(`- **Views:** ${item.meta.viewCount.toLocaleString('en-US')} (at capture)`);
+  }
   lines.push(`- **Type:** ${TYPE_LABELS[item.type]}`);
   lines.push(`- **Saved:** ${item.timestamp}`);
   lines.push(`- **Words:** ${countWords(item.content)}`);
+
+  const section = `${hashes}#`;
+  const sections = detailSections(item, section);
+  if (sections.length > 0) lines.push('', ...sections, `${section} Transcript`);
   lines.push('', item.content.trim(), '');
   return lines.join('\n');
+}
+
+/** Chapters, links, and description sections. Each ends with an empty line. */
+function detailSections(item: SavedItem, heading: string): string[] {
+  const lines: string[] = [];
+  const videoId = item.meta?.videoId ?? getYouTubeVideoId(item.url);
+  const chapters = item.meta?.chapters ?? [];
+  if (chapters.length > 0) {
+    lines.push(`${heading} Chapters`, '');
+    for (const chapter of chapters) {
+      const stamp = formatDuration(chapter.startSec);
+      const link = videoId ? `[${stamp}](${chapterUrl(videoId, chapter.startSec)})` : stamp;
+      lines.push(`- ${link} ${escapeInline(chapter.title)}`);
+    }
+    lines.push('');
+  }
+  const links = item.meta?.links ?? [];
+  if (links.length > 0) {
+    lines.push(`${heading} Links`, '');
+    for (const link of links) lines.push(`- ${link.label ? `${escapeInline(link.label)}: ` : ''}<${link.url}>`);
+    lines.push('');
+  }
+  const description = item.meta?.description?.trim();
+  if (description) {
+    lines.push(`${heading} Description`, '');
+    lines.push(...description.split('\n').map((line) => (line.trim() ? `> ${line.trimEnd()}` : '>')));
+    lines.push('');
+  }
+  return lines;
 }
 
 /** Renders one item as a standalone document, or several items as one combined document. */

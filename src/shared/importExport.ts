@@ -42,7 +42,45 @@ function parseMeta(value: unknown): ItemMeta | undefined {
   if (typeof value.durationSec === 'number' && Number.isFinite(value.durationSec)) {
     meta.durationSec = value.durationSec;
   }
+  if (typeof value.description === 'string') meta.description = value.description;
+  if (typeof value.viewCount === 'number' && Number.isInteger(value.viewCount) && value.viewCount >= 0) {
+    meta.viewCount = value.viewCount;
+  }
+  const chapters = parseList(value.chapters, (entry) =>
+    typeof entry.startSec === 'number' &&
+    Number.isFinite(entry.startSec) &&
+    entry.startSec >= 0 &&
+    typeof entry.title === 'string'
+      ? { startSec: entry.startSec, title: entry.title }
+      : undefined,
+  );
+  if (chapters) meta.chapters = chapters;
+  const links = parseList(value.links, (entry) => {
+    if (typeof entry.url !== 'string' || !isHttpUrl(entry.url)) return undefined;
+    return typeof entry.label === 'string' ? { url: entry.url, label: entry.label } : { url: entry.url };
+  });
+  if (links) meta.links = links;
   return Object.keys(meta).length > 0 ? meta : undefined;
+}
+
+/** Keeps the valid entries of an array of records. Returns undefined when none are valid. */
+function parseList<T>(value: unknown, parse: (entry: Record<string, unknown>) => T | undefined): T[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const result = value.flatMap((entry) => {
+    const parsed = isRecord(entry) ? parse(entry) : undefined;
+    return parsed === undefined ? [] : [parsed];
+  });
+  return result.length > 0 ? result : undefined;
+}
+
+/** Only http(s) links are kept, so an imported file cannot add `javascript:` links to the dashboard. */
+function isHttpUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 /** Validates one record. Returns the normalized item, or a reason string when it is invalid. */

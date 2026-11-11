@@ -2,6 +2,7 @@ import { extractYouTubeTranscript, type ExtractionResult } from '../content/yout
 import { upsertCapture } from '../shared/storage';
 import { countWords, formatTranscript } from '../shared/transcript';
 import type { CaptureResponse } from '../shared/types';
+import { buildVideoMeta } from '../shared/videoDetails';
 import { canonicalYouTubeUrl, getYouTubeVideoId } from '../shared/youtube';
 
 async function runExtractor(tabId: number): Promise<ExtractionResult> {
@@ -54,12 +55,7 @@ export async function captureTab(tabId: number): Promise<CaptureResponse> {
     url: canonicalYouTubeUrl(result.videoId),
     type: 'youtube_transcript',
     content,
-    meta: {
-      videoId: result.videoId,
-      ...(result.channel ? { channel: result.channel } : {}),
-      ...(result.language ? { language: result.language } : {}),
-      ...(result.durationSec ? { durationSec: result.durationSec } : {}),
-    },
+    meta: buildVideoMeta(result),
   });
 
   return {

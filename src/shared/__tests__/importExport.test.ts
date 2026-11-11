@@ -72,3 +72,37 @@ describe('planImport', () => {
     expect(plan.toDelete).toEqual(['z']);
   });
 });
+
+describe('video details in import files', () => {
+  it('round-trips description, views, chapters, and links', () => {
+    const meta = {
+      videoId: 'a',
+      description: 'Text https://a.example',
+      viewCount: 407883,
+      chapters: [{ startSec: 0, title: 'Start' }],
+      links: [{ url: 'https://a.example', label: 'A' }, { url: 'https://b.example' }],
+    };
+    const items = [item('a', '2026-01-01T00:00:00.000Z', { meta })];
+    expect(parseImport(JSON.stringify(buildExportPayload(items))).items).toEqual(items);
+  });
+
+  it('drops malformed video details and unsafe links', () => {
+    const parsed = parseImport(
+      JSON.stringify([
+        item('a', '2026-01-01T00:00:00.000Z', {
+          meta: {
+            channel: 'TED',
+            viewCount: -5,
+            chapters: [{ startSec: 'x', title: 'Bad' }, { startSec: 3, title: 'Good' }, 'nope'],
+            links: [{ url: 'javascript:alert(1)' }, { url: 'not a url' }, { url: 'https://ok.example', label: 7 }],
+          } as unknown as SavedItem['meta'],
+        }),
+      ]),
+    );
+    expect(parsed.items[0]!.meta).toEqual({
+      channel: 'TED',
+      chapters: [{ startSec: 3, title: 'Good' }],
+      links: [{ url: 'https://ok.example' }],
+    });
+  });
+});

@@ -2,12 +2,33 @@ export type ItemType = 'youtube_transcript' | 'webpage_text';
 
 export const ITEM_TYPES: readonly ItemType[] = ['youtube_transcript', 'webpage_text'];
 
+/** A chapter of a video. */
+export interface VideoChapter {
+  /** Start of the chapter, in seconds from the start of the video. */
+  startSec: number;
+  title: string;
+}
+
+/** A URL mentioned in the source (for example in a video description). */
+export interface VideoLink {
+  url: string;
+  /** Text next to the URL that tells what it is, when there is any. */
+  label?: string;
+}
+
 /** Optional extra metadata. Not required by the PRD schema; older or imported items can omit it. */
 export interface ItemMeta {
   channel?: string;
   videoId?: string;
   language?: string;
   durationSec?: number;
+  /** The video description, as the author wrote it. */
+  description?: string;
+  /** View count at capture time (`SavedItem.timestamp`). */
+  viewCount?: number;
+  chapters?: VideoChapter[];
+  /** URLs mentioned in the description, in order of first appearance. */
+  links?: VideoLink[];
 }
 
 /** A captured record, as defined in the PRD data schema (section 3). */

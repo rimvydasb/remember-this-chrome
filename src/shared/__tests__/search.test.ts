@@ -71,3 +71,17 @@ describe('search', () => {
     expect(searchMs).toBeLessThan(100);
   });
 });
+
+describe('search in descriptions', () => {
+  it('matches description text, and snippets still come from the content', () => {
+    const items = [
+      { ...make('1', 'Video', 'Spoken words only.'), meta: { description: 'See the verification loop docs' } },
+      make('2', 'Other', 'Nothing here.'),
+    ];
+    const index = buildSearchIndex(items);
+    expect(filterItems(items, index, parseQuery('verification')).map((i) => i.id)).toEqual(['1']);
+    expect(makeSnippet(items[0]!.content, ['verification'], 90, getIndexEntry(index, items[0]!))).toBe(
+      'Spoken words only.',
+    );
+  });
+});

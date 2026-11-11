@@ -19,6 +19,7 @@ import {
   IconClipboardCheck,
   IconClock,
   IconExternalLink,
+  IconEye,
   IconMarkdown,
   IconTrash,
   IconUser,
@@ -31,6 +32,7 @@ import type { SavedItem } from '../shared/types';
 import { formatDateTime, formatNumber, readingTime } from '../ui/format';
 import { confirmDelete, exportMarkdown } from './actions';
 import { KeywordBadges } from './KeywordBadges';
+import { VideoDetails } from './VideoDetails';
 
 interface ItemReaderProps {
   item: SavedItem;
@@ -87,6 +89,15 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
             {formatNumber(words)} words · {readingTime(words)}
             {item.meta?.durationSec ? ` · ${formatDuration(item.meta.durationSec)} video` : ''}
           </Meta>
+          {item.meta?.viewCount !== undefined && (
+            <Tooltip label={`View count when captured (${formatDateTime(item.timestamp)})`} withArrow>
+              <div>
+                <Meta icon={<IconEye size={15} />}>
+                  {formatNumber(item.meta.viewCount)} {item.meta.viewCount === 1 ? 'view' : 'views'} at capture
+                </Meta>
+              </div>
+            </Tooltip>
+          )}
         </Group>
 
         {keywords && keywords.length > 0 && (
@@ -136,6 +147,8 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
           {item.url}
         </Anchor>
       </Stack>
+
+      <VideoDetails item={item} />
 
       <Divider />
 

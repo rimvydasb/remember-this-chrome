@@ -7,6 +7,12 @@ export interface ExtractionSuccess {
   channel?: string;
   language?: string;
   durationSec?: number;
+  /** Full description text (URLs are not shortened). */
+  description?: string;
+  /** Exact view count, as YouTube reports it (digits, maybe with separators). */
+  viewCount?: string;
+  /** Chapters from the player bar (author or auto-generated), when the page data has them. */
+  chapters?: { startSec: number; title: string }[];
   source: 'innertube' | 'timedtext' | 'transcript-panel';
   segments: RawSegment[];
   elapsedMs: number;
@@ -159,6 +165,32 @@ export async function extractYouTubeTranscript(): Promise<ExtractionResult> {
   const durationSec = Number(player?.videoDetails?.lengthSeconds) || undefined;
   const tracks: Any[] = player?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
 
+  // --- Description, view count, chapters ---
+  const firstString = (...values: Any[]): string | undefined =>
+    values.find((value) => typeof value === 'string' && value.trim() !== '');
+  const description = firstString(
+    player?.videoDetails?.shortDescription,
+    findAll(pageData, 'attributedDescription', 1)[0]?.content,
+    findAll(pageData, 'attributedDescriptionBodyText', 1)[0]?.content,
+  );
+  const viewCountRenderer = findAll(pageData, 'videoViewCountRenderer', 1)[0];
+  const viewCount = firstString(
+    player?.videoDetails?.viewCount,
+    viewCountRenderer?.originalViewCount,
+    runsText(viewCountRenderer?.viewCount),
+  );
+  const chapters: { startSec: number; title: string }[] = [];
+  try {
+    for (const chapter of findAll(pageData, 'chapterRenderer')) {
+      const startMs = Number(chapter?.timeRangeStartMillis);
+      const chapterTitle = runsText(chapter?.title).trim();
+      if (Number.isFinite(startMs) && chapterTitle)
+        chapters.push({ startSec: Math.floor(startMs / 1000), title: chapterTitle });
+    }
+  } catch {
+    /* ignore: chapters are optional */
+  }
+
   const success = (
     source: ExtractionSuccess['source'],
     segments: RawSegment[],
@@ -170,6 +202,9 @@ export async function extractYouTubeTranscript(): Promise<ExtractionResult> {
     channel,
     durationSec,
     language,
+    description,
+    viewCount,
+    chapters: chapters.length > 0 ? chapters : undefined,
     source,
     segments,
     elapsedMs: Math.round(performance.now() - startedAt),
