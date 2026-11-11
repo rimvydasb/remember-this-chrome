@@ -12,6 +12,7 @@ import {
   getItem,
   isItemKey,
   putItems,
+  setAiTags,
   setItemsMark,
   upsertCapture,
 } from '../storage';
@@ -201,5 +202,40 @@ describe('marks', () => {
       content: 'New content',
     });
     expect(updated.mark).toBe('loved');
+  });
+});
+
+describe('AI tags', () => {
+  const tags = (...values: string[]) => ({ tags: values, model: 'qwen3-8b', createdAt: '2026-03-01T00:00:00.000Z' });
+
+  it('stores tags without changing the timestamp', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z')]);
+    expect(await setAiTags('a', tags('agents'))).toBe(true);
+    const stored = await getItem('a');
+    expect(stored?.aiTags).toEqual(tags('agents'));
+    expect(stored?.timestamp).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('keeps existing tags with onlyIfMissing, and replaces them without it', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z', { aiTags: tags('first') })]);
+    expect(await setAiTags('a', tags('second'), { onlyIfMissing: true })).toBe(false);
+    expect((await getItem('a'))?.aiTags?.tags).toEqual(['first']);
+    expect(await setAiTags('a', tags('second'))).toBe(true);
+    expect((await getItem('a'))?.aiTags?.tags).toEqual(['second']);
+  });
+
+  it('does nothing for a missing item', async () => {
+    expect(await setAiTags('missing', tags('x'))).toBe(false);
+  });
+
+  it('keeps AI tags when the item is captured again', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z', { aiTags: tags('agents') })]);
+    const { item: updated } = await upsertCapture({
+      title: 'New title',
+      url: 'https://www.youtube.com/watch?v=a',
+      type: 'youtube_transcript',
+      content: 'New content',
+    });
+    expect(updated.aiTags).toEqual(tags('agents'));
   });
 });

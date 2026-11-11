@@ -6,6 +6,8 @@ export interface LlmSettings {
   model: string;
   /** Instruction sent to the model together with the transcript. */
   summaryPrompt: string;
+  /** Generate item tags with the LLM in the background. Keyword extraction is the fallback. */
+  useForTags: boolean;
 }
 
 export interface Settings {
@@ -24,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
     baseUrl: 'http://192.168.1.220:1234',
     model: '',
     summaryPrompt: DEFAULT_SUMMARY_PROMPT,
+    useForTags: true,
   },
 };
 
@@ -33,7 +36,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /** Fills missing or invalid values of stored settings with the defaults. */
 export function normalizeSettings(value: unknown): Settings {
   const llm = isRecord(value) && isRecord(value.llm) ? value.llm : {};
-  const text = (key: keyof LlmSettings, allowEmpty: boolean) => {
+  const text = (key: 'baseUrl' | 'model' | 'summaryPrompt', allowEmpty: boolean) => {
     const raw = llm[key];
     return typeof raw === 'string' && (allowEmpty || raw.trim() !== '') ? raw : DEFAULT_SETTINGS.llm[key];
   };
@@ -42,6 +45,7 @@ export function normalizeSettings(value: unknown): Settings {
       baseUrl: text('baseUrl', false).trim(),
       model: text('model', true).trim(),
       summaryPrompt: text('summaryPrompt', false),
+      useForTags: typeof llm.useForTags === 'boolean' ? llm.useForTags : DEFAULT_SETTINGS.llm.useForTags,
     },
   };
 }

@@ -2,6 +2,7 @@ import {
   FOLLOW_UP_TYPES,
   ITEM_MARKS,
   ITEM_TYPES,
+  type AiTags,
   type FollowUp,
   type FollowUpType,
   type ItemMark,
@@ -120,7 +121,20 @@ export function validateItem(value: unknown): SavedItem | string {
   const followUps = parseList(value.followUps, parseFollowUp);
   if (followUps) item.followUps = followUps;
   if (typeof value.mark === 'string' && ITEM_MARKS.includes(value.mark as ItemMark)) item.mark = value.mark as ItemMark;
+  const aiTags = parseAiTags(value.aiTags);
+  if (aiTags) item.aiTags = aiTags;
   return item;
+}
+
+function parseAiTags(value: unknown): AiTags | undefined {
+  if (!isRecord(value) || !Array.isArray(value.tags)) return undefined;
+  const tags = value.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim() !== '');
+  if (tags.length === 0 || typeof value.createdAt !== 'string' || Number.isNaN(Date.parse(value.createdAt))) {
+    return undefined;
+  }
+  const result: AiTags = { tags, createdAt: value.createdAt };
+  if (typeof value.model === 'string' && value.model) result.model = value.model;
+  return result;
 }
 
 function parseFollowUp(entry: Record<string, unknown>): FollowUp | undefined {

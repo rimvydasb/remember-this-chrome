@@ -160,3 +160,29 @@ describe('marks in import files', () => {
     expect(parseImport(JSON.stringify([raw('starred')])).items[0]).not.toHaveProperty('mark');
   });
 });
+
+describe('AI tags in import files', () => {
+  const raw = (aiTags: unknown) => ({
+    id: 'a',
+    title: 'T',
+    url: 'u',
+    type: 'youtube_transcript',
+    content: 'C',
+    timestamp: '2026-01-01T00:00:00.000Z',
+    aiTags,
+  });
+
+  it('round-trips AI tags through export', () => {
+    const aiTags = { tags: ['AI agents', 'gardening'], model: 'qwen3-8b', createdAt: '2026-03-01T00:00:00.000Z' };
+    const exported = JSON.stringify(buildExportPayload([item('a', undefined, { aiTags })]));
+    expect(parseImport(exported).items[0]!.aiTags).toEqual(aiTags);
+  });
+
+  it('keeps string tags and drops malformed AI tags', () => {
+    const parsed = parseImport(JSON.stringify([raw({ tags: ['ok', 3, ' '], createdAt: '2026-03-01T00:00:00.000Z' })]));
+    expect(parsed.items[0]!.aiTags).toEqual({ tags: ['ok'], createdAt: '2026-03-01T00:00:00.000Z' });
+    for (const bad of [{ tags: [], createdAt: '2026-03-01T00:00:00.000Z' }, { tags: ['x'] }, 'tags', null]) {
+      expect(parseImport(JSON.stringify([raw(bad)])).items[0]).not.toHaveProperty('aiTags');
+    }
+  });
+});

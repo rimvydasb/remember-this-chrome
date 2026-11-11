@@ -12,6 +12,7 @@ import { ImportDialog } from './ImportDialog';
 import { ItemList } from './ItemList';
 import { ItemReader } from './ItemReader';
 import { ListToolbar } from './ListToolbar';
+import { useAiTagging } from './useAiTagging';
 import { useKeywordIndex } from './useKeywordIndex';
 import { useLibrary } from './useLibrary';
 import { useLibraryFilters } from './useLibraryFilters';
@@ -36,6 +37,7 @@ export function App() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const selected = filtered.find((item) => item.id === selectedId) ?? filtered[0];
+  const aiTaggingId = useAiTagging(all, selected?.id);
   const checkedItems = useMemo(() => all.filter((item) => checked.has(item.id)), [all, checked]);
   const types = useMemo(() => ITEM_TYPES.filter((type) => all.some((item) => item.type === type)), [all]);
   const narrowed = terms.length > 0 || filters.activeCount > 0;
@@ -222,6 +224,7 @@ export function App() {
               keywords={keywordIndex.get(selected.id)}
               activeKeywords={filters.keywords}
               onToggleKeyword={filters.toggleKeyword}
+              aiTagging={aiTaggingId === selected.id}
             />
           )}
         </div>

@@ -1,4 +1,5 @@
 import type { LlmSettings } from './settings';
+import type { AiTags, SavedItem } from './types';
 
 /** Time limit of one generation call to the local LLM. Long transcripts on local hardware are slow. */
 export const LLM_TIMEOUT_MS = 3 * 60_000;
@@ -96,17 +97,14 @@ export function buildSummaryMessage(prompt: string, title: string, text: string)
   return `${prompt.trim()}\n\nTitle: ${title || 'Untitled'}\n\nTranscript:\n${text}`;
 }
 
-/** Summarizes a text with the configured local model (OpenAI-compatible chat completions API). */
-export async function summarize(
+/** Sends one user message to the configured model (OpenAI-compatible chat completions API). */
+async function chat(
   settings: LlmSettings,
-  title: string,
-  text: string,
-  options: LlmOptions = {},
+  content: string,
+  options: LlmOptions,
+  extra: Record<string, unknown> = {},
 ): Promise<LlmResult> {
-  const payload: Record<string, unknown> = {
-    messages: [{ role: 'user', content: buildSummaryMessage(settings.summaryPrompt, title, text) }],
-    stream: false,
-  };
+  const payload: Record<string, unknown> = { messages: [{ role: 'user', content }], stream: false, ...extra };
   if (settings.model) payload.model = settings.model;
 
   const data = (await request(
@@ -117,10 +115,93 @@ export async function summarize(
   )) as { model?: unknown; choices?: { message?: { content?: unknown } }[] };
 
   const raw = data.choices?.[0]?.message?.content;
-  const content = typeof raw === 'string' ? stripReasoning(raw) : '';
-  if (!content) throw new LlmError('The LLM returned an empty answer.');
+  const answer = typeof raw === 'string' ? stripReasoning(raw) : '';
+  if (!answer) throw new LlmError('The LLM returned an empty answer.');
   const model = typeof data.model === 'string' && data.model ? data.model : settings.model || undefined;
-  return model ? { content, model } : { content };
+  return model ? { content: answer, model } : { content: answer };
+}
+
+/** Summarizes a text with the configured local model. */
+export function summarize(
+  settings: LlmSettings,
+  title: string,
+  text: string,
+  options: LlmOptions = {},
+): Promise<LlmResult> {
+  return chat(settings, buildSummaryMessage(settings.summaryPrompt, title, text), options);
+}
+
+/** Most tags kept from an answer. */
+export const MAX_AI_TAGS = 10;
+
+export const TAG_PROMPT =
+  'List the main topics of this transcript as tags for a personal library. ' +
+  'Give 5 to 10 tags, most important first. A tag is a noun or a short noun phrase of 1 to 3 words ' +
+  '(for example "AI agents", "TypeScript", "code review"). ' +
+  'Name what the content is about, not words that are only said often. ' +
+  'Do not use generic tags such as "video", "discussion" or "technology", and do not use the channel name. ' +
+  'Write tags in lowercase, except names and acronyms. ' +
+  'Answer with a JSON array of strings only, for example ["AI agents", "software engineering"].';
+
+/** Builds the tagging message: the prompt, then the title, the description and the text. */
+export function buildTagMessage(item: Pick<SavedItem, 'title' | 'content' | 'meta'>): string {
+  const description = item.meta?.description?.trim();
+  return [
+    TAG_PROMPT,
+    `Title: ${item.title || 'Untitled'}`,
+    item.meta?.channel ? `Channel: ${item.meta.channel}` : '',
+    description ? `Description:\n${description}` : '',
+    `Transcript:\n${item.content}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+/**
+ * Reads tags from a model answer: a JSON array (also inside a code fence or after other text),
+ * else one tag per line or comma. Strips list markers and "#", drops duplicates and odd lengths.
+ */
+export function parseTags(answer: string): string[] {
+  let raw: string[] | undefined;
+  const array = answer.match(/\[[\s\S]*\]/);
+  if (array) {
+    try {
+      const parsed: unknown = JSON.parse(array[0]);
+      if (Array.isArray(parsed)) raw = parsed.filter((tag): tag is string => typeof tag === 'string');
+    } catch {
+      // Not valid JSON: fall back to lines and commas.
+    }
+  }
+  raw ??= answer.replace(/```\w*/g, '').split(/[\n,]/);
+
+  const tags: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of raw) {
+    const tag = entry
+      .replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '')
+      .replace(/^[\s"'#`]+|[\s"'`.]+$/g, '')
+      .replace(/\s+/g, ' ');
+    const key = tag.toLowerCase();
+    if (tag.length < 2 || tag.length > 40 || tag.split(' ').length > 4 || seen.has(key)) continue;
+    seen.add(key);
+    tags.push(tag);
+    if (tags.length >= MAX_AI_TAGS) break;
+  }
+  return tags;
+}
+
+/** Generates tags for an item with the configured model. */
+export async function generateTags(
+  settings: LlmSettings,
+  item: Pick<SavedItem, 'title' | 'content' | 'meta'>,
+  options: LlmOptions = {},
+): Promise<AiTags> {
+  const result = await chat(settings, buildTagMessage(item), options, { temperature: 0.2 });
+  const tags = parseTags(result.content);
+  if (tags.length === 0) throw new LlmError('The LLM answer has no tags.');
+  const aiTags: AiTags = { tags, createdAt: new Date().toISOString() };
+  if (result.model) aiTags.model = result.model;
+  return aiTags;
 }
 
 /** Lists the model identifiers that the server offers. Used to test the connection. */
@@ -146,4 +227,13 @@ export function requestLlmPermission(baseUrl: string): Promise<boolean> {
     return Promise.reject(error);
   }
   return chrome.permissions.request({ origins });
+}
+
+/** Tells whether the extension may call the server. Unlike `requestLlmPermission`, needs no user gesture. */
+export async function hasLlmPermission(baseUrl: string): Promise<boolean> {
+  try {
+    return await chrome.permissions.contains({ origins: [hostPermissionPattern(baseUrl)] });
+  } catch {
+    return false;
+  }
 }

@@ -1,6 +1,6 @@
 import { Badge, Group, type MantineSize } from '@mantine/core';
 import { IconUser } from '@tabler/icons-react';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import type { Keyword } from '../shared/keywords';
 
 interface KeywordBadgesProps {
@@ -8,6 +8,8 @@ interface KeywordBadgesProps {
   active: ReadonlySet<string>;
   onToggle: (key: string) => void;
   size?: MantineSize;
+  /** Shown in the same row, after the last keyword. */
+  after?: ReactNode;
 }
 
 /** Clickable keyword pills. Clicking one adds it to (or removes it from) the filters. */
@@ -16,8 +18,9 @@ export const KeywordBadges = memo(function KeywordBadges({
   active,
   onToggle,
   size = 'xs',
+  after,
 }: KeywordBadgesProps) {
-  if (keywords.length === 0) return null;
+  if (keywords.length === 0 && !after) return null;
   return (
     <Group gap={4}>
       {keywords.map((keyword) => (
@@ -29,6 +32,7 @@ export const KeywordBadges = memo(function KeywordBadges({
           size={size}
         />
       ))}
+      {after}
     </Group>
   );
 });

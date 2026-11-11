@@ -22,10 +22,18 @@ describe('settings', () => {
   });
 
   it('saves and loads settings', async () => {
-    const custom = { llm: { baseUrl: 'http://localhost:1234', model: 'gemma', summaryPrompt: 'Short.' } };
+    const custom = {
+      llm: { baseUrl: 'http://localhost:1234', model: 'gemma', summaryPrompt: 'Short.', useForTags: false },
+    };
     await saveSettings(custom);
     expect(chrome.storage.local.store.get(SETTINGS_KEY)).toEqual(custom);
     expect(await getSettings()).toEqual(custom);
+  });
+
+  it('uses the LLM for tagging by default', () => {
+    expect(DEFAULT_SETTINGS.llm.useForTags).toBe(true);
+    expect(normalizeSettings({ llm: { useForTags: 'no' } }).llm.useForTags).toBe(true);
+    expect(normalizeSettings({ llm: { useForTags: false } }).llm.useForTags).toBe(false);
   });
 
   it('replaces missing or invalid values with defaults', () => {

@@ -5,11 +5,13 @@ import {
   countKeywords,
   displayKeywords,
   filterByKeywords,
-  languageCode,
-  termFrequencies,
+  isAiGeneratedTags,
+  termCacheKey,
   topicKey,
+  type KeywordIndex,
   type TermCache,
 } from '../keywords';
+import { itemTerms } from '../terms';
 import type { SavedItem } from '../types';
 
 const make = (id: string, title: string, content: string, channel?: string): SavedItem => ({
@@ -43,46 +45,35 @@ const items = [
   ),
 ];
 
+const termsOf = (list: readonly SavedItem[]): TermCache =>
+  new Map(list.map((item) => [termCacheKey(item), itemTerms(item)]));
+const indexOf = (list: readonly SavedItem[]): KeywordIndex => buildKeywordIndex(list, termsOf(list));
+
 describe('keywords', () => {
-  it('drops stopwords, transcript fillers, digits and short words', () => {
-    const counts = termFrequencies("Um, yeah, so the GRAVITY is like... 42 gravity's pull, you know? (gravity)");
-    expect([...counts]).toEqual([
-      ['gravity', 3],
-      ['pull', 1],
-    ]);
-  });
-
-  it('maps language codes and YouTube language names', () => {
-    expect(languageCode('de-DE')).toBe('de');
-    expect(languageCode('German (auto-generated)')).toBe('de');
-    expect(languageCode('Lithuanian')).toBe('en');
-    expect(languageCode(undefined)).toBe('en');
-  });
-
   it('puts the channel first, then ranked topics', () => {
-    const index = buildKeywordIndex(items);
+    const index = indexOf(items);
     const first = index.get('1')!;
     expect(first[0]).toEqual({ key: channelKey('Kurzgesagt'), kind: 'channel', label: 'Kurzgesagt' });
-    expect(first.slice(1, 3).map((k) => k.label)).toEqual(['black', 'holes']);
+    expect(first.slice(1, 3).map((k) => k.label)).toEqual(['hole', 'gravity']);
     const second = index.get('2')!.map((k) => k.label);
     expect(second[1]).toBe('sourdough');
-    expect(second.slice(2, 4)).toEqual(expect.arrayContaining(['starter', 'basics']));
+    expect(second.slice(2, 4)).toEqual(expect.arrayContaining(['starter', 'basic']));
   });
 
   it('works without a channel', () => {
-    const index = buildKeywordIndex([make('x', 'Rust ownership', 'Ownership and borrowing. Ownership rules.')]);
+    const index = indexOf([make('x', 'Rust ownership', 'Ownership and borrowing. Ownership rules.')]);
     expect(index.get('x')![0]).toMatchObject({ kind: 'topic', label: 'ownership' });
   });
 
   it('matches any selected channel and all selected topics', () => {
-    const index = buildKeywordIndex(items);
+    const index = indexOf(items);
     const both = new Set([channelKey('Kurzgesagt'), channelKey('Baker Bob')]);
     expect(filterByKeywords(items, index, both).map((i) => i.id)).toEqual(['1', '2', '3']);
     expect(filterByKeywords(items, index, new Set([topicKey('gravity'), topicKey('sourdough')]))).toEqual([]);
   });
 
   it('counts and filters by keyword', () => {
-    const index = buildKeywordIndex(items);
+    const index = indexOf(items);
     const channels = countKeywords(items, index, 'channel');
     expect(channels.map((c) => [c.keyword.label, c.count])).toEqual([
       ['Kurzgesagt', 2],
@@ -90,43 +81,60 @@ describe('keywords', () => {
     ]);
     const kurz = new Set([channelKey('Kurzgesagt')]);
     expect(filterByKeywords(items, index, kurz).map((i) => i.id)).toEqual(['1', '3']);
-    expect(filterByKeywords(items, index, new Set([...kurz, topicKey('orbits')])).map((i) => i.id)).toEqual(['3']);
+    expect(filterByKeywords(items, index, new Set([...kurz, topicKey('orbit')])).map((i) => i.id)).toEqual(['3']);
     expect(filterByKeywords(items, index, new Set())).toHaveLength(3);
   });
 
   it('shows active filters among the displayed keywords', () => {
-    const keywords = buildKeywordIndex(items).get('1')!;
+    const keywords = indexOf(items).get('1')!;
     const last = keywords[keywords.length - 1]!;
     const shown = displayKeywords(keywords, new Set([last.key]), 3);
     expect(shown[0]!.kind).toBe('channel');
     expect(shown[1]).toEqual(last);
   });
 
-  it('reuses cached terms and drops stale entries', () => {
-    const cache: TermCache = new Map();
-    buildKeywordIndex(items, cache);
-    expect(cache.size).toBe(3);
-    buildKeywordIndex(items.slice(0, 2), cache);
-    expect(cache.size).toBe(2);
+  it('gives items without extracted terms only their channel', () => {
+    const index = buildKeywordIndex(items, termsOf(items.slice(1)));
+    expect(index.get('1')).toEqual([{ key: channelKey('Kurzgesagt'), kind: 'channel', label: 'Kurzgesagt' }]);
+    expect(index.get('2')!.length).toBeGreaterThan(1);
   });
 
-  it('indexes 1,000 transcript-sized records in reasonable time', () => {
-    const vocabulary = Array.from({ length: 3000 }, (_, i) => `word${String.fromCharCode(97 + (i % 26))}${i}`);
-    const library = Array.from({ length: 1000 }, (_, i) =>
-      make(
-        String(i),
-        `Video ${i}`,
-        Array.from({ length: 8000 }, (_, w) => vocabulary[(w * 31 + i * 7) % 3000]).join(' '),
-      ),
-    );
+  it('shows acronyms in capitals', () => {
+    const index = indexOf([make('a', 'AI news', 'AI models and AI agents. The agents use an API.')]);
+    expect(index.get('a')!.map((k) => k.label)).toEqual(expect.arrayContaining(['AI', 'agent', 'API']));
+    expect(index.get('a')!.find((k) => k.label === 'AI')!.key).toBe(topicKey('ai'));
+  });
+
+  it('uses AI tags instead of extracted terms, after the channel', () => {
+    const aiTags = { tags: ['AI agents', 'Gravity', 'ai  agents'], createdAt: '2026-03-01T00:00:00.000Z' };
+    const tagged = { ...items[0]!, aiTags };
+    const library = [tagged, ...items.slice(1)];
+    const index = indexOf(library);
+    expect(isAiGeneratedTags(tagged)).toBe(true);
+    expect(isAiGeneratedTags(items[1]!)).toBe(false);
+    expect(index.get('1')).toEqual([
+      { key: channelKey('Kurzgesagt'), kind: 'channel', label: 'Kurzgesagt' },
+      { key: topicKey('ai agents'), kind: 'topic', label: 'AI agents' },
+      { key: topicKey('gravity'), kind: 'topic', label: 'Gravity' },
+    ]);
+    // An AI tag and an extracted term with the same text are one filter.
+    expect(filterByKeywords(library, index, new Set([topicKey('gravity')])).map((i) => i.id)).toEqual(['1', '3']);
+  });
+
+  it('ranks 1,000 items in reasonable time', () => {
     const cache: TermCache = new Map();
-    let start = performance.now();
+    const library = Array.from({ length: 1000 }, (_, i) => make(String(i), `Video ${i}`, ''));
+    for (const item of library) {
+      const terms = Array.from({ length: 60 }, (_, t): [string, number] => [
+        `term${(t * 31 + Number(item.id) * 7) % 3000}`,
+        60 - t,
+      ]);
+      cache.set(termCacheKey(item), { terms, total: 8000, acronyms: [] });
+    }
+    const start = performance.now();
     buildKeywordIndex(library, cache);
-    const cold = performance.now() - start;
-    start = performance.now();
-    buildKeywordIndex(library, cache);
-    const warm = performance.now() - start;
-    console.log(`keywords: cold ${cold.toFixed(0)} ms, warm ${warm.toFixed(0)} ms`);
-    expect(warm).toBeLessThan(200);
+    const elapsed = performance.now() - start;
+    console.log(`keywords: ${elapsed.toFixed(0)} ms`);
+    expect(elapsed).toBeLessThan(200);
   });
 });

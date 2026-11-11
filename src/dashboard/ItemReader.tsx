@@ -32,10 +32,11 @@ import {
 import { useMemo } from 'react';
 import { formatDuration, TYPE_LABELS } from '../shared/markdown';
 import { countWords } from '../shared/transcript';
-import type { Keyword } from '../shared/keywords';
+import { isAiGeneratedTags, type Keyword } from '../shared/keywords';
 import type { SavedItem } from '../shared/types';
 import { formatDateTime, formatNumber, formatShortDate, readingTime } from '../ui/format';
 import { confirmDelete, exportMarkdown, markItems } from './actions';
+import { AiTagsButton } from './AiTagsButton';
 import { FOLLOW_UPS_ANCHOR, FollowUps } from './FollowUps';
 import { KeywordBadges } from './KeywordBadges';
 import { VideoDetails } from './VideoDetails';
@@ -46,6 +47,8 @@ interface ItemReaderProps {
   keywords: readonly Keyword[] | undefined;
   activeKeywords: ReadonlySet<string>;
   onToggleKeyword: (key: string) => void;
+  /** True while background tagging works on this item. */
+  aiTagging?: boolean;
 }
 
 function countMatches(text: string, terms: readonly string[]): number {
@@ -57,7 +60,14 @@ function countMatches(text: string, terms: readonly string[]): number {
   return total;
 }
 
-export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyword }: ItemReaderProps) {
+export function ItemReader({
+  item,
+  terms,
+  keywords,
+  activeKeywords,
+  onToggleKeyword,
+  aiTagging = false,
+}: ItemReaderProps) {
   const paragraphs = useMemo(() => item.content.split(/\n{2,}/), [item.content]);
   const words = useMemo(() => countWords(item.content), [item.content]);
   const matches = useMemo(() => (terms.length ? countMatches(item.content, terms) : 0), [item.content, terms]);
@@ -114,9 +124,13 @@ export function ItemReader({ item, terms, keywords, activeKeywords, onToggleKeyw
           )}
         </Group>
 
-        {keywords && keywords.length > 0 && (
-          <KeywordBadges keywords={keywords} active={activeKeywords} onToggle={onToggleKeyword} size="sm" />
-        )}
+        <KeywordBadges
+          keywords={keywords ?? []}
+          active={activeKeywords}
+          onToggle={onToggleKeyword}
+          size="sm"
+          after={isAiGeneratedTags(item) ? undefined : <AiTagsButton item={item} busy={aiTagging} />}
+        />
 
         <Group gap="xs" mt={4}>
           <CopyButton value={item.content} timeout={2000}>

@@ -1,4 +1,4 @@
-import { Alert, Anchor, Badge, Button, Group, Modal, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { Alert, Anchor, Badge, Button, Checkbox, Group, Modal, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconCircleCheck, IconPlugConnected } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
@@ -57,8 +57,8 @@ export function SettingsDialog({ opened, onClose }: SettingsDialogProps) {
     <Modal opened={opened} onClose={onClose} title="Settings" size="lg" centered>
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          Follow-ups such as summaries use a local LLM through an OpenAI-compatible API (for example LM Studio). The
-          transcript is sent only to this server.
+          Summaries and tags use a local LLM through an OpenAI-compatible API (for example LM Studio). The transcript
+          is sent only to this server.
         </Text>
 
         <TextInput
@@ -139,6 +139,13 @@ export function SettingsDialog({ opened, onClose }: SettingsDialogProps) {
             </Anchor>
           )}
         </Stack>
+
+        <Checkbox
+          label="Use LLM for tagging"
+          description="Generates tags for items in the background while the dashboard is open. Items show keyword-extraction tags until then, and when the LLM is not reachable."
+          checked={draft.useForTags}
+          onChange={(event) => update({ useForTags: event.currentTarget.checked })}
+        />
 
         <Group justify="flex-end" mt="sm">
           <Button variant="default" onClick={onClose}>

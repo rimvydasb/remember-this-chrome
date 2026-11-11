@@ -1,7 +1,7 @@
 import { planImport, type ImportMode, type ImportPlan } from './importExport';
 import { sortByRecent } from './search';
 import { mergeCapture, type Capture, type CaptureField } from './mergeCapture';
-import type { FollowUp, ItemMark, ItemType, SavedItem } from './types';
+import type { AiTags, FollowUp, ItemMark, ItemType, SavedItem } from './types';
 
 /**
  * Each record is stored under its own key (`item:<id>`) in `chrome.storage.local`, so saving
@@ -79,6 +79,21 @@ export async function addFollowUp(itemId: string, followUp: FollowUp): Promise<b
   const item = await getItem(itemId);
   if (!item) return false;
   await putItems([{ ...item, followUps: [...(item.followUps ?? []), followUp] }]);
+  return true;
+}
+
+/**
+ * Stores LLM-generated tags on an item. With `onlyIfMissing`, an item that already has AI tags is
+ * left alone (another dashboard tab may have tagged it). Returns false when nothing was stored.
+ */
+export async function setAiTags(
+  itemId: string,
+  aiTags: AiTags,
+  options: { onlyIfMissing?: boolean } = {},
+): Promise<boolean> {
+  const item = await getItem(itemId);
+  if (!item || (options.onlyIfMissing && item.aiTags)) return false;
+  await putItems([{ ...item, aiTags }]);
   return true;
 }
 
