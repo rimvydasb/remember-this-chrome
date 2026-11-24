@@ -242,6 +242,72 @@ body {
   background: light-dark(var(--mantine-color-violet-0), rgba(121, 80, 242, 0.06));
 }
 
+/* A question and its answer in the Questions block. */
+.rt-question {
+  border: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+  border-left: 3px solid var(--mantine-color-violet-5);
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+}
+
+.rt-question-head {
+  padding: 8px 8px 8px 14px;
+  background: light-dark(var(--mantine-color-violet-0), rgba(121, 80, 242, 0.08));
+}
+
+.rt-question-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding-top: 4px;
+}
+
+.rt-question-answer {
+  padding: 10px 14px 12px;
+}
+
+/* Settings dialog: vertical section tabs and prompt editors. */
+.rt-settings-tabs {
+  min-height: 460px;
+}
+
+.rt-settings-tabs .mantine-Tabs-list {
+  min-width: 170px;
+}
+
+.rt-settings-tabs .mantine-Tabs-panel {
+  padding-left: var(--mantine-spacing-lg);
+  min-width: 0;
+}
+
+.rt-prompt-field {
+  cursor: pointer;
+  text-transform: none;
+  font-family: var(--mantine-font-family-monospace);
+}
+
+.rt-prompt-editor textarea {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .rt-settings-tabs {
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .rt-settings-tabs .mantine-Tabs-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: var(--mantine-spacing-md);
+  }
+
+  .rt-settings-tabs .mantine-Tabs-panel {
+    padding-left: 0;
+  }
+}
+
 /* Long text preview with a fade-out. */
 .rt-clamp-content {
   overflow: hidden;

@@ -44,6 +44,7 @@ import { ClampedText } from './ClampedText';
 import { ContentBlock } from './ContentBlock';
 import { KeywordBadges } from './KeywordBadges';
 import { PageBreadcrumbs } from './PageBreadcrumbs';
+import { Questions } from './Questions';
 import { Summary } from './Summary';
 import { VideoDetails } from './VideoDetails';
 
@@ -252,6 +253,8 @@ export function ItemReader({
 
       <Stack gap="md">
         <Summary item={item} />
+
+        <Questions key={item.id} item={item} />
 
         <VideoDetails item={item} />
 

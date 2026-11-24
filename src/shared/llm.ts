@@ -1,3 +1,11 @@
+import {
+  buildPromptModel,
+  PromptTemplateError,
+  renderPrompt,
+  type PromptItem,
+  type PromptKind,
+  type PromptModel,
+} from './promptModel';
 import type { LlmSettings } from './settings';
 import type { AiTags, SavedItem } from './types';
 
@@ -68,7 +76,10 @@ async function request(settings: LlmSettings, path: string, init: RequestInit, o
     response = await doFetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   } catch (error) {
     if (error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
-      throw new LlmError(`The LLM did not answer within ${formatTimeout(timeoutMs)}.`);
+      throw new LlmError(
+        `The LLM did not answer within ${formatTimeout(timeoutMs)} (${normalizeBaseUrl(settings.baseUrl)}). ` +
+          'Check that the address is the current IP of the computer that runs the server and that the server is running.',
+      );
     }
     throw new LlmError(`Cannot reach the LLM server at ${normalizeBaseUrl(settings.baseUrl)}. Is it running?`);
   }
@@ -92,9 +103,33 @@ async function request(settings: LlmSettings, path: string, init: RequestInit, o
   }
 }
 
-/** Builds the user message: the configured prompt, then the source text. */
-export function buildSummaryMessage(prompt: string, title: string, text: string): string {
-  return `${prompt.trim()}\n\nTitle: ${title || 'Untitled'}\n\nTranscript:\n${text}`;
+function render(template: string, model: PromptModel, kind: PromptKind): string {
+  try {
+    return renderPrompt(template, model, kind);
+  } catch (error) {
+    if (error instanceof PromptTemplateError) {
+      throw new LlmError(`The ${kind} prompt in Settings has a template error: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+/** Builds the summary request from the summary prompt template. */
+export function buildSummaryMessage(template: string, item: PromptItem): string {
+  return render(template, buildPromptModel(item), 'summary');
+}
+
+/**
+ * Builds the question request from the question prompt template. `questionId` is the follow-up of
+ * the question when it is already saved; it is left out of `{{questions}}`.
+ */
+export function buildQuestionMessage(
+  template: string,
+  item: PromptItem,
+  question: string,
+  questionId?: string,
+): string {
+  return render(template, buildPromptModel(item, { question, questionId }), 'question');
 }
 
 /** Sends one user message to the configured model (OpenAI-compatible chat completions API). */
@@ -121,14 +156,19 @@ async function chat(
   return model ? { content: answer, model } : { content: answer };
 }
 
-/** Summarizes a text with the configured local model. */
-export function summarize(
+/** Summarizes an item with the configured local model. */
+export function summarize(settings: LlmSettings, item: PromptItem, options: LlmOptions = {}): Promise<LlmResult> {
+  return chat(settings, buildSummaryMessage(settings.summaryPrompt, item), options);
+}
+
+/** Answers a question about an item with the configured local model, from the item text only. */
+export function answerQuestion(
   settings: LlmSettings,
-  title: string,
-  text: string,
+  item: PromptItem,
+  question: { text: string; id?: string },
   options: LlmOptions = {},
 ): Promise<LlmResult> {
-  return chat(settings, buildSummaryMessage(settings.summaryPrompt, title, text), options);
+  return chat(settings, buildQuestionMessage(settings.questionPrompt, item, question.text, question.id), options);
 }
 
 /** Most tags kept from an answer. */

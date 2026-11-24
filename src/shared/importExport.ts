@@ -155,17 +155,21 @@ function parseAiTags(value: unknown): AiTags | undefined {
 }
 
 function parseFollowUp(entry: Record<string, unknown>): FollowUp | undefined {
-  const { id, type, content, createdAt, model } = entry;
+  const { id, type, userContent, createdAt, model } = entry;
+  // Files exported before `generatedContent` existed have the text in `content`.
+  const generatedContent = entry.generatedContent ?? entry.content;
   if (typeof id !== 'string' || id.trim() === '') return undefined;
   if (typeof type !== 'string' || !FOLLOW_UP_TYPES.includes(type as FollowUpType)) return undefined;
-  if (typeof content !== 'string') return undefined;
+  if (typeof generatedContent !== 'string') return undefined;
   if (typeof createdAt !== 'string' || Number.isNaN(Date.parse(createdAt))) return undefined;
+  if (type === 'user-question' && (typeof userContent !== 'string' || userContent.trim() === '')) return undefined;
   const followUp: FollowUp = {
     id,
     type: type as FollowUpType,
-    content,
+    generatedContent,
     createdAt: new Date(createdAt).toISOString(),
   };
+  if (typeof userContent === 'string' && userContent !== '') followUp.userContent = userContent;
   if (typeof model === 'string' && model !== '') followUp.model = model;
   return followUp;
 }

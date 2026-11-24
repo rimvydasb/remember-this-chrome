@@ -16,11 +16,28 @@ export function isItemKey(key: string): boolean {
   return key.startsWith(ITEM_KEY_PREFIX);
 }
 
+/**
+ * Reads a stored item. Follow-ups stored before `generatedContent` existed keep their text in
+ * `content`; this moves it to `generatedContent`.
+ */
+export function readStoredItem(value: unknown): SavedItem {
+  const item = value as SavedItem;
+  if (!item.followUps?.some((followUp) => typeof followUp.generatedContent !== 'string')) return item;
+  return {
+    ...item,
+    followUps: item.followUps.map((followUp) => {
+      if (typeof followUp.generatedContent === 'string') return followUp;
+      const { content, ...rest } = followUp as FollowUp & { content?: unknown };
+      return { ...rest, generatedContent: typeof content === 'string' ? content : '' };
+    }),
+  };
+}
+
 export async function getAllItems(): Promise<SavedItem[]> {
   const all = await chrome.storage.local.get(null);
   const items: SavedItem[] = [];
   for (const [key, value] of Object.entries(all)) {
-    if (isItemKey(key) && value) items.push(value as SavedItem);
+    if (isItemKey(key) && value) items.push(readStoredItem(value));
   }
   return sortByRecent(items);
 }
@@ -33,7 +50,7 @@ export async function countItems(): Promise<number> {
 export async function getItem(id: string): Promise<SavedItem | undefined> {
   const key = keyFor(id);
   const result = await chrome.storage.local.get(key);
-  return result[key] as SavedItem | undefined;
+  return result[key] ? readStoredItem(result[key]) : undefined;
 }
 
 export async function putItems(items: readonly SavedItem[]): Promise<void> {
@@ -98,6 +115,24 @@ export async function setAiTags(
   return true;
 }
 
+/**
+ * Changes fields of a follow-up of an item. Returns false when the item or the follow-up no
+ * longer exists (for example the user deleted a question while its answer was generated).
+ */
+export async function updateFollowUp(
+  itemId: string,
+  followUpId: string,
+  patch: Partial<Omit<FollowUp, 'id' | 'type'>>,
+): Promise<boolean> {
+  const item = await getItem(itemId);
+  if (!item?.followUps?.some((followUp) => followUp.id === followUpId)) return false;
+  const followUps = item.followUps.map((followUp) =>
+    followUp.id === followUpId ? { ...followUp, ...patch } : followUp,
+  );
+  await putItems([{ ...item, followUps }]);
+  return true;
+}
+
 /** Removes a follow-up from an item. */
 export async function deleteFollowUp(itemId: string, followUpId: string): Promise<void> {
   const item = await getItem(itemId);
@@ -115,7 +150,7 @@ export async function setItemsMark(ids: readonly string[], mark: ItemMark | unde
   const stored = await chrome.storage.local.get(keys);
   const next: SavedItem[] = [];
   for (const key of keys) {
-    const item = stored[key] as SavedItem | undefined;
+    const item = stored[key] ? readStoredItem(stored[key]) : undefined;
     if (!item) continue;
     const updated: SavedItem = { ...item, mark };
     if (!mark) delete updated.mark;
@@ -204,7 +239,7 @@ export async function moveItemsToCatalog(ids: readonly string[], catalogId: stri
   const stored = await chrome.storage.local.get(keys);
   const next: SavedItem[] = [];
   for (const key of keys) {
-    const item = stored[key] as SavedItem | undefined;
+    const item = stored[key] ? readStoredItem(stored[key]) : undefined;
     if (item) next.push(withCatalog(item, catalogId));
   }
   await putItems(next);

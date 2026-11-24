@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  answerQuestion,
+  buildQuestionMessage,
   buildSummaryMessage,
   formatTimeout,
   generateTags,
@@ -19,6 +21,14 @@ const settings: LlmSettings = { ...DEFAULT_SETTINGS.llm };
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+const base = {
+  url: 'https://www.youtube.com/watch?v=a',
+  type: 'youtube_transcript' as const,
+  timestamp: '2026-01-01T00:00:00.000Z',
+};
+const src = { ...base, title: 't', content: 'x' };
+const video = { ...base, title: 'My video', content: 'the transcript', meta: { channel: 'Chan' } };
 
 const completion = (content: string, model = 'qwen3-8b') =>
   jsonResponse({ model, choices: [{ message: { content } }] });
@@ -43,7 +53,7 @@ describe('normalizeBaseUrl', () => {
 describe('summarize', () => {
   it('posts the prompt and transcript to the chat completions API', async () => {
     const fetch = vi.fn(async () => completion('Main idea.\n\nMore.'));
-    const result = await summarize(settings, 'My video', 'the transcript', { fetch });
+    const result = await summarize(settings, video, { fetch });
 
     expect(result).toEqual({ content: 'Main idea.\n\nMore.', model: 'qwen3-8b' });
     const [url, init] = fetch.mock.calls[0]! as unknown as [string, RequestInit];
@@ -53,23 +63,20 @@ describe('summarize', () => {
     const body = JSON.parse(init.body as string);
     expect(body.model).toBeUndefined();
     expect(body.stream).toBe(false);
-    expect(body.messages).toEqual([
-      { role: 'user', content: buildSummaryMessage(settings.summaryPrompt, 'My video', 'the transcript') },
-    ]);
-    expect(body.messages[0].content).toMatch(/^Summarize this YouTube transcript\./);
-    expect(body.messages[0].content).toMatch(/Transcript:\nthe transcript$/);
+    expect(body.messages).toEqual([{ role: 'user', content: buildSummaryMessage(settings.summaryPrompt, video) }]);
+    expect(body.messages[0].content).toMatch(/^Transcript:\nthe transcript\n\nTitle: My video\nChannel: Chan\n\nTask:\nSummarize/);
   });
 
   it('sends the configured model', async () => {
     const fetch = vi.fn(async () => completion('Ok', 'gemma'));
-    await summarize({ ...settings, model: 'gemma' }, 't', 'x', { fetch });
+    await summarize({ ...settings, model: 'gemma' }, src, { fetch });
     const init = (fetch.mock.calls[0]! as unknown as [string, RequestInit])[1];
     expect(JSON.parse(init.body as string).model).toBe('gemma');
   });
 
   it('removes a reasoning block from the answer', async () => {
     const fetch = vi.fn(async () => completion('<think>hmm\nok</think>\n\nThe summary.'));
-    expect((await summarize(settings, 't', 'x', { fetch })).content).toBe('The summary.');
+    expect((await summarize(settings, src, { fetch })).content).toBe('The summary.');
     expect(stripReasoning('No reasoning.')).toBe('No reasoning.');
   });
 
@@ -88,24 +95,66 @@ describe('summarize', () => {
           init?.signal?.addEventListener('abort', () => reject(init.signal!.reason));
         }),
     );
-    await expect(summarize(settings, 't', 'x', { fetch, timeoutMs: 20 })).rejects.toThrow(
-      /did not answer within 0 seconds/,
-    );
+    await expect(summarize(settings, src, { fetch, timeoutMs: 20 })).rejects.toThrow(/did not answer within 0 seconds/);
   });
 
   it('reports network, HTTP, and empty-answer errors', async () => {
     const offline = vi.fn(async () => {
       throw new TypeError('Failed to fetch');
     });
-    await expect(summarize(settings, 't', 'x', { fetch: offline })).rejects.toThrow(/Cannot reach the LLM server/);
+    await expect(summarize(settings, src, { fetch: offline })).rejects.toThrow(/Cannot reach the LLM server/);
 
     const httpError = vi.fn(async () => jsonResponse({ error: { message: 'No models loaded' } }, 400));
-    await expect(summarize(settings, 't', 'x', { fetch: httpError })).rejects.toThrow(
+    await expect(summarize(settings, src, { fetch: httpError })).rejects.toThrow(
       'The LLM server returned HTTP 400: No models loaded',
     );
 
     const empty = vi.fn(async () => completion('  '));
-    await expect(summarize(settings, 't', 'x', { fetch: empty })).rejects.toThrow(/empty answer/);
+    await expect(summarize(settings, src, { fetch: empty })).rejects.toThrow(/empty answer/);
+  });
+});
+
+describe('prompt messages', () => {
+  it('appends title and transcript to a summary prompt without fields', () => {
+    expect(buildSummaryMessage('Short.', video)).toBe('Short.\n\nTitle: My video\n\nTranscript:\nthe transcript');
+    expect(buildSummaryMessage('{{transcript}} by {{channel}}', video)).toBe('the transcript by Chan');
+  });
+
+  it('builds the summary message from the default template', () => {
+    expect(buildSummaryMessage(settings.summaryPrompt, video)).toMatch(
+      /^Transcript:\nthe transcript\n\nTitle: My video\nChannel: Chan\n\nTask:\nSummarize/,
+    );
+    expect(buildSummaryMessage(settings.summaryPrompt, src)).toMatch(/Title: t\n\nTask:/);
+  });
+
+  it('builds the question message from the default template', () => {
+    const message = buildQuestionMessage(settings.questionPrompt, video, '  Why?  ');
+    expect(message).toMatch(/^Transcript:\nthe transcript\n/);
+    expect(message).toContain('Question: Why?\n');
+    expect(message).not.toContain('{{');
+  });
+
+  it('appends the transcript and the question when the template uses no fields', () => {
+    expect(buildQuestionMessage('Answer.', video, 'Why?')).toBe(
+      'Answer.\n\nTitle: My video\n\nTranscript:\nthe transcript\n\nQuestion: Why?',
+    );
+  });
+
+  it('reports a template syntax error as an LlmError', () => {
+    expect(() => buildSummaryMessage('{{#questions}}open', video)).toThrow(LlmError);
+    expect(() => buildSummaryMessage('{{#questions}}open', video)).toThrow(/summary prompt .* template error/);
+  });
+
+  it('answers a question with the configured model', async () => {
+    const fetch = vi.fn(async () => completion('Because.'));
+    expect(await answerQuestion(settings, video, { text: 'Why?' }, { fetch })).toEqual({
+      content: 'Because.',
+      model: 'qwen3-8b',
+    });
+    const init = (fetch.mock.calls[0]! as unknown as [string, RequestInit])[1];
+    expect(JSON.parse(init.body as string).messages[0].content).toBe(
+      buildQuestionMessage(settings.questionPrompt, video, 'Why?'),
+    );
   });
 });
 

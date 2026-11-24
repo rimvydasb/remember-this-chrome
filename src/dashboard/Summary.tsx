@@ -1,59 +1,55 @@
-import { ActionIcon, Button, Stack, Text, ThemeIcon, Tooltip, Typography } from '@mantine/core';
+import { ActionIcon, Alert, Button, Stack, Text, ThemeIcon, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconRefresh, IconSparkles, IconTrash } from '@tabler/icons-react';
-import { Markdown } from '@tanstack/markdown/react';
-import { useState, type ComponentPropsWithoutRef } from 'react';
-import { LlmError, requestLlmPermission, summarize } from '../shared/llm';
+import { IconAlertCircle, IconRefresh, IconSparkles, IconTrash } from '@tabler/icons-react';
+import { useMutation } from '@tanstack/react-query';
+import { summarize } from '../shared/llm';
+import type { LlmSettings } from '../shared/settings';
 import { addFollowUp, deleteFollowUp } from '../shared/storage';
 import type { FollowUp, SavedItem } from '../shared/types';
 import { formatDateTime } from '../ui/format';
 import { ContentBlock } from './ContentBlock';
+import { ensureLlmPermission, errorText, LlmMarkdown } from './llmUi';
 import { useSettings } from './useSettings';
-
-/** Links in LLM output open in a new tab, so they do not replace the dashboard. */
-const MARKDOWN_COMPONENTS = {
-  a: (props: ComponentPropsWithoutRef<'a'>) => <a {...props} target="_blank" rel="noreferrer" />,
-};
 
 /** The AI summary of an item, or an empty block with a button to generate one. */
 export function Summary({ item }: { item: SavedItem }) {
   const settings = useSettings();
-  const [summarizing, setSummarizing] = useState(false);
   const summaries = (item.followUps ?? []).filter((followUp) => followUp.type === 'llm-summary');
   const summary = summaries.at(-1);
 
-  const generate = () => {
+  const mutation = useMutation({
+    mutationFn: async (llm: LlmSettings) => {
+      const result = await summarize(llm, item);
+      const followUp: FollowUp = {
+        id: crypto.randomUUID(),
+        type: 'llm-summary',
+        generatedContent: result.content,
+        createdAt: new Date().toISOString(),
+      };
+      if (result.model) followUp.model = result.model;
+      if (!(await addFollowUp(item.id, followUp))) throw new Error('The item was deleted.');
+      // A new summary replaces the earlier ones.
+      for (const old of summaries) await deleteFollowUp(item.id, old.id);
+    },
+    onSuccess: () => notifications.show({ color: 'teal', message: `Summary added to “${item.title || 'Untitled'}”.` }),
+    onError: (error) =>
+      notifications.show({ color: 'red', title: 'Cannot summarize', message: error.message, autoClose: 10_000 }),
+  });
+  const summarizing = mutation.isPending;
+
+  const generate = async () => {
     if (!settings) return;
     const llm = settings.llm;
-    const previous = summaries;
-    // The permission request must start inside the click handler (user gesture).
-    const permission = requestLlmPermission(llm.baseUrl);
-    setSummarizing(true);
-    permission
-      .then(async (granted) => {
-        if (!granted) throw new LlmError(`Permission to access ${llm.baseUrl} was denied.`);
-        const result = await summarize(llm, item.title, item.content);
-        const followUp: FollowUp = {
-          id: crypto.randomUUID(),
-          type: 'llm-summary',
-          content: result.content,
-          createdAt: new Date().toISOString(),
-        };
-        if (result.model) followUp.model = result.model;
-        if (!(await addFollowUp(item.id, followUp))) throw new Error('The item was deleted.');
-        // A new summary replaces the earlier ones.
-        for (const old of previous) await deleteFollowUp(item.id, old.id);
-        notifications.show({ color: 'teal', message: `Summary added to “${item.title || 'Untitled'}”.` });
-      })
-      .catch((error: unknown) => {
-        notifications.show({
-          color: 'red',
-          title: 'Cannot summarize',
-          message: error instanceof Error ? error.message : String(error),
-          autoClose: 10_000,
-        });
-      })
-      .finally(() => setSummarizing(false));
+    // The permission request must start inside the click handler (user gesture), before any await.
+    const permission = ensureLlmPermission(llm.baseUrl);
+    try {
+      await permission;
+    } catch (error) {
+      mutation.reset();
+      notifications.show({ color: 'red', title: 'Cannot summarize', message: errorText(error) });
+      return;
+    }
+    mutation.mutate(llm);
   };
 
   const actions = summary && (
@@ -65,7 +61,7 @@ export function Summary({ item }: { item: SavedItem }) {
           aria-label="Regenerate summary"
           loading={summarizing}
           disabled={!settings}
-          onClick={generate}
+          onClick={() => void generate()}
         >
           <IconRefresh size={16} />
         </ActionIcon>
@@ -88,14 +84,12 @@ export function Summary({ item }: { item: SavedItem }) {
       storageKey="summary"
       icon={<IconSparkles size={17} />}
       title="Summary"
-      copy={summary ? { value: summary.content, label: 'Copy summary' } : undefined}
+      copy={summary ? { value: summary.generatedContent, label: 'Copy summary' } : undefined}
       actions={actions}
     >
       {summary ? (
         <Stack gap="sm">
-          <Typography className="rt-reader rt-follow-up">
-            <Markdown components={MARKDOWN_COMPONENTS}>{summary.content}</Markdown>
-          </Typography>
+          <LlmMarkdown>{summary.generatedContent}</LlmMarkdown>
           <Text size="xs" c="dimmed">
             Generated {formatDateTime(summary.createdAt)}
             {summary.model ? ` · ${summary.model}` : ''}
@@ -120,10 +114,15 @@ export function Summary({ item }: { item: SavedItem }) {
             leftSection={<IconSparkles size={15} />}
             loading={summarizing}
             disabled={!settings}
-            onClick={generate}
+            onClick={() => void generate()}
           >
             Generate summary
           </Button>
+          {mutation.isError && (
+            <Alert color="red" icon={<IconAlertCircle size={18} />} title="Cannot summarize" maw={420}>
+              {mutation.error.message}
+            </Alert>
+          )}
         </Stack>
       )}
     </ContentBlock>

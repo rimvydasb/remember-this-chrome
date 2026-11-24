@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { sortByRecent } from '../shared/search';
-import { getAllItems, isItemKey, ITEM_KEY_PREFIX } from '../shared/storage';
+import { getAllItems, isItemKey, ITEM_KEY_PREFIX, readStoredItem } from '../shared/storage';
 import type { SavedItem } from '../shared/types';
 
 /** Loads the library and keeps it in sync with `chrome.storage.local` (captures, imports, deletes). */
@@ -21,7 +21,7 @@ export function useLibrary(): SavedItem[] | null {
         const byId = new Map((previous ?? []).map((item) => [item.id, item]));
         for (const [key, change] of relevant) {
           const id = key.slice(ITEM_KEY_PREFIX.length);
-          if (change.newValue) byId.set(id, change.newValue as SavedItem);
+          if (change.newValue) byId.set(id, readStoredItem(change.newValue));
           else byId.delete(id);
         }
         return sortByRecent([...byId.values()]);

@@ -6,6 +6,7 @@ import {
   clearLibrary,
   countItems,
   deleteFollowUp,
+  updateFollowUp,
   deleteForgottenItems,
   deleteItems,
   getAllItems,
@@ -134,7 +135,7 @@ describe('follow-ups', () => {
   const summary = (id: string) => ({
     id,
     type: 'llm-summary' as const,
-    content: `Summary ${id}`,
+    generatedContent: `Summary ${id}`,
     createdAt: '2026-03-01T00:00:00.000Z',
   });
 
@@ -150,6 +151,23 @@ describe('follow-ups', () => {
   it('does nothing for a missing item', async () => {
     expect(await addFollowUp('missing', summary('f1'))).toBe(false);
     expect(chrome.storage.local.set).not.toHaveBeenCalled();
+  });
+
+  it('updates a follow-up, and reports a missing one', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z', { followUps: [summary('f1')] })]);
+    expect(await updateFollowUp('a', 'f1', { generatedContent: 'New', model: 'm' })).toBe(true);
+    expect((await getItem('a'))?.followUps).toEqual([{ ...summary('f1'), generatedContent: 'New', model: 'm' }]);
+    expect(await updateFollowUp('a', 'missing', { generatedContent: 'x' })).toBe(false);
+    expect(await updateFollowUp('missing', 'f1', { generatedContent: 'x' })).toBe(false);
+  });
+
+  it('reads follow-ups stored with the old `content` field', async () => {
+    const { generatedContent, ...legacy } = summary('f1');
+    await putItems([
+      item('a', '2026-01-01T00:00:00.000Z', { followUps: [{ ...legacy, content: generatedContent } as never] }),
+    ]);
+    expect((await getItem('a'))?.followUps).toEqual([summary('f1')]);
+    expect((await getAllItems())[0]?.followUps).toEqual([summary('f1')]);
   });
 
   it('deletes a follow-up and drops the empty list', async () => {

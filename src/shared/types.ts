@@ -38,15 +38,21 @@ export interface ItemMeta {
 }
 
 /** Kinds of follow-up work done on a saved item. */
-export type FollowUpType = 'llm-summary';
+export type FollowUpType = 'llm-summary' | 'user-question';
 
-export const FOLLOW_UP_TYPES: readonly FollowUpType[] = ['llm-summary'];
+export const FOLLOW_UP_TYPES: readonly FollowUpType[] = ['llm-summary', 'user-question'];
 
-/** A result of follow-up work on a saved item (for example an LLM summary of the transcript). */
+/**
+ * A result of follow-up work on a saved item: an LLM summary of the transcript, or a question of
+ * the user with the LLM answer.
+ */
 export interface FollowUp {
   id: string;
   type: FollowUpType;
-  content: string;
+  /** What the user wrote, for example the question of a `user-question`. */
+  userContent?: string;
+  /** What the LLM generated. Empty while a question waits for its answer or after the answer failed. */
+  generatedContent: string;
   /** ISO date string. */
   createdAt: string;
   /** The model that produced the content, when an LLM made it. */

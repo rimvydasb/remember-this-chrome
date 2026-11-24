@@ -125,7 +125,7 @@ describe('follow-ups in import files', () => {
     };
     const { items } = parseImport(JSON.stringify([raw]));
     expect(items[0]!.followUps).toEqual([
-      { id: 'f1', type: 'llm-summary', content: 'Sum', createdAt: '2026-01-02T00:00:00.000Z', model: 'qwen' },
+      { id: 'f1', type: 'llm-summary', generatedContent: 'Sum', createdAt: '2026-01-02T00:00:00.000Z', model: 'qwen' },
     ]);
   });
 
@@ -137,7 +137,16 @@ describe('follow-ups in import files', () => {
       type: 'youtube_transcript',
       content: 'C',
       timestamp: '2026-01-01T00:00:00.000Z',
-      followUps: [{ id: 'f1', type: 'llm-summary', content: 'Sum', createdAt: '2026-01-02T00:00:00.000Z' }],
+      followUps: [
+        { id: 'f1', type: 'llm-summary', generatedContent: 'Sum', createdAt: '2026-01-02T00:00:00.000Z' },
+        {
+          id: 'q1',
+          type: 'user-question',
+          userContent: 'Why?',
+          generatedContent: 'Because.',
+          createdAt: '2026-01-03T00:00:00.000Z',
+        },
+      ],
     };
     expect(parseImport(JSON.stringify(buildExportPayload([item]))).items).toEqual([item]);
   });
