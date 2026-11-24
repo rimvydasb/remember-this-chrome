@@ -39,11 +39,18 @@ Summarize this transcript. Start with the main statement or idea of the transcri
 export const DEFAULT_QUESTION_PROMPT = `Transcript:
 {{transcript}}
 
+Previous user questions:
+{{#questions}}
+Q: {{question}}
+A: {{answer}}
+
+{{/questions}}
+
 Task:
 Carefully read the provided transcript and answer this question exactly as the transcript author tries to answer it in the transcript.
 Question: {{question}}
 
-Do not use predefined knowledge; answer this question as the transcript author would answer it. The transcript author could be wrong or have their own opinion - respect that opinion.`;
+Do not use predefined knowledge; answer this user's question as the transcript author would answer it. The transcript author could be wrong or have their own opinion - respect that opinion. Admit if author does not answer the given question.`;
 
 export const DEFAULT_SETTINGS: Settings = {
   llm: {
