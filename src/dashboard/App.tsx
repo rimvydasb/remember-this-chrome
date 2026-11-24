@@ -1,11 +1,15 @@
-import { AppShell, Button, Center, Collapse, EmptyState, Loader, ScrollArea, Stack, Text } from '@mantine/core';
+import { AppShell, Button, Center, Collapse, Loader, ScrollArea, Select, Stack, Text } from '@mantine/core';
 import { useDisclosure, useHotkeys, useLocalStorage } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconSearchOff } from '@tabler/icons-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { RECENTS, RECENTS_ID } from '../shared/catalogs';
 import { ImportError, parseImport, type ParsedImport } from '../shared/importExport';
 import { ITEM_TYPES } from '../shared/types';
 import { AppHeader } from './AppHeader';
+import { ITEM_DRAG_TYPE } from './catalogActions';
+import { CatalogIcon } from './CatalogMenu';
+import { CatalogsHome } from './CatalogsHome';
+import { CatalogView } from './CatalogView';
 import { EmptyLibrary } from './EmptyLibrary';
 import { ActiveFilters, FilterPanel } from './FilterPanel';
 import { ImportDialog } from './ImportDialog';
@@ -13,40 +17,120 @@ import { ItemList } from './ItemList';
 import { ItemReader } from './ItemReader';
 import { ListToolbar } from './ListToolbar';
 import { useAiTagging } from './useAiTagging';
+import { useCatalogIndex } from './useCatalogIndex';
+import { useCatalogs } from './useCatalogs';
 import { useKeywordIndex } from './useKeywordIndex';
 import { useLibrary } from './useLibrary';
 import { useLibraryFilters } from './useLibraryFilters';
 
-function itemIdFromHash(): string | undefined {
-  const match = /item=([^&]+)/.exec(location.hash);
-  return match ? decodeURIComponent(match[1]!) : undefined;
+/**
+ * Where the dashboard is. The URL hash holds it, so the browser's back button and deep links work:
+ * `#` is the Catalogs home, `#catalog=<id>` a catalog, `#item=<id>` or `#catalog=<id>&item=<id>` an
+ * item. `catalog` also limits the list to that catalog.
+ */
+interface Route {
+  catalogId?: string;
+  itemId?: string;
 }
+
+function readRoute(): Route {
+  const params = new URLSearchParams(location.hash.slice(1));
+  return { catalogId: params.get('catalog') ?? undefined, itemId: params.get('item') ?? undefined };
+}
+
+function routeUrl(route: Route): string {
+  const params = new URLSearchParams();
+  if (route.catalogId) params.set('catalog', route.catalogId);
+  if (route.itemId) params.set('item', route.itemId);
+  const hash = params.toString();
+  return hash ? `#${hash}` : location.pathname + location.search;
+}
+
+const NO_CATALOGS = [RECENTS];
 
 export function App() {
   const items = useLibrary();
   const all = useMemo(() => items ?? [], [items]);
+  const loadedCatalogs = useCatalogs();
+  const catalogs = loadedCatalogs ?? NO_CATALOGS;
+  const { catalogOf, stats: catalogStats } = useCatalogIndex(all, catalogs);
+  const [route, setRoute] = useState<Route>(readRoute);
+
+  const scopeCatalog = catalogs.find((catalog) => catalog.id === route.catalogId);
+  const scopeId = scopeCatalog?.id;
+  const scoped = useMemo(
+    () => (scopeId ? all.filter((item) => catalogOf.get(item.id) === scopeId) : all),
+    [all, catalogOf, scopeId],
+  );
+
   const { index: keywordIndex, ready: keywordsReady } = useKeywordIndex(all);
-  const filters = useLibraryFilters(all, keywordIndex);
+  const filters = useLibraryFilters(scoped, keywordIndex);
   const { filtered, terms } = filters;
 
-  const [selectedId, setSelectedId] = useState<string | undefined>(itemIdFromHash);
   const [checked, setChecked] = useState<Set<string>>(() => new Set());
   const [pendingImport, setPendingImport] = useState<{ fileName: string; parsed: ParsedImport } | null>(null);
   const [navOpened, { toggle: toggleNav, close: closeNav }] = useDisclosure(false);
   const [filtersOpen, setFiltersOpen] = useLocalStorage({ key: 'rt-filters-open', defaultValue: true });
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const selected = filtered.find((item) => item.id === selectedId) ?? filtered[0];
+  // The item stays open when a search or filter hides it, or when it moves to another catalog.
+  const selected = route.itemId ? all.find((item) => item.id === route.itemId) : undefined;
+  const selectedCatalog = selected
+    ? (catalogs.find((catalog) => catalog.id === catalogOf.get(selected.id)) ?? RECENTS)
+    : undefined;
   const aiTaggingId = useAiTagging(all, selected?.id);
   const checkedItems = useMemo(() => all.filter((item) => checked.has(item.id)), [all, checked]);
+  const checkedCatalogIds = new Set(checkedItems.map((item) => catalogOf.get(item.id)));
+  const checkedCatalogId = checkedCatalogIds.size === 1 ? [...checkedCatalogIds][0] : undefined;
+
+  // In the all-catalogs list, rows tell which catalog they are in (Recents goes without saying).
+  const catalogLabels = useMemo(() => {
+    if (scopeId) return undefined;
+    const names = new Map(catalogs.map((catalog) => [catalog.id, catalog.name]));
+    const labels = new Map<string, string>();
+    for (const [itemId, catalogId] of catalogOf) {
+      if (catalogId !== RECENTS_ID) labels.set(itemId, names.get(catalogId)!);
+    }
+    return labels;
+  }, [scopeId, catalogs, catalogOf]);
   const types = useMemo(() => ITEM_TYPES.filter((type) => all.some((item) => item.type === type)), [all]);
   const narrowed = terms.length > 0 || filters.activeCount > 0;
 
-  // Deep links from the popup: dashboard.html#item=<id>
+  // Back and forward buttons, and deep links from the popup: dashboard.html#item=<id>
   useEffect(() => {
-    const onHashChange = () => setSelectedId(itemIdFromHash());
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
+    const onChange = () => setRoute(readRoute());
+    window.addEventListener('hashchange', onChange);
+    window.addEventListener('popstate', onChange);
+    return () => {
+      window.removeEventListener('hashchange', onChange);
+      window.removeEventListener('popstate', onChange);
+    };
+  }, []);
+
+  const navigate = useCallback(
+    (next: Route, options: { replace?: boolean } = {}) => {
+      setRoute(next);
+      if (options.replace) history.replaceState(null, '', routeUrl(next));
+      else history.pushState(null, '', routeUrl(next));
+      closeNav();
+      document.querySelector('.rt-main')?.scrollTo?.({ top: 0 });
+      window.scrollTo({ top: 0 });
+    },
+    [closeNav],
+  );
+
+  const goHome = useCallback(() => navigate({}), [navigate]);
+  const openCatalog = useCallback((catalogId: string) => navigate({ catalogId }), [navigate]);
+
+  // Rows can be dragged onto a catalog card. Dragging a checked row drags every checked item.
+  const checkedRef = useRef(checked);
+  useEffect(() => {
+    checkedRef.current = checked;
+  }, [checked]);
+  const startDrag = useCallback((id: string, event: DragEvent) => {
+    const ids = checkedRef.current.has(id) ? [...checkedRef.current] : [id];
+    event.dataTransfer.setData(ITEM_DRAG_TYPE, JSON.stringify(ids));
+    event.dataTransfer.effectAllowed = 'move';
   }, []);
 
   // Drop selections of items that no longer exist.
@@ -58,15 +142,11 @@ export function App() {
     });
   }, [all]);
 
+  // Going from item to item replaces the history entry, so Back returns to the catalog or home.
+  const routeItemId = route.itemId;
   const select = useCallback(
-    (id: string) => {
-      setSelectedId(id);
-      history.replaceState(null, '', `#item=${encodeURIComponent(id)}`);
-      closeNav();
-      document.querySelector('.rt-main')?.scrollTo?.({ top: 0 });
-      window.scrollTo({ top: 0 });
-    },
-    [closeNav],
+    (id: string) => navigate({ catalogId: scopeId, itemId: id }, { replace: routeItemId !== undefined }),
+    [navigate, scopeId, routeItemId],
   );
 
   const toggleChecked = useCallback((id: string) => {
@@ -142,10 +222,30 @@ export function App() {
           navOpened={navOpened}
           onToggleNav={toggleNav}
           onImport={handleImportFile}
+          onHome={goHome}
         />
       </AppShell.Header>
 
       <AppShell.Navbar>
+        <AppShell.Section className="rt-scope">
+          <Select
+            size="xs"
+            aria-label="Show items from"
+            allowDeselect={false}
+            value={scopeId ?? 'all'}
+            onChange={(value) => (!value || value === 'all' ? goHome() : openCatalog(value))}
+            data={[
+              { value: 'all', label: `All catalogs (${all.length})` },
+              ...catalogs.map((catalog) => ({
+                value: catalog.id,
+                label: `${catalog.name} (${catalogStats.get(catalog.id)?.total ?? 0})`,
+              })),
+            ]}
+            leftSection={scopeCatalog ? <CatalogIcon catalog={scopeCatalog} size={15} /> : undefined}
+            comboboxProps={{ withinPortal: true }}
+            disabled={all.length === 0}
+          />
+        </AppShell.Section>
         <AppShell.Section className="rt-list-toolbar">
           <ListToolbar
             total={all.length}
@@ -159,6 +259,8 @@ export function App() {
             filtersOpen={filtersOpen}
             activeFilters={filters.activeCount}
             onToggleFilters={() => setFiltersOpen((open) => !open)}
+            catalogs={catalogs}
+            checkedCatalogId={checkedCatalogId}
           />
         </AppShell.Section>
 
@@ -196,27 +298,19 @@ export function App() {
             onSelect={select}
             onToggle={toggleChecked}
             onToggleKeyword={filters.toggleKeyword}
+            catalogLabels={catalogLabels}
+            onDragStart={startDrag}
           />
         </AppShell.Section>
       </AppShell.Navbar>
 
       <AppShell.Main className="rt-main">
         <div className="rt-main-inner">
-          {items === null ? (
+          {items === null || loadedCatalogs === null ? (
             <Center h="60vh">
               <Loader />
             </Center>
-          ) : all.length === 0 ? (
-            <EmptyLibrary onImport={handleImportFile} />
-          ) : !selected ? (
-            <Center h="60vh">
-              <EmptyState
-                icon={<IconSearchOff size={28} />}
-                title="Nothing found"
-                description="Try different words, put a phrase in double quotes, or remove a filter."
-              />
-            </Center>
-          ) : (
+          ) : selected && selectedCatalog ? (
             <ItemReader
               key={selected.id}
               item={selected}
@@ -225,7 +319,26 @@ export function App() {
               activeKeywords={filters.keywords}
               onToggleKeyword={filters.toggleKeyword}
               aiTagging={aiTaggingId === selected.id}
+              catalogs={catalogs}
+              catalog={selectedCatalog}
+              onHome={goHome}
+              onOpenCatalog={openCatalog}
             />
+          ) : all.length === 0 ? (
+            <EmptyLibrary onImport={handleImportFile} />
+          ) : scopeCatalog ? (
+            <CatalogView
+              catalog={scopeCatalog}
+              catalogs={catalogs}
+              stats={catalogStats.get(scopeCatalog.id)}
+              items={filtered}
+              narrowed={narrowed}
+              onHome={goHome}
+              onOpenItem={select}
+              onResetFilters={resetAll}
+            />
+          ) : (
+            <CatalogsHome catalogs={catalogs} stats={catalogStats} onOpen={openCatalog} />
           )}
         </div>
       </AppShell.Main>

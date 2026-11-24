@@ -12,6 +12,11 @@ on your computer. Requirements: [docs/todo.md](docs/todo.md).
   paragraphs.
 - **Library dashboard** (`dashboard.html`, also the extension's options page): newest first, real-time full-text search
   (use `"quotes"` for phrases), reader view with highlighted matches, copy to clipboard, delete one, many, or all items.
+- **Catalogs:** the dashboard opens on the Catalogs home. Each item is in exactly one catalog. New saves go to
+  *Recents*, the default catalog, which cannot be renamed or deleted. Move items with the catalog button in the
+  reader, the **Move** button for selected items, or by dragging list rows onto a catalog card. Deleting a catalog
+  moves its items back to Recents. The list above can show all catalogs or one. Catalogs are included in JSON
+  exports and imports (catalogs with the same name are merged).
 - **Keywords:** each item gets up to 10 keywords, extracted locally with
   [keyword-extractor](https://www.npmjs.com/package/keyword-extractor) and ranked by TF-IDF across the library. The
   channel is always the first keyword. The list shows the top 5 instead of the start of the text (while searching,

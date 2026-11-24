@@ -9,6 +9,7 @@ import {
   Menu,
   TextInput,
   Tooltip,
+  UnstyledButton,
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
@@ -38,9 +39,19 @@ interface AppHeaderProps {
   navOpened: boolean;
   onToggleNav: () => void;
   onImport: (file: File | null) => void;
+  onHome: () => void;
 }
 
-export function AppHeader({ all, query, onQueryChange, searchRef, navOpened, onToggleNav, onImport }: AppHeaderProps) {
+export function AppHeader({
+  all,
+  query,
+  onQueryChange,
+  searchRef,
+  navOpened,
+  onToggleNav,
+  onImport,
+  onHome,
+}: AppHeaderProps) {
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('light');
   const empty = all.length === 0;
@@ -50,7 +61,9 @@ export function AppHeader({ all, query, onQueryChange, searchRef, navOpened, onT
     <Group h="100%" justify="space-between" wrap="nowrap" gap="md">
       <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>
         <Burger opened={navOpened} onClick={onToggleNav} hiddenFrom="sm" size="sm" aria-label="Toggle list" />
-        <Logo />
+        <UnstyledButton onClick={onHome} aria-label="Catalogs home" className="rt-home-link">
+          <Logo />
+        </UnstyledButton>
       </Group>
 
       <TextInput

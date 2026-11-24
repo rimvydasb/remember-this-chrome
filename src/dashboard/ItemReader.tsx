@@ -15,6 +15,7 @@ import {
 import {
   IconArticle,
   IconCalendar,
+  IconChevronDown,
   IconClipboard,
   IconClipboardCheck,
   IconClock,
@@ -30,6 +31,7 @@ import {
   IconUser,
 } from '@tabler/icons-react';
 import { useMemo } from 'react';
+import type { Catalog } from '../shared/catalogs';
 import { formatDuration, TYPE_LABELS } from '../shared/markdown';
 import { countWords } from '../shared/transcript';
 import { isAiGeneratedTags, type Keyword } from '../shared/keywords';
@@ -37,9 +39,11 @@ import type { SavedItem } from '../shared/types';
 import { formatDateTime, formatNumber, formatShortDate, readingTime } from '../ui/format';
 import { confirmDelete, exportMarkdown, markItems } from './actions';
 import { AiTagsButton } from './AiTagsButton';
+import { CatalogIcon, CatalogMenu } from './CatalogMenu';
 import { ClampedText } from './ClampedText';
 import { ContentBlock } from './ContentBlock';
 import { KeywordBadges } from './KeywordBadges';
+import { PageBreadcrumbs } from './PageBreadcrumbs';
 import { Summary } from './Summary';
 import { VideoDetails } from './VideoDetails';
 
@@ -51,6 +55,11 @@ interface ItemReaderProps {
   onToggleKeyword: (key: string) => void;
   /** True while background tagging works on this item. */
   aiTagging?: boolean;
+  catalogs: readonly Catalog[];
+  /** The catalog the item is in. */
+  catalog: Catalog;
+  onHome: () => void;
+  onOpenCatalog: (catalogId: string) => void;
 }
 
 function countMatches(text: string, terms: readonly string[]): number {
@@ -69,6 +78,10 @@ export function ItemReader({
   activeKeywords,
   onToggleKeyword,
   aiTagging = false,
+  catalogs,
+  catalog,
+  onHome,
+  onOpenCatalog,
 }: ItemReaderProps) {
   const paragraphs = useMemo(() => item.content.split(/\n{2,}/), [item.content]);
   const words = useMemo(() => countWords(item.content), [item.content]);
@@ -80,6 +93,13 @@ export function ItemReader({
 
   return (
     <Stack gap="lg" maw={760} mx="auto" pb="xl">
+      <PageBreadcrumbs
+        crumbs={[
+          { label: 'Catalogs', onClick: onHome },
+          { label: catalog.name, onClick: () => onOpenCatalog(catalog.id) },
+          { label: item.title || 'Untitled' },
+        ]}
+      />
       <Stack gap="sm">
         <Group gap="xs">
           <Badge variant="light" color={item.type === 'youtube_transcript' ? 'red' : 'blue'}>
@@ -136,6 +156,25 @@ export function ItemReader({
         />
 
         <Group gap="xs" mt={4}>
+          <CatalogMenu
+            catalogs={catalogs}
+            itemIds={[item.id]}
+            currentId={catalog.id}
+            target={
+              <Tooltip label="Catalog · click to move" withArrow>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="gray"
+                  leftSection={<CatalogIcon catalog={catalog} size={15} />}
+                  rightSection={<IconChevronDown size={14} />}
+                  maw={220}
+                >
+                  {catalog.name}
+                </Button>
+              </Tooltip>
+            }
+          />
           <CopyButton value={item.content} timeout={2000}>
             {({ copied, copy }) => (
               <Button
@@ -220,6 +259,7 @@ export function ItemReader({
           storageKey="content"
           icon={isTranscript ? <IconFileText size={17} /> : <IconArticle size={17} />}
           title={isTranscript ? 'Transcript' : 'Content'}
+          copy={{ value: item.content, label: isTranscript ? 'Copy transcript' : 'Copy content' }}
           actions={
             <Text size="xs" c="dimmed" className="rt-tabular">
               {formatNumber(words)} words

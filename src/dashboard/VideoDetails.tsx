@@ -15,6 +15,8 @@ export function VideoDetails({ item }: { item: SavedItem }) {
   const links = meta?.links ?? [];
   const description = meta?.description?.trim();
   if (chapters.length === 0 && links.length === 0 && !description) return null;
+  const chaptersText = chapters.map((c) => `${formatDuration(c.startSec)} ${c.title}`).join('\n');
+  const linksText = links.map((l) => (l.label ? `${l.label}: ${l.url}` : l.url)).join('\n');
 
   return (
     <>
@@ -25,17 +27,30 @@ export function VideoDetails({ item }: { item: SavedItem }) {
           title="Chapters"
           count={chapters.length}
           flush
+          copy={{ value: chaptersText, label: 'Copy chapters' }}
         >
           <ChapterList chapters={chapters} videoId={videoId} durationSec={meta?.durationSec} />
         </ContentBlock>
       )}
       {links.length > 0 && (
-        <ContentBlock storageKey="links" icon={<IconLink size={17} />} title="Links" count={links.length} flush>
+        <ContentBlock
+          storageKey="links"
+          icon={<IconLink size={17} />}
+          title="Links"
+          count={links.length}
+          flush
+          copy={{ value: linksText, label: 'Copy links' }}
+        >
           <LinkList links={links} />
         </ContentBlock>
       )}
       {description && (
-        <ContentBlock storageKey="description" icon={<IconAlignLeft size={17} />} title="Description">
+        <ContentBlock
+          storageKey="description"
+          icon={<IconAlignLeft size={17} />}
+          title="Description"
+          copy={{ value: description, label: 'Copy description' }}
+        >
           <Description text={description} />
         </ContentBlock>
       )}

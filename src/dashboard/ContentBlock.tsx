@@ -2,6 +2,7 @@ import { Badge, Collapse, Group, Paper, Text, UnstyledButton } from '@mantine/co
 import { useLocalStorage } from '@mantine/hooks';
 import { IconChevronDown } from '@tabler/icons-react';
 import { useId, type ReactNode } from 'react';
+import { CopyAction } from './CopyAction';
 
 interface ContentBlockProps {
   /** Stable key; the collapsed state is remembered per key across items and sessions. */
@@ -9,6 +10,8 @@ interface ContentBlockProps {
   icon: ReactNode;
   title: string;
   count?: number;
+  /** Adds a copy button right after the title. */
+  copy?: { value: string; label: string };
   /** Extra header content (buttons), shown on the right, outside the toggle. */
   actions?: ReactNode;
   defaultExpanded?: boolean;
@@ -24,6 +27,7 @@ export function ContentBlock({
   icon,
   title,
   count,
+  copy,
   actions,
   defaultExpanded = true,
   flush = false,
@@ -36,6 +40,7 @@ export function ContentBlock({
     getInitialValueInEffect: false,
   });
   const bodyId = useId();
+  const toggle = () => setExpanded((value) => !value);
 
   return (
     <Paper
@@ -48,12 +53,12 @@ export function ContentBlock({
     >
       <Group gap="xs" wrap="nowrap" className="rt-block-header">
         <UnstyledButton
-          className="rt-block-toggle"
-          onClick={() => setExpanded((value) => !value)}
+          className="rt-block-toggle rt-block-toggle-title"
+          onClick={toggle}
           aria-expanded={expanded}
           aria-controls={bodyId}
         >
-          <Group gap={10} wrap="nowrap" w="100%">
+          <Group gap={10} wrap="nowrap">
             <span className="rt-block-icon">{icon}</span>
             <Text fw={600} size="sm">
               {title}
@@ -63,8 +68,12 @@ export function ContentBlock({
                 {count}
               </Badge>
             )}
-            <IconChevronDown size={16} className="rt-block-chevron" />
           </Group>
+        </UnstyledButton>
+        {copy && <CopyAction value={copy.value} label={copy.label} />}
+        {/* Fills the rest of the row so the whole header toggles; the title button is the accessible one. */}
+        <UnstyledButton className="rt-block-toggle rt-block-toggle-rest" onClick={toggle} tabIndex={-1} aria-hidden>
+          <IconChevronDown size={16} className="rt-block-chevron" />
         </UnstyledButton>
         {actions && (
           <Group gap={4} wrap="nowrap" pr={8}>

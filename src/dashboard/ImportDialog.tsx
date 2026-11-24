@@ -20,7 +20,7 @@ export function ImportDialog({ fileName, parsed, libraryCount, onClose }: Import
   const run = async () => {
     setBusy(true);
     try {
-      const plan = await applyImport(parsed.items, mode);
+      const plan = await applyImport(parsed.items, mode, parsed.catalogs);
       const parts = [`${plan.added} added`, `${plan.updated} updated`];
       if (plan.unchanged) parts.push(`${plan.unchanged} already up to date`);
       if (plan.removed) parts.push(`${plan.removed} removed`);
@@ -37,7 +37,14 @@ export function ImportDialog({ fileName, parsed, libraryCount, onClose }: Import
       <Stack gap="md">
         <Text size="sm">
           <b>{fileName}</b> contains <b>{formatNumber(parsed.items.length)}</b> valid{' '}
-          {parsed.items.length === 1 ? 'item' : 'items'}.
+          {parsed.items.length === 1 ? 'item' : 'items'}
+          {parsed.catalogs.length > 0 && (
+            <>
+              {' '}
+              and <b>{parsed.catalogs.length}</b> {parsed.catalogs.length === 1 ? 'catalog' : 'catalogs'}
+            </>
+          )}
+          .
         </Text>
 
         {parsed.rejected.length > 0 && (

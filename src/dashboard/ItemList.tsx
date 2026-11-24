@@ -1,6 +1,6 @@
 import { Checkbox, Group, Highlight, Text } from '@mantine/core';
-import { IconBrandYoutube, IconEyeOff, IconFileText, IconHeartFilled } from '@tabler/icons-react';
-import { memo, useMemo } from 'react';
+import { IconBrandYoutube, IconEyeOff, IconFileText, IconFolder, IconHeartFilled } from '@tabler/icons-react';
+import { memo, useMemo, type DragEvent } from 'react';
 import { displayKeywords, type Keyword, type KeywordIndex } from '../shared/keywords';
 import { getIndexEntry, makeSnippet, type SearchIndex } from '../shared/search';
 import type { SavedItem } from '../shared/types';
@@ -23,6 +23,9 @@ interface ItemListProps {
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
   onToggleKeyword: (key: string) => void;
+  /** Catalog name per item ID. Rows show it when given; leave out when the list shows one catalog. */
+  catalogLabels?: ReadonlyMap<string, string>;
+  onDragStart: (id: string, event: DragEvent) => void;
 }
 
 export function ItemList({
@@ -36,6 +39,8 @@ export function ItemList({
   onSelect,
   onToggle,
   onToggleKeyword,
+  catalogLabels,
+  onDragStart,
 }: ItemListProps) {
   return (
     <div role="listbox" aria-label="Saved items">
@@ -53,6 +58,8 @@ export function ItemList({
           onSelect={onSelect}
           onToggle={onToggle}
           onToggleKeyword={onToggleKeyword}
+          catalogLabel={catalogLabels?.get(item.id)}
+          onDragStart={onDragStart}
         />
       ))}
     </div>
@@ -70,6 +77,8 @@ interface ItemRowProps {
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
   onToggleKeyword: (key: string) => void;
+  catalogLabel: string | undefined;
+  onDragStart: (id: string, event: DragEvent) => void;
 }
 
 const ItemRow = memo(function ItemRow({
@@ -83,6 +92,8 @@ const ItemRow = memo(function ItemRow({
   onSelect,
   onToggle,
   onToggleKeyword,
+  catalogLabel,
+  onDragStart,
 }: ItemRowProps) {
   const highlight = terms as string[];
   const thumbnail = item.meta?.thumbnail;
@@ -96,6 +107,8 @@ const ItemRow = memo(function ItemRow({
       className="rt-item"
       data-selected={selected || undefined}
       onClick={() => onSelect(item.id)}
+      draggable
+      onDragStart={(event) => onDragStart(item.id, event)}
     >
       <Checkbox
         size="xs"
@@ -105,14 +118,7 @@ const ItemRow = memo(function ItemRow({
         onClick={(event) => event.stopPropagation()}
         onChange={() => onToggle(item.id)}
       />
-      {thumbnail && (
-        <img
-          className="rt-item-thumb"
-          src={thumbnail}
-          alt=""
-          draggable={false}
-        />
-      )}
+      {thumbnail && <img className="rt-item-thumb" src={thumbnail} alt="" draggable={false} />}
       <div style={{ minWidth: 0, flex: 1 }}>
         <Highlight highlight={highlight} size="sm" fw={600} lineClamp={2} lh={1.35}>
           {item.title || 'Untitled'}
@@ -135,6 +141,14 @@ const ItemRow = memo(function ItemRow({
             />
           )}
           {item.mark === 'forgotten' && <IconEyeOff size={13} aria-label="Forgotten" style={{ flexShrink: 0 }} />}
+          {catalogLabel && (
+            <Group gap={3} wrap="nowrap" className="rt-item-catalog" title={`In ${catalogLabel}`}>
+              <IconFolder size={13} style={{ flexShrink: 0 }} />
+              <Text size="xs" c="dimmed" truncate>
+                {catalogLabel}
+              </Text>
+            </Group>
+          )}
         </Group>
         {shown.length > 0 && (
           <div style={{ marginTop: 6 }}>

@@ -1,3 +1,4 @@
+import { parseCatalog, RECENTS_ID, type Catalog } from './catalogs';
 import {
   FOLLOW_UP_TYPES,
   ITEM_MARKS,
@@ -19,15 +20,23 @@ export interface ExportPayload {
   version: number;
   exportedAt: string;
   count: number;
+  /** The user's catalogs (Recents is implied). Older exports omit it. */
+  catalogs?: Catalog[];
   items: SavedItem[];
 }
 
-export function buildExportPayload(items: readonly SavedItem[], now = new Date()): ExportPayload {
+export function buildExportPayload(
+  items: readonly SavedItem[],
+  now = new Date(),
+  catalogs: readonly Catalog[] = [],
+): ExportPayload {
+  const userCatalogs = catalogs.filter((catalog) => catalog.id !== RECENTS_ID);
   return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: now.toISOString(),
     count: items.length,
+    ...(userCatalogs.length > 0 ? { catalogs: userCatalogs } : {}),
     items: [...items],
   };
 }
@@ -36,6 +45,8 @@ export class ImportError extends Error {}
 
 export interface ParsedImport {
   items: SavedItem[];
+  /** Catalogs in the file. Empty for older exports and bare arrays. */
+  catalogs: Catalog[];
   /** Records that failed validation and were skipped. */
   rejected: { index: number; reason: string }[];
 }
@@ -126,6 +137,9 @@ export function validateItem(value: unknown): SavedItem | string {
   if (typeof value.mark === 'string' && ITEM_MARKS.includes(value.mark as ItemMark)) item.mark = value.mark as ItemMark;
   const aiTags = parseAiTags(value.aiTags);
   if (aiTags) item.aiTags = aiTags;
+  if (typeof value.catalogId === 'string' && value.catalogId !== '' && value.catalogId !== RECENTS_ID) {
+    item.catalogId = value.catalogId;
+  }
   return item;
 }
 
@@ -169,6 +183,7 @@ export function parseImport(text: string): ParsedImport {
   }
 
   let rawItems: unknown;
+  let catalogs: Catalog[] = [];
   if (Array.isArray(data)) {
     rawItems = data;
   } else if (isRecord(data) && Array.isArray(data.items)) {
@@ -181,6 +196,9 @@ export function parseImport(text: string): ParsedImport {
       );
     }
     rawItems = data.items;
+    if (Array.isArray(data.catalogs)) {
+      catalogs = data.catalogs.flatMap((entry) => parseCatalog(entry) ?? []);
+    }
   } else {
     throw new ImportError('The file does not contain a Remember This library.');
   }
@@ -200,7 +218,7 @@ export function parseImport(text: string): ParsedImport {
   if (byId.size === 0 && rejected.length > 0) {
     throw new ImportError(`No valid records found (${rejected.length} invalid).`);
   }
-  return { items: [...byId.values()], rejected };
+  return { items: [...byId.values()], catalogs, rejected };
 }
 
 export type ImportMode = 'merge' | 'replace';

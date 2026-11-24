@@ -1,8 +1,10 @@
 import { Badge, Button, Checkbox, CloseButton, Group, Loader, Text, Tooltip } from '@mantine/core';
-import { IconEyeOff, IconFilter, IconMarkdown, IconRestore, IconTrash } from '@tabler/icons-react';
+import type { Catalog } from '../shared/catalogs';
+import { IconEyeOff, IconFilter, IconFolderShare, IconMarkdown, IconRestore, IconTrash } from '@tabler/icons-react';
 import type { SavedItem } from '../shared/types';
 import { formatNumber } from '../ui/format';
 import { confirmDelete, exportMarkdown, markItems } from './actions';
+import { CatalogMenu } from './CatalogMenu';
 
 interface ListToolbarProps {
   total: number;
@@ -17,6 +19,9 @@ interface ListToolbarProps {
   filtersOpen: boolean;
   activeFilters: number;
   onToggleFilters: () => void;
+  catalogs: readonly Catalog[];
+  /** The catalog that all checked items are in, if they share one. */
+  checkedCatalogId: string | undefined;
 }
 
 export function ListToolbar({
@@ -31,6 +36,8 @@ export function ListToolbar({
   filtersOpen,
   activeFilters,
   onToggleFilters,
+  catalogs,
+  checkedCatalogId,
 }: ListToolbarProps) {
   const allVisibleChecked = visible.length > 0 && visible.every((item) => checked.has(item.id));
   const someVisibleChecked = visible.some((item) => checked.has(item.id));
@@ -53,6 +60,17 @@ export function ListToolbar({
           </Text>
         </Group>
         <Group gap={4} wrap="nowrap">
+          <CatalogMenu
+            catalogs={catalogs}
+            itemIds={checkedItems.map((item) => item.id)}
+            currentId={checkedCatalogId}
+            onMoved={onClearChecked}
+            target={
+              <Button size="compact-xs" variant="light" leftSection={<IconFolderShare size={14} />}>
+                Move
+              </Button>
+            }
+          />
           <Button
             size="compact-xs"
             variant="light"

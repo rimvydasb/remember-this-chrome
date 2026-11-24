@@ -1,6 +1,6 @@
-import { ActionIcon, Button, CopyButton, Stack, Text, ThemeIcon, Tooltip, Typography } from '@mantine/core';
+import { ActionIcon, Button, Stack, Text, ThemeIcon, Tooltip, Typography } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconClipboard, IconClipboardCheck, IconRefresh, IconSparkles, IconTrash } from '@tabler/icons-react';
+import { IconRefresh, IconSparkles, IconTrash } from '@tabler/icons-react';
 import { Markdown } from '@tanstack/markdown/react';
 import { useState, type ComponentPropsWithoutRef } from 'react';
 import { LlmError, requestLlmPermission, summarize } from '../shared/llm';
@@ -58,15 +58,6 @@ export function Summary({ item }: { item: SavedItem }) {
 
   const actions = summary && (
     <>
-      <CopyButton value={summary.content} timeout={2000}>
-        {({ copied, copy }) => (
-          <Tooltip label={copied ? 'Copied' : 'Copy summary'} withArrow>
-            <ActionIcon variant="subtle" color={copied ? 'teal' : 'gray'} aria-label="Copy summary" onClick={copy}>
-              {copied ? <IconClipboardCheck size={16} /> : <IconClipboard size={16} />}
-            </ActionIcon>
-          </Tooltip>
-        )}
-      </CopyButton>
       <Tooltip label="Regenerate summary" withArrow>
         <ActionIcon
           variant="subtle"
@@ -93,7 +84,13 @@ export function Summary({ item }: { item: SavedItem }) {
   );
 
   return (
-    <ContentBlock storageKey="summary" icon={<IconSparkles size={17} />} title="Summary" actions={actions}>
+    <ContentBlock
+      storageKey="summary"
+      icon={<IconSparkles size={17} />}
+      title="Summary"
+      copy={summary ? { value: summary.content, label: 'Copy summary' } : undefined}
+      actions={actions}
+    >
       {summary ? (
         <Stack gap="sm">
           <Typography className="rt-reader rt-follow-up">

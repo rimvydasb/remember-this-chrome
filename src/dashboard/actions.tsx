@@ -3,15 +3,15 @@ import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { buildExportPayload } from '../shared/importExport';
 import { itemsToMarkdown, markdownFileName } from '../shared/markdown';
-import { clearLibrary, deleteForgottenItems, getAllItems, setItemsMark } from '../shared/storage';
+import { clearLibrary, deleteForgottenItems, getAllItems, getCatalogs, setItemsMark } from '../shared/storage';
 import type { ItemMark, SavedItem } from '../shared/types';
 import { downloadTextFile } from '../ui/download';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export async function exportLibraryJson(): Promise<void> {
-  const items = await getAllItems();
-  const payload = buildExportPayload(items);
+  const [items, catalogs] = await Promise.all([getAllItems(), getCatalogs()]);
+  const payload = buildExportPayload(items, new Date(), catalogs);
   const date = payload.exportedAt.slice(0, 10);
   downloadTextFile(`remember-this-library-${date}.json`, JSON.stringify(payload, null, 2), 'application/json');
   notifications.show({

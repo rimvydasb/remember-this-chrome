@@ -1,3 +1,4 @@
+import { CATALOGS_KEY, mergeCatalogs, normalizeCatalogs, RECENTS_ID, type Catalog } from './catalogs';
 import { planImport, type ImportMode, type ImportPlan } from './importExport';
 import { sortByRecent } from './search';
 import { mergeCapture, type Capture, type CaptureField } from './mergeCapture';
@@ -132,10 +133,79 @@ export async function deleteForgottenItems(ids: readonly string[]): Promise<stri
   return forgotten;
 }
 
-/** Applies an import. New data is written before stale records are removed, so a failure cannot lose data. */
-export async function applyImport(incoming: readonly SavedItem[], mode: ImportMode): Promise<ImportPlan> {
-  const plan = planImport(await getAllItems(), incoming, mode);
+/**
+ * Applies an import. New data is written before stale records are removed, so a failure cannot lose data.
+ * Catalogs are combined by the rules of `mergeCatalogs`.
+ */
+export async function applyImport(
+  incoming: readonly SavedItem[],
+  mode: ImportMode,
+  incomingCatalogs: readonly Catalog[] = [],
+): Promise<ImportPlan> {
+  const { catalogs, remap } = mergeCatalogs(await getCatalogs(), incomingCatalogs, mode);
+  const items =
+    remap.size === 0
+      ? incoming
+      : incoming.map((item) => withCatalog(item, remap.get(item.catalogId ?? '') ?? item.catalogId));
+  await saveCatalogs(catalogs);
+  const plan = planImport(await getAllItems(), items, mode);
   await putItems(plan.toWrite);
   await deleteItems(plan.toDelete);
   return plan;
+}
+
+/** Returns a copy of the item in the given catalog. Recents (or undefined) removes the field. */
+function withCatalog(item: SavedItem, catalogId: string | undefined): SavedItem {
+  const next: SavedItem = { ...item, catalogId };
+  if (!catalogId || catalogId === RECENTS_ID) delete next.catalogId;
+  return next;
+}
+
+/** All catalogs: Recents first, then the user's catalogs by name. */
+export async function getCatalogs(): Promise<Catalog[]> {
+  const result = await chrome.storage.local.get(CATALOGS_KEY);
+  return normalizeCatalogs(result[CATALOGS_KEY]);
+}
+
+async function saveCatalogs(catalogs: readonly Catalog[]): Promise<void> {
+  // Recents is implied and never stored.
+  await chrome.storage.local.set({ [CATALOGS_KEY]: normalizeCatalogs(catalogs).slice(1) });
+}
+
+export async function createCatalog(name: string, now = new Date()): Promise<Catalog> {
+  const catalog: Catalog = { id: crypto.randomUUID(), name: name.trim(), createdAt: now.toISOString() };
+  await saveCatalogs([...(await getCatalogs()), catalog]);
+  return catalog;
+}
+
+/** Renames a catalog. Recents cannot be renamed. */
+export async function renameCatalog(id: string, name: string): Promise<void> {
+  if (id === RECENTS_ID) return;
+  const catalogs = await getCatalogs();
+  await saveCatalogs(catalogs.map((catalog) => (catalog.id === id ? { ...catalog, name: name.trim() } : catalog)));
+}
+
+/**
+ * Deletes a catalog and moves its items to Recents. Recents cannot be deleted. Items are moved
+ * first; an item that still names a missing catalog is in Recents anyway.
+ */
+export async function deleteCatalog(id: string): Promise<number> {
+  if (id === RECENTS_ID) return 0;
+  const moved = (await getAllItems()).filter((item) => item.catalogId === id);
+  await putItems(moved.map((item) => withCatalog(item, undefined)));
+  await saveCatalogs((await getCatalogs()).filter((catalog) => catalog.id !== id));
+  return moved.length;
+}
+
+/** Moves items to a catalog. Missing items are skipped. */
+export async function moveItemsToCatalog(ids: readonly string[], catalogId: string): Promise<void> {
+  if (ids.length === 0) return;
+  const keys = ids.map(keyFor);
+  const stored = await chrome.storage.local.get(keys);
+  const next: SavedItem[] = [];
+  for (const key of keys) {
+    const item = stored[key] as SavedItem | undefined;
+    if (item) next.push(withCatalog(item, catalogId));
+  }
+  await putItems(next);
 }
