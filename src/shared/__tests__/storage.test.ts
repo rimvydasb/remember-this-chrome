@@ -5,6 +5,8 @@ import {
   applyImport,
   clearLibrary,
   countItems,
+  createCatalog,
+  getCatalogs,
   deleteFollowUp,
   updateFollowUp,
   deleteForgottenItems,
@@ -255,5 +257,55 @@ describe('AI tags', () => {
       content: 'New content',
     });
     expect(updated.aiTags).toEqual(tags('agents'));
+  });
+});
+
+describe('concurrent updates', () => {
+  const followUp = (id: string) => ({
+    id,
+    type: 'user-question' as const,
+    userContent: id,
+    generatedContent: '',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('keeps every follow-up when several are added at once', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z')]);
+    await Promise.all(['q1', 'q2', 'q3'].map((id) => addFollowUp('a', followUp(id))));
+    expect((await getItem('a'))?.followUps?.map((f) => f.id)).toEqual(['q1', 'q2', 'q3']);
+  });
+
+  it('keeps every answer when several questions are answered at once', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z', { followUps: [followUp('q1'), followUp('q2')] })]);
+    await Promise.all([
+      updateFollowUp('a', 'q1', { generatedContent: 'one' }),
+      updateFollowUp('a', 'q2', { generatedContent: 'two' }),
+    ]);
+    expect((await getItem('a'))?.followUps?.map((f) => f.generatedContent)).toEqual(['one', 'two']);
+  });
+
+  it('keeps AI tags and follow-ups that are saved at the same time', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z')]);
+    await Promise.all([
+      setAiTags('a', { tags: ['sleep'], createdAt: '2026-01-02T00:00:00.000Z' }),
+      addFollowUp('a', followUp('q1')),
+      setItemsMark(['a'], 'loved'),
+    ]);
+    const stored = await getItem('a');
+    expect(stored?.aiTags?.tags).toEqual(['sleep']);
+    expect(stored?.followUps).toHaveLength(1);
+    expect(stored?.mark).toBe('loved');
+  });
+
+  it('keeps every catalog that is created at the same time', async () => {
+    await Promise.all(['A', 'B', 'C'].map((name) => createCatalog(name)));
+    expect((await getCatalogs()).map((c) => c.name)).toEqual(['Recents', 'A', 'B', 'C']);
+  });
+
+  it('keeps working after a failed update', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z')]);
+    chrome.storage.local.set.mockRejectedValueOnce(new Error('quota'));
+    await expect(addFollowUp('a', followUp('q1'))).rejects.toThrow('quota');
+    await expect(addFollowUp('a', followUp('q2'))).resolves.toBe(true);
   });
 });

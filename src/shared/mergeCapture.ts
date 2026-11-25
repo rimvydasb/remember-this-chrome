@@ -1,11 +1,9 @@
-import type { ItemMeta, SavedItem } from './types';
+import type { CaptureField, ItemMeta, SavedItem } from './types';
+
+export type { CaptureField };
 
 /** A new capture, before it gets an ID and a timestamp. */
 export type Capture = Omit<SavedItem, 'id' | 'timestamp'>;
-
-/** Parts of an item that a capture can change. Used to tell the user what an update changed. */
-export type CaptureField =
-  'title' | 'content' | 'channel' | 'duration' | 'language' | 'views' | 'description' | 'links' | 'chapters';
 
 export interface MergeResult {
   item: SavedItem;

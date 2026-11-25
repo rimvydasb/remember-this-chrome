@@ -12,6 +12,21 @@ export const ITEM_KEY_PREFIX = 'item:';
 
 const keyFor = (id: string) => `${ITEM_KEY_PREFIX}${id}`;
 
+/**
+ * Updates read a record, change it, and write it back. Two updates that overlap (two answers that
+ * arrive together, tags that finish while a question is saved) would each write from the same old
+ * copy, and the later write would erase the earlier change. So the updates below run one at a time.
+ * A failed update does not stop the ones after it. An update must not call another one: it would
+ * wait for itself.
+ */
+let updateQueue: Promise<unknown> = Promise.resolve();
+
+function serialized<T>(update: () => Promise<T>): Promise<T> {
+  const result = updateQueue.then(update, update);
+  updateQueue = result.catch(() => {});
+  return result;
+}
+
 export function isItemKey(key: string): boolean {
   return key.startsWith(ITEM_KEY_PREFIX);
 }
@@ -78,7 +93,7 @@ export async function findCapture(url: string, type: ItemType): Promise<SavedIte
  * item keeps its ID and is updated by the rules of `mergeCapture`: parts that the new capture
  * could not read keep their stored values.
  */
-export async function upsertCapture(
+async function upsertCaptureNow(
   capture: Capture,
   options: { fallbackTitle?: string } = {},
 ): Promise<{ item: SavedItem; created: boolean; changed: CaptureField[] }> {
@@ -93,7 +108,7 @@ export async function upsertCapture(
 }
 
 /** Attaches a follow-up to an item. Returns false when the item no longer exists. */
-export async function addFollowUp(itemId: string, followUp: FollowUp): Promise<boolean> {
+async function addFollowUpNow(itemId: string, followUp: FollowUp): Promise<boolean> {
   const item = await getItem(itemId);
   if (!item) return false;
   await putItems([{ ...item, followUps: [...(item.followUps ?? []), followUp] }]);
@@ -104,7 +119,7 @@ export async function addFollowUp(itemId: string, followUp: FollowUp): Promise<b
  * Stores LLM-generated tags on an item. With `onlyIfMissing`, an item that already has AI tags is
  * left alone (another dashboard tab may have tagged it). Returns false when nothing was stored.
  */
-export async function setAiTags(
+async function setAiTagsNow(
   itemId: string,
   aiTags: AiTags,
   options: { onlyIfMissing?: boolean } = {},
@@ -119,7 +134,7 @@ export async function setAiTags(
  * Changes fields of a follow-up of an item. Returns false when the item or the follow-up no
  * longer exists (for example the user deleted a question while its answer was generated).
  */
-export async function updateFollowUp(
+async function updateFollowUpNow(
   itemId: string,
   followUpId: string,
   patch: Partial<Omit<FollowUp, 'id' | 'type'>>,
@@ -134,7 +149,7 @@ export async function updateFollowUp(
 }
 
 /** Removes a follow-up from an item. */
-export async function deleteFollowUp(itemId: string, followUpId: string): Promise<void> {
+async function deleteFollowUpNow(itemId: string, followUpId: string): Promise<void> {
   const item = await getItem(itemId);
   if (!item?.followUps) return;
   const followUps = item.followUps.filter((followUp) => followUp.id !== followUpId);
@@ -144,7 +159,7 @@ export async function deleteFollowUp(itemId: string, followUpId: string): Promis
 }
 
 /** Sets the mark of the given items, or removes it when `mark` is undefined. Missing items are skipped. */
-export async function setItemsMark(ids: readonly string[], mark: ItemMark | undefined): Promise<void> {
+async function setItemsMarkNow(ids: readonly string[], mark: ItemMark | undefined): Promise<void> {
   if (ids.length === 0) return;
   const keys = ids.map(keyFor);
   const stored = await chrome.storage.local.get(keys);
@@ -160,7 +175,7 @@ export async function setItemsMark(ids: readonly string[], mark: ItemMark | unde
 }
 
 /** Deletes the given items, but only those marked as forgotten. Returns the IDs that were deleted. */
-export async function deleteForgottenItems(ids: readonly string[]): Promise<string[]> {
+async function deleteForgottenItemsNow(ids: readonly string[]): Promise<string[]> {
   const keys = ids.map(keyFor);
   const stored = await chrome.storage.local.get(keys);
   const forgotten = ids.filter((id) => (stored[keyFor(id)] as SavedItem | undefined)?.mark === 'forgotten');
@@ -172,7 +187,7 @@ export async function deleteForgottenItems(ids: readonly string[]): Promise<stri
  * Applies an import. New data is written before stale records are removed, so a failure cannot lose data.
  * Catalogs are combined by the rules of `mergeCatalogs`.
  */
-export async function applyImport(
+async function applyImportNow(
   incoming: readonly SavedItem[],
   mode: ImportMode,
   incomingCatalogs: readonly Catalog[] = [],
@@ -207,14 +222,14 @@ async function saveCatalogs(catalogs: readonly Catalog[]): Promise<void> {
   await chrome.storage.local.set({ [CATALOGS_KEY]: normalizeCatalogs(catalogs).slice(1) });
 }
 
-export async function createCatalog(name: string, now = new Date()): Promise<Catalog> {
+async function createCatalogNow(name: string, now = new Date()): Promise<Catalog> {
   const catalog: Catalog = { id: crypto.randomUUID(), name: name.trim(), createdAt: now.toISOString() };
   await saveCatalogs([...(await getCatalogs()), catalog]);
   return catalog;
 }
 
 /** Renames a catalog. Recents cannot be renamed. */
-export async function renameCatalog(id: string, name: string): Promise<void> {
+async function renameCatalogNow(id: string, name: string): Promise<void> {
   if (id === RECENTS_ID) return;
   const catalogs = await getCatalogs();
   await saveCatalogs(catalogs.map((catalog) => (catalog.id === id ? { ...catalog, name: name.trim() } : catalog)));
@@ -224,7 +239,7 @@ export async function renameCatalog(id: string, name: string): Promise<void> {
  * Deletes a catalog and moves its items to Recents. Recents cannot be deleted. Items are moved
  * first; an item that still names a missing catalog is in Recents anyway.
  */
-export async function deleteCatalog(id: string): Promise<number> {
+async function deleteCatalogNow(id: string): Promise<number> {
   if (id === RECENTS_ID) return 0;
   const moved = (await getAllItems()).filter((item) => item.catalogId === id);
   await putItems(moved.map((item) => withCatalog(item, undefined)));
@@ -233,7 +248,7 @@ export async function deleteCatalog(id: string): Promise<number> {
 }
 
 /** Moves items to a catalog. Missing items are skipped. */
-export async function moveItemsToCatalog(ids: readonly string[], catalogId: string): Promise<void> {
+async function moveItemsToCatalogNow(ids: readonly string[], catalogId: string): Promise<void> {
   if (ids.length === 0) return;
   const keys = ids.map(keyFor);
   const stored = await chrome.storage.local.get(keys);
@@ -244,3 +259,19 @@ export async function moveItemsToCatalog(ids: readonly string[], catalogId: stri
   }
   await putItems(next);
 }
+
+// The updates, one at a time. See `serialized`.
+export const upsertCapture: typeof upsertCaptureNow = (...args) => serialized(() => upsertCaptureNow(...args));
+export const addFollowUp: typeof addFollowUpNow = (...args) => serialized(() => addFollowUpNow(...args));
+export const setAiTags: typeof setAiTagsNow = (...args) => serialized(() => setAiTagsNow(...args));
+export const updateFollowUp: typeof updateFollowUpNow = (...args) => serialized(() => updateFollowUpNow(...args));
+export const deleteFollowUp: typeof deleteFollowUpNow = (...args) => serialized(() => deleteFollowUpNow(...args));
+export const setItemsMark: typeof setItemsMarkNow = (...args) => serialized(() => setItemsMarkNow(...args));
+export const deleteForgottenItems: typeof deleteForgottenItemsNow = (...args) =>
+  serialized(() => deleteForgottenItemsNow(...args));
+export const applyImport: typeof applyImportNow = (...args) => serialized(() => applyImportNow(...args));
+export const createCatalog: typeof createCatalogNow = (...args) => serialized(() => createCatalogNow(...args));
+export const renameCatalog: typeof renameCatalogNow = (...args) => serialized(() => renameCatalogNow(...args));
+export const deleteCatalog: typeof deleteCatalogNow = (...args) => serialized(() => deleteCatalogNow(...args));
+export const moveItemsToCatalog: typeof moveItemsToCatalogNow = (...args) =>
+  serialized(() => moveItemsToCatalogNow(...args));

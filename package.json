@@ -10,8 +10,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write .",
-    "icons": "node scripts/generate-icons.mjs"
+    "format": "prettier --write --log-level warn \"**/*.{ts,tsx,js,cjs,mjs,json,md}\"",
+    "icons": "node scripts/generate-icons.mjs",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,cjs,mjs,json,md}\"",
+    "lint": "oxlint --quiet",
+    "lint:all": "oxlint",
+    "depcruise": "depcruise . --config .dependency-cruiser.cjs --ignore-known --output-type err-long",
+    "depcruise:baseline": "depcruise-baseline . --config .dependency-cruiser.cjs"
   },
   "dependencies": {
     "@mantine/core": "^9.8.0",
@@ -28,12 +33,19 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@swc/core": "^1.16.22",
+    "@testing-library/jest-dom": "^8.0.0",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.13",
     "@types/chrome": "^0.3.7",
     "@types/mustache": "^4.2.6",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
+    "dependency-cruiser": "^18.9.0",
+    "jsdom": "^31.0.1",
+    "oxlint": "^1.95.0",
     "postcss": "^8.5.32",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",

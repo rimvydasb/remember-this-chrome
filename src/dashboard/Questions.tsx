@@ -68,6 +68,8 @@ export function Questions({ item }: { item: SavedItem }) {
     // Starts the permission prompt inside the user gesture, before any await.
     const permission = ensureLlmPermission(llm.baseUrl);
     permission.catch(() => {}); // Handled in `answer`.
+    // Clear the input first, so a second Enter or click cannot ask the same question twice.
+    setDraft('');
 
     const followUp: FollowUp = {
       id: crypto.randomUUID(),
@@ -77,10 +79,10 @@ export function Questions({ item }: { item: SavedItem }) {
       createdAt: new Date().toISOString(),
     };
     if (!(await addFollowUp(item.id, followUp))) {
+      setDraft((current) => current || question);
       notifications.show({ color: 'red', message: 'Cannot save the question: the item was deleted.' });
       return;
     }
-    setDraft('');
     await answer(followUp.id, question, llm, permission);
   };
 

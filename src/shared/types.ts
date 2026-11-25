@@ -1,5 +1,3 @@
-import type { CaptureField } from './mergeCapture';
-
 export type ItemType = 'youtube_transcript' | 'webpage_text';
 
 export const ITEM_TYPES: readonly ItemType[] = ['youtube_transcript', 'webpage_text'];
@@ -119,3 +117,7 @@ export type CaptureResponse =
   | { ok: false; code: CaptureErrorCode; error: string };
 
 export type RuntimeMessage = { type: 'capture-tab'; tabId: number };
+
+/** Parts of an item that a capture can change. Used to tell the user what an update changed. */
+export type CaptureField =
+  'title' | 'content' | 'channel' | 'duration' | 'language' | 'views' | 'description' | 'links' | 'chapters';

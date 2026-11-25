@@ -30,5 +30,6 @@ export default defineConfig({
   test: {
     root,
     environment: 'node',
+    setupFiles: [resolve(root, 'test/setup.ts')],
   },
 });

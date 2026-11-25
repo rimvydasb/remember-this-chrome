@@ -64,7 +64,9 @@ describe('summarize', () => {
     expect(body.model).toBeUndefined();
     expect(body.stream).toBe(false);
     expect(body.messages).toEqual([{ role: 'user', content: buildSummaryMessage(settings.summaryPrompt, video) }]);
-    expect(body.messages[0].content).toMatch(/^Transcript:\nthe transcript\n\nTitle: My video\nChannel: Chan\n\nTask:\nSummarize/);
+    expect(body.messages[0].content).toMatch(
+      /^Transcript:\nthe transcript\n\nTitle: My video\nChannel: Chan\n\nTask:\nSummarize/,
+    );
   });
 
   it('sends the configured model', async () => {
