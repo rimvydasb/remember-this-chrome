@@ -1,7 +1,9 @@
 import { vi } from 'vitest';
 
 /**
- * Mocks of the LLM calls, for `vi.mock('../../shared/llm', ...)`. Create them with `vi.hoisted`,
+ * Mocks of the LLM calls. `listModels` and the permission calls replace the exports of `src/llm`;
+ * `summarize`, `answerQuestion` and `generateTags` replace the generation steps of the follow-up
+ * pipelines (`generateSummary`, `generateAnswer`, `generateTags`). Create them with `vi.hoisted`,
  * because `vi.mock` runs before the imports.
  */
 export function createLlmMocks() {

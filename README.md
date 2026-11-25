@@ -63,9 +63,11 @@ npm run build        # type-check + production build into dist/
 | `public/manifest.json` | Manifest V3. Permissions: `storage`, `unlimitedStorage`, `scripting`; host: YouTube only. |
 | `src/background/` | Service worker. Handles capture requests from the popup and the keyboard shortcut. |
 | `src/content/youtubeExtractor.ts` | Function injected into the YouTube tab (MAIN world) that reads the transcript. |
-| `src/shared/` | Pure logic: transcript cleanup, storage, search, import/export, Markdown. Unit-tested. |
-| `src/popup/` | Toolbar popup (React + Mantine). |
-| `src/dashboard/` | Library dashboard (React + Mantine). |
+| `src/shared/` | Pure logic: transcript cleanup, storage, search, import/export, Markdown, prompt model. Unit-tested. |
+| `src/llm/` | Transport to the OpenAI-compatible LLM server: client, address, host permission. |
+| `src/followups/` | Follow-up pipelines on a saved item (`summary/`, `questions/`, `tagging/`), the `FollowUpPipeline` contract, and `services.ts` that wires them to the library. No UI. |
+| `src/app/popup/` | Toolbar popup (React + Mantine). |
+| `src/app/dashboard/` | Library dashboard (React + Mantine). Reader sections are panels in `panels/`, listed in `panels/registry.tsx`. |
 
 ### How transcript extraction works
 

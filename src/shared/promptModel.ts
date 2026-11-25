@@ -1,5 +1,6 @@
 import Mustache from 'mustache';
 import { formatDuration } from './markdown';
+import { followUpsOfType } from './followUpRecords';
 import type { SavedItem } from './types';
 
 /**
@@ -128,8 +129,7 @@ const day = (iso: string) => (Number.isNaN(Date.parse(iso)) ? '' : new Date(iso)
  */
 export function buildPromptModel(item: PromptItem, ask?: { question: string; questionId?: string }): PromptModel {
   const meta = item.meta ?? {};
-  const followUps = item.followUps ?? [];
-  const summary = followUps.filter((followUp) => followUp.type === 'llm-summary').at(-1);
+  const summary = followUpsOfType(item, 'llm-summary').at(-1);
   return {
     title: item.title || 'Untitled',
     url: item.url,
@@ -148,13 +148,10 @@ export function buildPromptModel(item: PromptItem, ask?: { question: string; que
       time: formatDuration(chapter.startSec),
       title: chapter.title,
     })),
-    questions: followUps
+    questions: followUpsOfType(item, 'user-question')
       .filter(
         (followUp) =>
-          followUp.type === 'user-question' &&
-          followUp.id !== ask?.questionId &&
-          followUp.userContent?.trim() &&
-          followUp.generatedContent.trim(),
+          followUp.id !== ask?.questionId && followUp.userContent?.trim() && followUp.generatedContent.trim(),
       )
       .map((followUp) => ({
         question: followUp.userContent!.trim(),

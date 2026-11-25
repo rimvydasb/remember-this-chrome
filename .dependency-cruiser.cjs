@@ -75,6 +75,46 @@ module.exports = {
     },
 
     // --- Project rules -------------------------------------------------------------------------------------------
+    {
+      name: 'supporting-code-not-to-app',
+      comment:
+        'Supporting code (shared, llm, followups, background, content) must not import the GUI in src/app. Move what both need out of src/app.',
+      severity: 'error',
+      from: { path: '^src/(shared|llm|followups|background|content)/', pathNot: '(^|/)(__tests__|test)/' },
+      to: { path: '^src/app/' },
+    },
+    {
+      name: 'supporting-code-not-to-react',
+      comment: 'Supporting code is framework-free. React and Mantine belong in src/app.',
+      severity: 'error',
+      from: { path: '^src/(shared|llm|followups|background|content)/', pathNot: '(^|/)(__tests__|test)/' },
+      to: { path: '^node_modules/(react|react-dom|@mantine|@tanstack/react-query|@tabler)(/|$)' },
+    },
+    {
+      name: 'llm-is-a-leaf-module',
+      comment: 'src/llm is the transport to the LLM server. It must not know about follow-ups or the app.',
+      severity: 'error',
+      from: { path: '^src/llm/', pathNot: '(^|/)__tests__/' },
+      to: { path: '^src/(followups|app)/' },
+    },
+    {
+      name: 'followup-modules-are-independent',
+      comment:
+        'A follow-up module (summary, questions, tagging) must not import another one. Share code through src/followups/*.ts or src/shared.',
+      severity: 'error',
+      from: { path: '^src/followups/(summary|questions|tagging)/', pathNot: '(^|/)__tests__/' },
+      to: { path: '^src/followups/(summary|questions|tagging)/', pathNot: '^src/followups/$1/' },
+    },
+    {
+      name: 'panels-are-independent',
+      comment: 'A reader panel must not import another panel. Share code through src/app/dashboard/panels/common.',
+      severity: 'error',
+      from: { path: '^src/app/dashboard/panels/([^/]+)/', pathNot: '(^|/)__tests__/' },
+      to: {
+        path: '^src/app/dashboard/panels/(summary|questions|videoDetails)/',
+        pathNot: '^src/app/dashboard/panels/$1/',
+      },
+    },
   ],
   options: {
     exclude: {
