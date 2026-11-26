@@ -2,6 +2,7 @@ import { ActionIcon, Alert, Button, Stack, Text, ThemeIcon, Tooltip } from '@man
 import { IconAlertCircle, IconRefresh, IconSparkles, IconTrash } from '@tabler/icons-react';
 import type { SavedItem } from '../../../../shared/types';
 import { formatDateTime } from '../../../ui/format';
+import { GeneratingNote } from '../../ActivityBar';
 import { ContentBlock } from '../../ContentBlock';
 import { LlmMarkdown } from '../common/llmUi';
 import { useSummary } from './useSummary';
@@ -42,6 +43,7 @@ export function Summary({ item }: { item: SavedItem }) {
     >
       {summary ? (
         <Stack gap="sm">
+          {generating && <GeneratingNote label="Regenerating" />}
           <LlmMarkdown>{summary.generatedContent}</LlmMarkdown>
           <Text size="xs" c="dimmed">
             Generated {formatDateTime(summary.createdAt)}
@@ -70,6 +72,7 @@ export function Summary({ item }: { item: SavedItem }) {
           >
             Generate summary
           </Button>
+          {generating && <GeneratingNote label="Summarizing" />}
           {error && (
             <Alert color="red" icon={<IconAlertCircle size={18} />} title="Cannot summarize" maw={420}>
               {error}

@@ -18,8 +18,21 @@ export interface BackgroundTaggerDeps {
   getPriorityId: () => string | undefined;
   /** Called with the item being tagged, and with undefined when idle. */
   onCurrent: (itemId: string | undefined) => void;
+  /**
+   * Called before each item with the progress of this run: `done` items of `total` (the done ones
+   * plus the ones still waiting, this one included). Called with undefined when the run ends.
+   */
+  onProgress?: (progress: TaggingProgress | undefined) => void;
+  /** Called when a tagging request ends, with whether it succeeded. */
+  onCall?: (ok: boolean) => void;
   retryMs?: number;
   log?: (message: string, error: unknown) => void;
+}
+
+export interface TaggingProgress {
+  item: SavedItem;
+  done: number;
+  total: number;
 }
 
 /** Tag identity: the item changes when it is captured again. */
@@ -57,12 +70,16 @@ export class BackgroundTagger {
     clearTimeout(this.timer);
     this.timer = undefined;
     this.deps.onCurrent(undefined);
+    this.deps.onProgress?.(undefined);
   }
 
-  private next(): SavedItem | undefined {
-    const candidates = this.deps
+  private candidates(): SavedItem[] {
+    return this.deps
       .getItems()
       .filter((item) => this.deps.pipeline.needsTags(item) && !this.attempted.has(attemptKey(item)));
+  }
+
+  private next(candidates = this.candidates()): SavedItem | undefined {
     const priority = this.deps.getPriorityId();
     return candidates.find((item) => item.id === priority) ?? candidates[0];
   }
@@ -73,27 +90,36 @@ export class BackgroundTagger {
 
   private async run(): Promise<void> {
     if (this.running || this.stopped) return;
-    const { settings, pipeline, hasPermission, isReachable, onCurrent } = this.deps;
+    const { settings, pipeline, hasPermission, isReachable, onCurrent, onProgress, onCall } = this.deps;
     this.running = true;
     this.timer = undefined;
     try {
       if (!this.next()) return;
       if (!(await hasPermission(settings.baseUrl)) || !(await isReachable(settings))) return this.pause();
-      for (let item = this.next(); item && !this.stopped; item = this.next()) {
+      let done = 0;
+      for (let waiting = this.candidates(); !this.stopped; waiting = this.candidates()) {
+        const item = this.next(waiting);
+        if (!item) break;
         onCurrent(item.id);
+        onProgress?.({ item, done, total: done + waiting.length });
         try {
           await pipeline.run({ settings, item }, { onlyIfMissing: true });
+          onCall?.(true);
           // Do not ask for the same item again before the library update arrives.
           this.attempted.add(attemptKey(item));
+          done++;
         } catch (error) {
           if (this.stopped) return;
+          onCall?.(false);
           if (!(await isReachable(settings))) return this.pause();
           this.deps.log?.(`AI tagging failed for “${item.title}”`, error);
           this.attempted.add(attemptKey(item));
+          done++;
         }
       }
     } finally {
       this.running = false;
+      onProgress?.(undefined);
       if (!this.stopped) onCurrent(undefined);
     }
   }

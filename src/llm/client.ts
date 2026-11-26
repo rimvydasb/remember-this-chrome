@@ -77,7 +77,9 @@ export class LlmClient {
 
   private async request(path: string, init: RequestInit, defaultTimeoutMs = LLM_TIMEOUT_MS): Promise<unknown> {
     const doFetch = this.options.fetch ?? fetch;
-    const timeoutMs = this.options.timeoutMs ?? defaultTimeoutMs;
+    // Generation calls use the time limit from the settings; connection tests keep their short one.
+    const configured = defaultTimeoutMs === LLM_TIMEOUT_MS ? this.settings.timeoutMs : undefined;
+    const timeoutMs = this.options.timeoutMs ?? configured ?? defaultTimeoutMs;
     const root = normalizeBaseUrl(this.settings.baseUrl);
 
     let response: Response;

@@ -6,6 +6,7 @@ import { errorMessage } from '../../../../llm';
 import type { LlmSettings } from '../../../../shared/settings';
 import type { FollowUp, SavedItem } from '../../../../shared/types';
 import { useLlmGate } from '../common/useLlmGate';
+import { aiActivity } from '../../aiActivity';
 
 export interface QuestionsState {
   /** The questions, newest first. */
@@ -53,7 +54,9 @@ export function useQuestions(item: SavedItem): QuestionsState {
     setError(question.id, undefined);
     try {
       await permission;
-      await questionPipeline.run({ settings: llm, item }, question);
+      await aiActivity.track('Answering a question', item.title, () =>
+        questionPipeline.run({ settings: llm, item }, question),
+      );
     } catch (error) {
       setError(question.id, errorMessage(error));
     } finally {

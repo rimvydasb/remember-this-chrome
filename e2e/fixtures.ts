@@ -96,9 +96,10 @@ export const test = base.extend<Fixtures>({
       unexpected.push(request.url());
     });
 
+    // Seed through the service worker, so the dashboard's first load already sees the fake library
+    // and the fake server (it checks the server's connection as soon as it opens).
+    await seedStorage(context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker')), ITEMS);
     await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
-    await seedStorage(page, ITEMS);
-    await page.reload();
     await use(page);
     expect(unexpected, 'requests that left the extension and the fake LLM').toEqual([]);
   },
@@ -107,7 +108,7 @@ export const test = base.extend<Fixtures>({
 export { expect };
 
 /** Replaces everything in this (test) profile's extension storage with the given items and settings. */
-async function seedStorage(page: Page, items: readonly SavedItem[]) {
+async function seedStorage(page: Pick<Page, 'evaluate'>, items: readonly SavedItem[]) {
   const settings = { llm: { ...DEFAULT_SETTINGS.llm, baseUrl: LLM_URL, useForTags: false } };
   const entries = {
     [SETTINGS_KEY]: settings,

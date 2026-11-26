@@ -41,6 +41,24 @@ describe('BackgroundTagger', () => {
     expect(current).toEqual(['a', 'b', undefined]);
   });
 
+  it('reports its progress as done of total, and the end of the run', async () => {
+    const items = [
+      makeItem({ id: 'a', title: 'A' }),
+      makeItem({ id: 'b', title: 'B' }),
+      makeItem({ id: 'c', title: 'C' }),
+    ];
+    const progress: (string | undefined)[] = [];
+    const calls: boolean[] = [];
+    const { tagger } = setup(items, {
+      onProgress: (p) => progress.push(p && `${p.item.id} ${p.done}/${p.total}`),
+      onCall: (ok) => calls.push(ok),
+    });
+    tagger.start();
+    await flush();
+    expect(progress).toEqual(['a 0/3', 'b 1/3', 'c 2/3', undefined]);
+    expect(calls).toEqual([true, true, true]);
+  });
+
   it('tags the priority item first', async () => {
     const items = [makeItem({ id: 'a' }), makeItem({ id: 'b' })];
     const { tagger, tagged } = setup(items, { getPriorityId: () => 'b' });

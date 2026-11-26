@@ -80,11 +80,6 @@ export async function deleteItems(ids: readonly string[]): Promise<void> {
   await chrome.storage.local.remove(ids.map(keyFor));
 }
 
-export async function clearLibrary(): Promise<void> {
-  const keys = await chrome.storage.local.getKeys();
-  await chrome.storage.local.remove(keys.filter(isItemKey));
-}
-
 /** Returns the saved item of `type` for `url`, if the library has one. */
 export async function findCapture(url: string, type: ItemType): Promise<SavedItem | undefined> {
   return (await getAllItems()).find((item) => item.url === url && item.type === type);

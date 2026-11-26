@@ -7,6 +7,7 @@ import { errorMessage } from '../../../../llm';
 import { GOOGLE_HOST_PERMISSION } from '../../../../shared/googleSearch';
 import type { FollowUp, SavedItem } from '../../../../shared/types';
 import { useLlmGate } from '../common/useLlmGate';
+import { aiActivity } from '../../aiActivity';
 import { readCooldown, startCooldown, type SearchCooldown } from './cooldown';
 
 export interface RelatedError {
@@ -60,9 +61,8 @@ export function useRelatedArticles(item: SavedItem): RelatedArticlesState {
     setProgress({ step: 'queries' });
     try {
       await access.permission;
-      const { followUp, aborted } = await relatedArticlesPipeline.run(
-        { settings: access.llm, item },
-        { onProgress: setProgress },
+      const { followUp, aborted } = await aiActivity.track('Finding related articles', item.title, () =>
+        relatedArticlesPipeline.run({ settings: access.llm, item }, { onProgress: setProgress }),
       );
       const count = followUp.articles?.length ?? 0;
       notifications.show({ color: 'teal', message: `Found ${count} related ${count === 1 ? 'article' : 'articles'}.` });

@@ -3,7 +3,7 @@ import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { buildExportPayload } from '../../shared/importExport';
 import { itemsToMarkdown, markdownFileName } from '../../shared/markdown';
-import { clearLibrary, deleteForgottenItems, getAllItems, getCatalogs, setItemsMark } from '../../shared/storage';
+import { deleteForgottenItems, getAllItems, getCatalogs, setItemsMark } from '../../shared/storage';
 import type { ItemMark, SavedItem } from '../../shared/types';
 import { downloadTextFile } from '../ui/download';
 
@@ -73,24 +73,6 @@ export function confirmDelete(all: readonly SavedItem[], onDeleted?: () => void)
       const deleted = await deleteForgottenItems(items.map((item) => item.id));
       onDeleted?.();
       notifications.show({ color: 'gray', message: `${plural(deleted.length, 'item')} deleted.` });
-    },
-  });
-}
-
-export function confirmClearLibrary(total: number): void {
-  modals.openConfirmModal({
-    title: 'Clear the entire library?',
-    centered: true,
-    children: (
-      <Text size="sm">
-        All {plural(total, 'item')} will be permanently deleted. Export the library as JSON first if you want a backup.
-      </Text>
-    ),
-    labels: { confirm: 'Delete everything', cancel: 'Cancel' },
-    confirmProps: { color: 'red' },
-    onConfirm: async () => {
-      await clearLibrary();
-      notifications.show({ color: 'gray', message: 'Library cleared.' });
     },
   });
 }

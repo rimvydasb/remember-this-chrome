@@ -133,7 +133,7 @@ describe('import', () => {
   });
 });
 
-describe('export and clear', () => {
+describe('export', () => {
   it('exports the library and the catalogs as JSON', async () => {
     fake = installDashboardEnvironment();
     const catalog = { id: 'c1', name: 'Cooking', createdAt: '2026-01-01T00:00:00.000Z' };
@@ -142,7 +142,7 @@ describe('export and clear', () => {
     const { user } = renderApp(<App />);
     await screen.findByText('Soup');
 
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Import and export' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Export JSON' }));
     await waitFor(() => expect(download.downloadTextFile).toHaveBeenCalledTimes(1));
     const [name, text, type] = download.downloadTextFile.mock.calls[0]!;
@@ -157,7 +157,7 @@ describe('export and clear', () => {
   it('disables the export on an empty library', async () => {
     const { user } = open([]);
     await screen.findByText('Your library is empty');
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Import and export' }));
     expect(await screen.findByRole('menuitem', { name: 'Export JSON' })).toBeDisabled();
   });
 
@@ -167,36 +167,12 @@ describe('export and clear', () => {
       makeItem({ id: 'p', title: 'A page', type: 'webpage_text', content: 'Page words.' }),
     ]);
     await screen.findByText('A video');
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Import and export' }));
     await user.click(await screen.findByRole('menuitem', { name: /Export all transcripts as Markdown/ }));
     expect(download.downloadTextFile).toHaveBeenCalledTimes(1);
     const text = download.downloadTextFile.mock.calls[0]![1] as string;
     expect(text).toContain('Video words.');
     expect(text).not.toContain('Page words.');
-  });
-
-  it('clears the library after confirmation, and keeps the catalogs and settings', async () => {
-    fake = installDashboardEnvironment();
-    fake.storage.local.store.set(CATALOGS_KEY, [{ id: 'c1', name: 'Cooking', createdAt: '2026-01-01T00:00:00.000Z' }]);
-    fake.storage.local.store.set('settings', { llm: {} });
-    fake.storage.local.store.set('item:a', makeItem({ id: 'a', title: 'Soup' }));
-    const { user } = renderApp(<App />);
-    await screen.findByText('Soup');
-
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
-    await user.click(await screen.findByRole('menuitem', { name: /Clear library/ }));
-    const dialog = await screen.findByRole('dialog', { name: 'Clear the entire library?' });
-    expect(within(dialog).getByText(/All 1 item will be permanently deleted/)).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-    expect(storedIds()).toEqual(['a']);
-
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
-    await user.click(await screen.findByRole('menuitem', { name: /Clear library/ }));
-    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete everything' }));
-    await waitFor(() => expect(storedIds()).toEqual([]));
-    expect(fake.storage.local.store.has(CATALOGS_KEY)).toBe(true);
-    expect(fake.storage.local.store.has('settings')).toBe(true);
-    expect(await screen.findByText('Your library is empty')).toBeInTheDocument();
   });
 });
 

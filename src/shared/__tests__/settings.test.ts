@@ -43,6 +43,7 @@ describe('settings', () => {
         summaryPrompt: 'Short.',
         questionPrompt: 'Q?',
         useForTags: false,
+        timeoutMs: 60_000,
       },
     };
     await saveSettings(custom);
@@ -54,6 +55,12 @@ describe('settings', () => {
     expect(DEFAULT_SETTINGS.llm.useForTags).toBe(true);
     expect(normalizeSettings({ llm: { useForTags: 'no' } }).llm.useForTags).toBe(true);
     expect(normalizeSettings({ llm: { useForTags: false } }).llm.useForTags).toBe(false);
+  });
+
+  it('keeps only the offered request time limits', () => {
+    expect(DEFAULT_SETTINGS.llm.timeoutMs).toBe(180_000);
+    expect(normalizeSettings({ llm: { timeoutMs: 600_000 } }).llm.timeoutMs).toBe(600_000);
+    expect(normalizeSettings({ llm: { timeoutMs: 5 } }).llm.timeoutMs).toBe(180_000);
   });
 
   it('replaces missing or invalid values with defaults', () => {

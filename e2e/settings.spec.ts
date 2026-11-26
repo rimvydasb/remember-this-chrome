@@ -14,10 +14,10 @@ test.describe('Settings', () => {
     await expect(dialog.getByRole('button', { name: 'Save' })).toBeDisabled();
 
     await dialog.getByRole('button', { name: 'Test & list' }).click();
-    await expect(dialog.getByText('Connected')).toBeVisible();
+    await expect(dialog.getByText('Connected', { exact: true })).toBeVisible();
     await dialog.getByText('mock-model-b').click();
-    await expect(dialog.getByLabel('Model')).toHaveValue('mock-model-b');
-    await expect(dialog.getByText('You have unsaved changes.')).toBeVisible();
+    await expect(dialog.getByLabel('Model', { exact: true })).toHaveValue('mock-model-b');
+    await expect(dialog.getByText('Unsaved changes in AI server')).toBeVisible();
 
     await dialog.getByRole('button', { name: 'Save' }).click();
     await expect(dashboard.getByText('Settings saved.')).toBeVisible();
@@ -28,7 +28,7 @@ test.describe('Settings', () => {
   test('the saved model is used by the next summary', async ({ dashboard, llm }) => {
     await dashboard.getByRole('button', { name: 'Settings' }).click();
     const dialog = dashboard.getByRole('dialog');
-    await dialog.getByLabel('Model').fill('my-model');
+    await dialog.getByLabel('Model', { exact: true }).fill('my-model');
     await dialog.getByRole('button', { name: 'Save' }).click();
     await expect(dialog).toBeHidden();
 
@@ -55,7 +55,7 @@ test.describe('Settings', () => {
     await dashboard.getByRole('button', { name: 'Settings' }).click();
     const dialog = dashboard.getByRole('dialog');
     await dialog.getByRole('tab', { name: 'Tagging' }).click();
-    const toggle = dialog.getByRole('switch', { name: 'Use LLM for tagging' });
+    const toggle = dialog.getByRole('switch', { name: 'Use the LLM for tagging' });
     await expect(toggle).not.toBeChecked(); // The fixture turns it off, so tests do not trigger tagging.
     await toggle.check({ force: true });
     await dialog.getByRole('button', { name: 'Save' }).click();

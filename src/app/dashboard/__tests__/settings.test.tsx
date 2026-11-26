@@ -71,7 +71,7 @@ describe('Settings dialog', () => {
     await user.clear(address);
     await user.type(address, 'http://localhost:1234');
 
-    expect(screen.getByText('You have unsaved changes.')).toBeInTheDocument();
+    expect(screen.getByText('Unsaved changes in AI server')).toBeInTheDocument();
     await user.click(saveButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
@@ -91,10 +91,14 @@ describe('Settings dialog', () => {
     const { user } = await openDialog();
     await user.click(screen.getByRole('tab', { name: 'Prompts' }));
     expect(screen.getByRole('textbox', { name: 'Summary prompt' })).toBeVisible();
+    await user.click(screen.getByRole('tab', { name: /Question/ }));
     expect(screen.getByRole('textbox', { name: 'Question prompt' })).toBeVisible();
 
+    await user.click(screen.getByRole('tab', { name: 'Appearance' }));
+    expect(screen.getByRole('radio', { name: /System/ })).toBeVisible();
+
     await user.click(screen.getByRole('tab', { name: 'Tagging' }));
-    expect(screen.getByRole('switch', { name: /Use LLM for tagging/ })).toBeVisible();
+    expect(screen.getByRole('switch', { name: /Use the LLM for tagging/ })).toBeVisible();
 
     await user.click(screen.getByRole('tab', { name: 'Storage' }));
     expect(screen.getByText('Used now')).toBeVisible();
@@ -183,7 +187,7 @@ describe('Settings dialog', () => {
       await user.paste('{{#channel}} never closed {{transcript}}');
 
       expect(await screen.findByText(/Template error/)).toBeInTheDocument();
-      expect(screen.getByText('Fix the prompt template error to save.')).toBeInTheDocument();
+      expect(screen.getByText('Fix the template error in the summary prompt to save.')).toBeInTheDocument();
       expect(saveButton()).toBeDisabled();
     });
 
@@ -216,6 +220,27 @@ describe('Settings dialog', () => {
       expect(summary).toHaveValue('{{title}}');
     });
 
+    it('previews the request filled with the item, and diffs against the default', async () => {
+      fake = installDashboardEnvironment();
+      const item = makeItem({ id: 'p', title: 'Bread basics', content: 'Knead the dough.' });
+      const { user } = renderApp(<SettingsDialog opened onClose={() => {}} section="prompts" previewItem={item} />);
+      const summary = await screen.findByRole('textbox', { name: 'Summary prompt' });
+      await waitFor(() => expect(summary).toHaveValue(DEFAULT_SETTINGS.llm.summaryPrompt));
+      await user.clear(summary);
+      await user.click(summary);
+      await user.paste('About {{title}}: {{transcript}}');
+
+      await user.click(screen.getByRole('radio', { name: 'Preview' }));
+      const preview = screen.getByLabelText('Summary prompt preview');
+      expect(preview).toHaveTextContent('About Bread basics: Knead the dough.');
+      expect(within(preview).getByText('Bread basics')).toHaveClass('rt-fill');
+
+      await user.click(screen.getByRole('radio', { name: 'Diff vs default' }));
+      const diff = screen.getByLabelText('Summary prompt changes');
+      expect(within(diff).getByText(/^About \{\{title\}\}: \{\{transcript\}\}/)).toHaveAttribute('data-diff', 'add');
+      expect(screen.getByText('Unsaved changes in Summary prompt')).toBeInTheDocument();
+    });
+
     it('resets a changed prompt to its default', async () => {
       const { user } = await openPrompts();
       const summary = screen.getByRole('textbox', { name: 'Summary prompt' });
@@ -230,10 +255,17 @@ describe('Settings dialog', () => {
     });
   });
 
+  it('saves the request timeout', async () => {
+    const { user } = await openDialog();
+    await user.click(screen.getByRole('radio', { name: '10 min' }));
+    await user.click(saveButton());
+    await waitFor(() => expect(storedLlm().timeoutMs).toBe(600_000));
+  });
+
   it('saves the tagging switch', async () => {
     const { user } = await openDialog({ useForTags: true });
     await user.click(screen.getByRole('tab', { name: 'Tagging' }));
-    const toggle = screen.getByRole('switch', { name: /Use LLM for tagging/ });
+    const toggle = screen.getByRole('switch', { name: /Use the LLM for tagging/ });
     expect(toggle).toBeChecked();
 
     await user.click(toggle);

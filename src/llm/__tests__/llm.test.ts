@@ -3,6 +3,7 @@ import {
   formatTimeout,
   hostPermissionPattern,
   listModels,
+  LLM_CONNECT_TIMEOUT_MS,
   LLM_TIMEOUT_MS,
   LlmClient,
   LlmError,
@@ -83,6 +84,23 @@ describe('LlmClient.complete', () => {
     await expect(new LlmClient(settings, { fetch, timeoutMs: 20 }).complete('hi')).rejects.toThrow(
       /did not answer within 0 seconds/,
     );
+  });
+
+  it('uses the time limit from the settings for generation, not for the connection test', async () => {
+    const hang = vi.fn(
+      (_url: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(init.signal!.reason));
+        }),
+    );
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    await expect(new LlmClient({ ...settings, timeoutMs: 10 }, { fetch: hang }).complete('hi')).rejects.toThrow(
+      /did not answer/,
+    );
+    expect(timeout).toHaveBeenLastCalledWith(10);
+    void new LlmClient({ ...settings, timeoutMs: 10 }, { fetch: hang }).listModels().catch(() => {});
+    expect(timeout).toHaveBeenLastCalledWith(LLM_CONNECT_TIMEOUT_MS);
+    timeout.mockRestore();
   });
 
   it('reports network, HTTP, and empty-answer errors', async () => {

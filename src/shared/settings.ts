@@ -10,7 +10,12 @@ export interface LlmSettings {
   questionPrompt: string;
   /** Generate item tags with the LLM in the background. Keyword extraction is the fallback. */
   useForTags: boolean;
+  /** Time limit of one generation request, in milliseconds. One of `LLM_TIMEOUT_CHOICES`. */
+  timeoutMs: number;
 }
+
+/** The request time limits that the settings offer: 1, 3 and 10 minutes. */
+export const LLM_TIMEOUT_CHOICES = [60_000, 3 * 60_000, 10 * 60_000] as const;
 
 export interface Settings {
   llm: LlmSettings;
@@ -59,6 +64,7 @@ export const DEFAULT_SETTINGS: Settings = {
     summaryPrompt: DEFAULT_SUMMARY_PROMPT,
     questionPrompt: DEFAULT_QUESTION_PROMPT,
     useForTags: true,
+    timeoutMs: 3 * 60_000,
   },
 };
 
@@ -80,6 +86,9 @@ export function normalizeSettings(value: unknown): Settings {
         llm.summaryPrompt === LEGACY_SUMMARY_PROMPT ? DEFAULT_SUMMARY_PROMPT : text('summaryPrompt', false),
       questionPrompt: text('questionPrompt', false),
       useForTags: typeof llm.useForTags === 'boolean' ? llm.useForTags : DEFAULT_SETTINGS.llm.useForTags,
+      timeoutMs: (LLM_TIMEOUT_CHOICES as readonly unknown[]).includes(llm.timeoutMs)
+        ? (llm.timeoutMs as number)
+        : DEFAULT_SETTINGS.llm.timeoutMs,
     },
   };
 }

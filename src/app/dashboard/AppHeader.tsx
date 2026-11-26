@@ -9,26 +9,30 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useHotkeys } from '@mantine/hooks';
 import {
-  IconDots,
+  IconArrowsTransferUpDown,
   IconDownload,
   IconMarkdown,
   IconMoon,
   IconSearch,
   IconSettings,
   IconSun,
-  IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
-import type { Ref } from 'react';
+import { useState, type Ref } from 'react';
 import type { SavedItem } from '../../shared/types';
 import { Logo } from '../ui/Logo';
-import { confirmClearLibrary, exportLibraryJson, exportMarkdown } from './actions';
+import { exportLibraryJson, exportMarkdown } from './actions';
+import { AiStatus, type SettingsSection } from './AiStatus';
 import { SettingsDialog } from './SettingsDialog';
+import { useAiConnection } from './useAiConnection';
+import { useSettings } from './useSettings';
 
 interface AppHeaderProps {
   all: readonly SavedItem[];
+  /** The open item; the prompt preview in Settings uses it. */
+  openItem: SavedItem | undefined;
   query: string;
   onQueryChange: (query: string) => void;
   searchRef: Ref<HTMLInputElement>;
@@ -36,18 +40,24 @@ interface AppHeaderProps {
   onHome: () => void;
 }
 
-/** The app header: logo, search, and (top right) theme, settings and library actions. */
-export function AppHeader({ all, query, onQueryChange, searchRef, onImport, onHome }: AppHeaderProps) {
+/** The app header: logo, search, and (top right) AI status, theme, settings and import / export. */
+export function AppHeader({ all, openItem, query, onQueryChange, searchRef, onImport, onHome }: AppHeaderProps) {
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('dark');
   const empty = all.length === 0;
-  const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);
+  const llm = useSettings()?.llm;
+  const { connection, check } = useAiConnection(llm);
+  const [settings, setSettings] = useState<SettingsSection | null>(null);
+
+  useHotkeys([[',', () => setSettings((open) => open ?? 'server')]]);
 
   return (
     <header className="rt-topbar">
-      <button type="button" onClick={onHome} aria-label="Catalogs home" className="rt-home-link">
-        <Logo />
-      </button>
+      <div className="rt-brand">
+        <button type="button" onClick={onHome} aria-label="Catalogs home" className="rt-home-link">
+          <Logo />
+        </button>
+      </div>
 
       <TextInput
         ref={searchRef}
@@ -70,6 +80,8 @@ export function AppHeader({ all, query, onQueryChange, searchRef, onImport, onHo
       />
 
       <div className="rt-topbar-right">
+        <AiStatus all={all} llm={llm} connection={connection} onCheck={check} onOpenSettings={setSettings} />
+        <span className="rt-tb-sep" aria-hidden />
         <Tooltip label={colorScheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} withArrow>
           <ActionIcon
             variant="subtle"
@@ -79,18 +91,27 @@ export function AppHeader({ all, query, onQueryChange, searchRef, onImport, onHo
             {colorScheme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
           </ActionIcon>
         </Tooltip>
-        <Tooltip label="Settings" withArrow>
-          <ActionIcon variant="subtle" aria-label="Settings" onClick={openSettings}>
+        <Tooltip label="Settings  ," withArrow>
+          <ActionIcon variant="subtle" aria-label="Settings" onClick={() => setSettings('server')}>
             <IconSettings size={16} />
           </ActionIcon>
         </Tooltip>
-        <SettingsDialog opened={settingsOpened} onClose={closeSettings} />
+        <SettingsDialog
+          opened={settings !== null}
+          section={settings ?? 'server'}
+          onSectionChange={setSettings}
+          onClose={() => setSettings(null)}
+          connection={connection}
+          previewItem={openItem ?? all[0]}
+        />
         <Menu position="bottom-end" width={264} keepMounted>
-          <Menu.Target>
-            <ActionIcon variant="subtle" aria-label="More actions">
-              <IconDots size={16} />
-            </ActionIcon>
-          </Menu.Target>
+          <Tooltip label="Import / export" withArrow>
+            <Menu.Target>
+              <ActionIcon variant="subtle" aria-label="Import and export">
+                <IconArrowsTransferUpDown size={16} />
+              </ActionIcon>
+            </Menu.Target>
+          </Tooltip>
           <Menu.Dropdown>
             <Menu.Label>Library</Menu.Label>
             <FileButton onChange={onImport} accept="application/json,.json">
@@ -109,15 +130,6 @@ export function AppHeader({ all, query, onQueryChange, searchRef, onImport, onHo
               disabled={empty}
             >
               Export all transcripts as Markdown
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item
-              color="red"
-              leftSection={<IconTrash size={16} />}
-              onClick={() => confirmClearLibrary(all.length)}
-              disabled={empty}
-            >
-              Clear library…
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>

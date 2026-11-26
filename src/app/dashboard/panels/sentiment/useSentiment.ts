@@ -6,6 +6,7 @@ import { findSentiment, type SentimentDefinition } from '../../../../shared/sent
 import type { LlmSettings } from '../../../../shared/settings';
 import type { SavedItem } from '../../../../shared/types';
 import { useLlmGate } from '../common/useLlmGate';
+import { aiActivity } from '../../aiActivity';
 
 export interface SentimentState {
   /** When and by which model the current sentiments were generated; undefined when there are none. */
@@ -27,7 +28,8 @@ export function useSentiment(item: SavedItem): SentimentState {
   const sentiments = tags.flatMap((tag) => findSentiment(tag.label) ?? []);
 
   const mutation = useMutation({
-    mutationFn: (llm: LlmSettings) => sentimentPipeline.run({ settings: llm, item }),
+    mutationFn: (llm: LlmSettings) =>
+      aiActivity.track('Analyzing sentiment', item.title, () => sentimentPipeline.run({ settings: llm, item })),
     onSuccess: () =>
       notifications.show({ color: 'teal', message: `Sentiment added to “${item.title || 'Untitled'}”.` }),
     onError: (error) =>

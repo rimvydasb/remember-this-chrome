@@ -3,6 +3,7 @@ import { IconAlertCircle, IconMoodSmile, IconRefresh, IconTrash } from '@tabler/
 import { SENTIMENT_CATEGORIES, type SentimentDefinition } from '../../../../shared/sentiment';
 import type { SavedItem } from '../../../../shared/types';
 import { formatDateTime } from '../../../ui/format';
+import { GeneratingNote } from '../../ActivityBar';
 import { ContentBlock } from '../../ContentBlock';
 import { CATEGORY_ICONS, MOOD_COLORS } from '../../sentimentStyle';
 import { Chip } from '../../../ui/Chip';
@@ -59,6 +60,7 @@ export function Sentiment({ item }: { item: SavedItem }) {
     >
       {generated ? (
         <Stack gap="sm">
+          {generating && <GeneratingNote label="Regenerating" />}
           <Group gap={4}>
             {sentiments.map((entry) => (
               <SentimentBadge key={entry.label} sentiment={entry} />
@@ -92,6 +94,7 @@ export function Sentiment({ item }: { item: SavedItem }) {
           >
             Analyze sentiment
           </Button>
+          {generating && <GeneratingNote label="Analyzing" />}
           {error && (
             <Alert color="red" icon={<IconAlertCircle size={18} />} title="Cannot analyze sentiment" maw={420}>
               {error}

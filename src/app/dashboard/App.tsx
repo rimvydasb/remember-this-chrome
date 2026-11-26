@@ -15,6 +15,7 @@ import { ImportDialog } from './ImportDialog';
 import { ItemList } from './ItemList';
 import { ItemReader } from './ItemReader';
 import { ListToolbar } from './ListToolbar';
+import { COMPACT_LIST_KEY } from './SettingsDialog';
 import { Sidebar } from './Sidebar';
 import { useAiTagging } from './useAiTagging';
 import { useCatalogIndex } from './useCatalogIndex';
@@ -71,6 +72,7 @@ export function App() {
   const [pendingImport, setPendingImport] = useState<{ fileName: string; parsed: ParsedImport } | null>(null);
   const [sideCollapsed, setSideCollapsed] = useLocalStorage({ key: 'rt-side-collapsed', defaultValue: false });
   const [filtersOpen, setFiltersOpen] = useLocalStorage({ key: 'rt-filters-open', defaultValue: true });
+  const [compactList] = useLocalStorage({ key: COMPACT_LIST_KEY, defaultValue: false });
   const searchRef = useRef<HTMLInputElement>(null);
 
   // The item stays open when a search or filter hides it, or when it moves to another catalog.
@@ -190,6 +192,7 @@ export function App() {
     ['J', () => moveSelection(1)],
     ['K', () => moveSelection(-1)],
     ['F', () => setFiltersOpen((open) => !open)],
+    ['[', () => setSideCollapsed((collapsed) => !collapsed)],
   ]);
 
   const handleImportFile = async (file: File | null) => {
@@ -211,9 +214,10 @@ export function App() {
   };
 
   return (
-    <div className="rt-app" data-side-collapsed={sideCollapsed || undefined}>
+    <div className="rt-app" data-side-collapsed={sideCollapsed || undefined} data-compact={compactList || undefined}>
       <AppHeader
         all={all}
+        openItem={selected}
         query={filters.query}
         onQueryChange={filters.setQuery}
         searchRef={searchRef}

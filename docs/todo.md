@@ -126,11 +126,14 @@ interface SavedItem {
 - [ ] **Fetch related articles:** Fetch the pages that "Find related articles" saved (`RelatedArticle.fetchState`), extract their main text, and let the LLM summarize or compare them with the item. See `docs/find-related-articles-story.md` (Out of Scope).
 - [ ] **Tags & collections:** Let users organize saved transcripts into custom folders or tags in the dashboard.
 
-## Pot-design update
+## Pot-design update and finalization
 
-- [ ] "The AI status pill and panel from the spec are missing. The app doesn't expose that connection or progress state yet, so it would be a new feature" - that is fine, show fake animated "infinity time" bar with a tasks that are in the pool, e.g. `Tagging library`. No exact time measurement is needed. However, if tasks pool contain more tasks show animated bar in half, e.g. if `5 / 12` tasks, then show infinity animated bar as nearly half.
-- [ ] `The header no longer has Import and Export buttons. Those actions are now only in the ⋯ menu, as the spec shows.` - Remove "Clear library..." and in general clear library functionality, because I do not want that someone will use that by accident. Change top three dot icon to import/export (transfer) icon. 
-- [ ] Add an icon of the "New Catalog" - now it is simply empty space. Move new catalog icon below all catalogs when Library is collapsed.
-- [ ] Top left "Remember This" logo better be put into square so a thin line separates logo from "Search titles..." search bar. Add background under logo that is very light slashed lines.
-- [ ] Fix AI integration. As of now, when AI is executed, nothing is shown in top right. If needed redesign and refactor the code to bring awareness of tasks that are processed by AI.
-- [ ] `Settings` part is absolutely not finished as designed in `02-graphite.html` - complete that part.
+Design is in `02-graphite.html`
+
+- [x] "The AI status pill and panel from the spec are missing. The app doesn't expose that connection or progress state yet, so it would be a new feature" - that is fine, show fake animated "infinity time" bar with a tasks that are in the pool, e.g. `Tagging library`. No exact time measurement is needed. However, if tasks pool contain more tasks show animated bar in half, e.g. if `5 / 12` tasks, then show infinity animated bar as nearly half.
+- [x] `The header no longer has Import and Export buttons. Those actions are now only in the ⋯ menu, as the spec shows.` - Remove "Clear library..." and in general clear library functionality, because I do not want that someone will use that by accident. Change top three dot icon to import/export (transfer) icon. 
+- [x] Add an icon of the "New Catalog" - now it is simply empty space. Move new catalog icon below all catalogs when Library is collapsed.
+- [x] Top left "Remember This" logo better be put into square so a thin line separates logo from "Search titles..." search bar. Add background under logo that is very light slashed lines.
+- [x] Fix AI integration. As of now, when AI is executed, nothing is shown in top right. If needed redesign and refactor the code to bring awareness of tasks that are processed by AI.
+- [x] `Settings` part is absolutely not finished as designed in `02-graphite.html` - complete that part.
+- [x] Once again, do a finalization round by comparing `02-graphite.html` with actual implementation. As far as I know we do not have filter functionality, that is fine, but more or less other aspects should be implemented.

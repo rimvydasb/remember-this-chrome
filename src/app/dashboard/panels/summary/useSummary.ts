@@ -5,6 +5,7 @@ import { errorMessage } from '../../../../llm';
 import type { LlmSettings } from '../../../../shared/settings';
 import type { FollowUp, SavedItem } from '../../../../shared/types';
 import { useLlmGate } from '../common/useLlmGate';
+import { aiActivity } from '../../aiActivity';
 
 export interface SummaryState {
   summary: FollowUp | undefined;
@@ -22,7 +23,8 @@ export function useSummary(item: SavedItem): SummaryState {
   const summary = summaryPipeline.current(item);
 
   const mutation = useMutation({
-    mutationFn: (llm: LlmSettings) => summaryPipeline.run({ settings: llm, item }),
+    mutationFn: (llm: LlmSettings) =>
+      aiActivity.track('Summarizing', item.title, () => summaryPipeline.run({ settings: llm, item })),
     onSuccess: () => notifications.show({ color: 'teal', message: `Summary added to “${item.title || 'Untitled'}”.` }),
     onError: (error) =>
       notifications.show({ color: 'red', title: 'Cannot summarize', message: error.message, autoClose: 10_000 }),

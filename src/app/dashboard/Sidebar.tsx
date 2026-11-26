@@ -1,11 +1,11 @@
 import { ActionIcon, Tooltip } from '@mantine/core';
 import {
   IconEyeOff,
+  IconFolderPlus,
   IconHeart,
   IconInbox,
   IconLayoutGrid,
   IconLayoutSidebarLeftCollapse,
-  IconPlus,
 } from '@tabler/icons-react';
 import { useState, type DragEvent, type ReactNode } from 'react';
 import { RECENTS_ID, type Catalog } from '../../shared/catalogs';
@@ -85,11 +85,19 @@ export function Sidebar({
 
         <div className="rt-grp">
           <span>Catalogs</span>
-          <Tooltip label="New catalog" withArrow>
-            <ActionIcon variant="subtle" size="sm" aria-label="New catalog" onClick={() => openCreateCatalog(catalogs)}>
-              <IconPlus size={14} />
-            </ActionIcon>
-          </Tooltip>
+          {!collapsed && (
+            <Tooltip label="New catalog" withArrow>
+              <ActionIcon
+                variant="subtle"
+                size="sm"
+                className="rt-grp-add"
+                aria-label="New catalog"
+                onClick={() => openCreateCatalog(catalogs)}
+              >
+                <IconFolderPlus size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
         </div>
         {catalogs.map((catalog) => (
           <CatalogNavItem
@@ -100,6 +108,18 @@ export function Sidebar({
             onClick={() => onOpenCatalog(catalog.id)}
           />
         ))}
+        {collapsed && (
+          <Tooltip label="New catalog" withArrow position="right">
+            <button
+              type="button"
+              className="rt-nav rt-nav-new"
+              aria-label="New catalog"
+              onClick={() => openCreateCatalog(catalogs)}
+            >
+              <IconFolderPlus />
+            </button>
+          </Tooltip>
+        )}
       </nav>
     </aside>
   );

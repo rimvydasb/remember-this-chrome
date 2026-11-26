@@ -3,7 +3,6 @@ import { createFakeChrome, type FakeChrome } from '../../test/fakeChrome';
 import {
   addFollowUp,
   applyImport,
-  clearLibrary,
   countItems,
   createCatalog,
   getCatalogs,
@@ -63,7 +62,7 @@ describe('storage', () => {
     expect(chrome.storage.local.remove).not.toHaveBeenCalled();
   });
 
-  it('deletes items and clears only library keys', async () => {
+  it('deletes items and keeps other keys', async () => {
     chrome.storage.local.store.set('settings', 1);
     await putItems([
       item('a', '2026-01-01T00:00:00Z'),
@@ -72,8 +71,6 @@ describe('storage', () => {
     ]);
     await deleteItems(['a']);
     expect(await countItems()).toBe(2);
-    await clearLibrary();
-    expect(await countItems()).toBe(0);
     expect(chrome.storage.local.store.has('settings')).toBe(true);
   });
 });
