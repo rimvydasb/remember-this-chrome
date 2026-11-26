@@ -144,12 +144,9 @@
   .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 
   /* annotation pins */
-  .pin { position: absolute; top: -9px; right: -9px; width: 18px; height: 18px; border-radius: 50%; background: #f59f00; color: #111; font: 700 10.5px var(--sans); display: grid; place-items: center; z-index: 5; box-shadow: 0 0 0 2px var(--panel); pointer-events: none; }
-  body:not(.annotate) .pin { display: none; }
   .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 24px; margin-top: 18px; color: var(--text-2); }
   .legend div { display: flex; gap: 10px; align-items: flex-start; }
-  .legend .pin { position: static; flex-shrink: 0; box-shadow: none; }
-  body:not(.annotate) .legend { display: none; }
+  .legend b { white-space: nowrap; }
 
   /* ============ app icon ============ */
   .variants { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
@@ -163,6 +160,11 @@
   .vn { padding: 10px 12px; border-top: 1px solid var(--line); }
   .vn b { display: block; font-size: 13px; } .vn span { color: var(--muted); font-size: 12px; }
   .appicon { display: inline-block; line-height: 0; }
+  .icon-show { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  @media (max-width: 900px) { .icon-show { grid-template-columns: 1fr; } }
+  .icon-show .vs { align-items: flex-end; gap: 22px; padding: 28px 16px 18px; flex-wrap: wrap; }
+  .icon-show figure { margin: 0; text-align: center; font: 11px var(--mono); color: #868b95; }
+  .icon-show figure .appicon { margin-bottom: 8px; }
 
   /* ============ popup ============ */
   .popup-row { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
@@ -225,9 +227,12 @@
   .nav small { margin-left: auto; font: 11px var(--mono); color: var(--faint); }
 
   .list { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-  .lhead .inline-f { flex: 1; min-width: 0; display: flex; gap: 4px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
-  .lhead .inline-f .chip { flex-shrink: 0; }
-  .lhead .count-txt { font: 11.5px var(--mono); color: var(--faint); white-space: nowrap; }
+  .lhead .count-txt { margin-left: auto; font: 11.5px var(--mono); color: var(--faint); white-space: nowrap; }
+  /* Active filters: always visible, never collapses; hidden only when nothing is filtered. */
+  .active-sec { padding: 8px 12px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .active-sec .ah { display: flex; justify-content: space-between; align-items: center; height: 22px; margin-bottom: 4px; }
+  .active-sec .ah span { font: 500 10.5px var(--mono); color: var(--faint); text-transform: uppercase; letter-spacing: .06em; }
+  .active-sec .ah .btn { padding: 1px 6px; font-size: 11.5px; }
   .ftoggle { position: relative; }
   .ftoggle .count { font: 600 10.5px var(--mono); background: var(--accent); color: var(--on-accent); border-radius: 8px; padding: 0 5px; }
   .ftoggle .chev { transition: transform .15s ease; }
@@ -439,11 +444,10 @@
   }
 </style>
 </head>
-<body class="annotate">
+<body>
 <div class="doc">
   <nav class="topnav">
     <span class="eyebrow">design proposal · v2</span>
-    <label><input type="checkbox" checked onchange="document.body.classList.toggle('annotate', this.checked)" /> Show annotations</label>
     <button class="btn" onclick="toggleTheme()"><i data-i="sun"></i> Toggle light / dark</button>
   </nav>
 
@@ -451,7 +455,7 @@
   <p class="lede">A solid, dynamic workspace for the library. Dark by default, monospace for data, one indigo accent. The whole width goes to content: no inspector column and no status bar. AI state lives in one header control that opens a detailed panel.</p>
 
   <div class="changes">
-    <div><em>01</em><b>Collapsible filters</b><span>A Filters button opens a panel above the list; each group folds on its own. When closed, active filters show as removable chips in the same row.</span></div>
+    <div><em>01</em><b>Collapsible filters</b><span>A Filters button opens a panel above the list; each group folds on its own. Chosen filters always show in a fixed “Active” section below.</span></div>
     <div><em>01b</em><b>Collapsible sidebar</b><span>Folds to an icon rail; catalogs keep letter badges.</span></div>
     <div><em>01c</em><b>Aligned sub-header</b><span>One 44 px band across all columns with a single straight bottom line.</span></div>
     <div><em>01d</em><b>Plain transcript</b><span>Plain paragraphs, no timestamps, exactly as stored and sent to the AI.</span></div>
@@ -459,7 +463,7 @@
     <div><em>03</em><b>Tag chips unchanged</b><span>Same colors and icons as the app today: mood colors, category icons, red channel, navy topics.</span></div>
     <div><em>04</em><b>No inspector</b><span>Facts, sentiment, chapters and links are part of the main column.</span></div>
     <div><em>05</em><b>Settings &amp; prompt editor</b><span>Prompt editor with line numbers, field palette, validation, live preview and diff against the default.</span></div>
-    <div><em>06</em><b>Bookmark + star icon</b><span>Flat, no gradients: five variants to choose from.</span></div>
+    <div><em>06</em><b>Bookmark + star icon</b><span>Indigo tile, flat colors, proportions tuned per size.</span></div>
     <div><em>07</em><b>Sections, not tabs</b><span>Summary, sentiment, questions, related, details and transcript are stacked sections that fold.</span></div>
     <div><em>08</em><b>Theme &amp; settings placement</b><span>Top-right of the header, marked with pins below.</span></div>
     <div><em>09</em><b>No footer bar</b><span>Content runs to the bottom of the window.</span></div>
@@ -467,13 +471,10 @@
 
   <!-- ================= ICON ================= -->
   <h2 class="sec-title">App icon</h2>
-  <p class="sub">Flat colors only, no gradients. The bookmark and the star have rounded corners; a soft shadow lifts the bookmark off the tile. Each variant is shown on a dark and a light toolbar at 128, 32 and 16 px. <b style="color:var(--text-2)">Click a variant</b> to use it everywhere on this page.</p>
-  <div class="variants" id="variants">
-    <div class="variant" data-v="indigo"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="indigo"></span><span class="appicon" data-size="32" data-variant="indigo"></span><span class="appicon" data-size="16" data-variant="indigo"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="indigo"></span><span class="appicon" data-size="16" data-variant="indigo"></span></div></div><div class="vn"><b>A · Indigo tile</b><span>White bookmark, star cut out. Strongest at 16 px. Recommended.</span></div></div>
-    <div class="variant" data-v="graphite"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="graphite"></span><span class="appicon" data-size="32" data-variant="graphite"></span><span class="appicon" data-size="16" data-variant="graphite"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="graphite"></span><span class="appicon" data-size="16" data-variant="graphite"></span></div></div><div class="vn"><b>B · Graphite tile</b><span>Today’s design, flat: dark tile, white bookmark, indigo star.</span></div></div>
-    <div class="variant" data-v="night"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="night"></span><span class="appicon" data-size="32" data-variant="night"></span><span class="appicon" data-size="16" data-variant="night"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="night"></span><span class="appicon" data-size="16" data-variant="night"></span></div></div><div class="vn"><b>C · Night</b><span>Dark tile, indigo bookmark, star cut out.</span></div></div>
-    <div class="variant" data-v="ribbon"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="ribbon"></span><span class="appicon" data-size="32" data-variant="ribbon"></span><span class="appicon" data-size="16" data-variant="ribbon"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="ribbon"></span><span class="appicon" data-size="16" data-variant="ribbon"></span></div></div><div class="vn"><b>D · Bookmark only</b><span>No tile: the bookmark is the icon. Lightest look.</span></div></div>
-    <div class="variant" data-v="paper"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="paper"></span><span class="appicon" data-size="32" data-variant="paper"></span><span class="appicon" data-size="16" data-variant="paper"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="paper"></span><span class="appicon" data-size="16" data-variant="paper"></span></div></div><div class="vn"><b>E · Paper</b><span>White tile, graphite bookmark, star cut out.</span></div></div>
+  <p class="sub">Indigo tile, white bookmark, star cut out. Flat colors, rounded corners, a soft shadow under the bookmark at 48 px and up. The bookmark gets relatively smaller as the icon gets smaller (68 % of the tile height at 128 px, 58 % at 16 px), so the tile still reads as a tile in the toolbar.</p>
+  <div class="icon-show">
+    <div class="vs dark"><figure><span class="appicon" data-size="128"></span>128</figure><figure><span class="appicon" data-size="48"></span>48</figure><figure><span class="appicon" data-size="32"></span>32</figure><figure><span class="appicon" data-size="24"></span>24</figure><figure><span class="appicon" data-size="16"></span>16</figure></div>
+    <div class="vs light"><figure><span class="appicon" data-size="128"></span>128</figure><figure><span class="appicon" data-size="48"></span>48</figure><figure><span class="appicon" data-size="32"></span>32</figure><figure><span class="appicon" data-size="24"></span>24</figure><figure><span class="appicon" data-size="16"></span>16</figure></div>
   </div>
 
   <!-- ================= CHIPS ================= -->
@@ -497,7 +498,7 @@
       <div class="p-body">
         <div class="p-video"><div class="thumb"></div><div><h3>Why the bond market is flashing a warning</h3><div class="chips"><span class="chip c-red"><i data-i="user"></i>Macro Lens</span><span class="chip c-orange"><i data-i="chart"></i>cautiously bearish</span></div></div></div>
         <dl class="kv">
-          <dt>status</dt><dd class="ok">● saved · up to date</dd>
+          <dt>status</dt><dd class="ok">● in library</dd>
           <dt>duration</dt><dd>24:13</dd>
           <dt>words</dt><dd>4,812 · 38 ¶</dd>
           <dt>catalog</dt><dd>Markets</dd>
@@ -511,9 +512,9 @@
       <h4>Notes</h4>
       <ul>
         <li>Channel and sentiment show as the same colored chips as in the library.</li>
-        <li>After a capture, the key-value block updates in place; changed fields flash in indigo.</li>
+        <li>After a capture, the key-value block updates in place with the new values.</li>
         <li>The primary action is the only filled control. Copy is an icon button.</li>
-        <li>No settings in the popup: they live in the dashboard header (pin 3 below).</li>
+        <li>No settings in the popup: they live in the dashboard header (gear icon, top right).</li>
       </ul>
     </div>
   </div>
@@ -528,12 +529,12 @@
         <div class="cmd"><i data-i="search"></i><span>yield curve</span><em>14 results</em><kbd>/</kbd></div>
         <div class="tb-right">
           <button class="ai-pill" onclick="document.getElementById('app').classList.toggle('ai-open')" title="Local AI status">
-            <span class="pin">1</span><span class="dot pulse"></span><b>AI</b><span>tagging 5/12</span><span class="mini"><i></i></span>
+            <span class="dot pulse"></span><b>AI</b><span>tagging 5/12</span><span class="mini"><i></i></span>
           </button>
           <span class="tb-sep"></span>
-          <button class="icon-btn" title="Switch to light / dark theme" onclick="toggleTheme()"><span class="pin">2</span><i data-i="sun" class="theme-ico"></i></button>
-          <button class="icon-btn" title="Settings" onclick="document.getElementById('settings').scrollIntoView({behavior:'smooth'})"><span class="pin">3</span><i data-i="settings"></i></button>
-          <button class="icon-btn" title="Library actions" onclick="document.getElementById('app').classList.toggle('menu-open')"><span class="pin">4</span><i data-i="dots"></i></button>
+          <button class="icon-btn" title="Switch to light / dark theme" onclick="toggleTheme()"><i data-i="sun" class="theme-ico"></i></button>
+          <button class="icon-btn" title="Settings" onclick="document.getElementById('settings').scrollIntoView({behavior:'smooth'})"><i data-i="settings"></i></button>
+          <button class="icon-btn" title="Library actions" onclick="document.getElementById('app').classList.toggle('menu-open')"><i data-i="dots"></i></button>
         </div>
       </header>
 
@@ -564,7 +565,7 @@
         <aside class="side">
           <div class="subbar">
             <span class="ttl">Library</span>
-            <button class="icon-btn collapse-btn" title="Collapse sidebar  [" onclick="document.getElementById('app').classList.toggle('side-collapsed')"><span class="pin">6</span><i data-i="sidebar"></i></button>
+            <button class="icon-btn collapse-btn" title="Collapse sidebar  [" onclick="document.getElementById('app').classList.toggle('side-collapsed')"><i data-i="sidebar"></i></button>
           </div>
           <div class="side-body">
             <div class="nav" title="All items · 248"><i data-i="grid"></i><span class="lbl">All items</span><small>248</small></div>
@@ -581,9 +582,8 @@
 
         <section class="list f-open" id="list">
           <div class="subbar lhead">
-            <button class="btn sm ftoggle" onclick="document.getElementById('list').classList.toggle('f-open')"><span class="pin">5</span><i data-i="filter"></i>Filters<span class="count">3</span><i data-i="chev" class="chev"></i></button>
-            <div class="inline-f"><span class="chip c-gray on">30 days ×</span><span class="chip c-orange on"><i data-i="chart"></i>cautiously bearish ×</span><span class="chip c-navy on">bonds ×</span></div>
-            <span class="count-txt">14/61</span>
+            <button class="btn sm ftoggle" onclick="document.getElementById('list').classList.toggle('f-open')"><i data-i="filter"></i>Filters<i data-i="chev" class="chev"></i></button>
+            <span class="count-txt">14 of 61</span>
             <button class="icon-btn" title="Sort: newest first"><i data-i="sort"></i></button>
           </div>
           <div class="fpanel">
@@ -603,7 +603,11 @@
             <div class="fgroup collapsed"><h6 onclick="fold(this)"><span>Type</span><span class="r"><i data-i="chev" class="chev"></i></span></h6>
               <div class="chips"><span class="chip c-gray"><i data-i="youtube"></i>YouTube<em>58</em></span><span class="chip c-gray"><i data-i="file"></i>Web page<em>3</em></span></div>
             </div>
-            <div class="foot"><span class="meta">Press <kbd>F</kbd> to open or close</span><button class="btn ghost sm">Clear all</button></div>
+            <div class="foot"><span class="meta">Press <kbd>F</kbd> to open or close</span></div>
+          </div>
+          <div class="active-sec">
+            <div class="ah"><span>Active</span><button class="btn ghost sm">Clear all</button></div>
+            <div class="chips"><span class="chip c-gray on">30 days ×</span><span class="chip c-orange on"><i data-i="chart"></i>cautiously bearish ×</span><span class="chip c-navy on">bonds ×</span></div>
           </div>
           <div class="rows">
             <div class="row on">
@@ -703,30 +707,31 @@
     </div>
   </div>
   <div class="legend">
-    <div><span class="pin">1</span><span><b>Local AI status.</b> Dot color = state; text = current job. Click to open the AI panel.</span></div>
-    <div><span class="pin">2</span><span><b>Theme toggle.</b> One click switches light ↔ dark. “Follow system” is in Settings → Appearance.</span></div>
-    <div><span class="pin">3</span><span><b>Settings.</b> Always top-right, opens the Settings dialog. Shortcut <kbd>,</kbd></span></div>
-    <div><span class="pin">4</span><span><b>Library menu.</b> The actions that exist today: Import JSON, Export JSON, Export all as Markdown, Clear library. They move from visible buttons into this menu. Click it.</span></div>
-    <div><span class="pin">5</span><span><b>Filters.</b> Opens and closes the filter panel (<kbd>F</kbd>). The badge counts active filters; the active ones stay visible in the same row.</span></div>
-    <div><span class="pin">6</span><span><b>Collapse sidebar.</b> Leaves a 52 px icon rail (<kbd>[</kbd>). Catalogs keep a letter badge, so they stay distinct; hover shows the name and count.</span></div>
+    <div><span><b>AI pill</b> (header, right) — dot color = state; text = current job. Click to open the AI panel.</span></div>
+    <div><span><b>Sun / moon</b> (header, right) — one click switches light ↔ dark. “Follow system” is in Settings → Appearance.</span></div>
+    <div><span><b>Gear</b> (header, right) — opens the Settings dialog. Shortcut <kbd>,</kbd></span></div>
+    <div><span><b>⋯ menu</b> (header, far right) — the actions that exist today: Import JSON, Export JSON, Export all as Markdown, Clear library. Click it.</span></div>
+    <div><span><b>Filters</b> (list, top left) — opens and closes the filter panel (<kbd>F</kbd>). Chosen filters show in the <i>Active</i> section below it.</span></div>
+    <div><span><b>Sidebar button</b> (sidebar, top right) — folds the sidebar to a 52 px icon rail (<kbd>[</kbd>). Catalogs keep a letter, so they stay distinct; hover shows the name and count.</span></div>
   </div>
-  <p class="sub" style="margin-top:20px"><b style="color:var(--text-2)">Aligned sub-header.</b> The first row under the header is one band, 44 px high, in all three columns: <i>Library</i> + collapse, Filters + active chips + count + sort, and breadcrumb + item actions. Their bottom lines form one straight line; nothing wraps onto a second row.</p>
+  <p class="sub" style="margin-top:20px"><b style="color:var(--text-2)">Aligned sub-header.</b> The first row under the header is one band, 44 px high, in all three columns: <i>Library</i> + collapse, Filters + count + sort, and breadcrumb + item actions. Their bottom lines form one straight line; nothing wraps onto a second row.</p>
 
   <!-- ================= FILTERS ================= -->
   <h2 class="sec-title">Filters: closed and open</h2>
-  <p class="sub">The row height never changes. Closed, the list gets all the height and the active filters stay in the same row as removable chips (they fade out at the edge when there are many; the badge still counts them). Open, each group can fold; “any of” and “all of” are written next to the group name. The state is remembered.</p>
+  <p class="sub">The Filters row never changes height. Chosen filters go to the <b style="color:var(--text-2)">Active</b> section under it: not collapsible, so you always see what is filtered, whether the panel is open or closed. Each chip removes its filter; “Clear all” removes all. Open, each filter group can fold; “any of” and “all of” are written next to the group name.</p>
   <div class="comps">
     <div class="comp" style="padding:0;overflow:hidden">
       <div class="list" style="border:0">
-        <div class="subbar lhead"><button class="btn sm ftoggle"><i data-i="filter"></i>Filters<span class="count">3</span><i data-i="chev" class="chev"></i></button><div class="inline-f"><span class="chip c-gray on">30 days ×</span><span class="chip c-orange on"><i data-i="chart"></i>cautiously bearish ×</span><span class="chip c-navy on">bonds ×</span></div><span class="count-txt">14/61</span><button class="icon-btn"><i data-i="sort"></i></button></div>
+        <div class="subbar lhead"><button class="btn sm ftoggle"><i data-i="filter"></i>Filters<i data-i="chev" class="chev"></i></button><span class="count-txt">14 of 61</span><button class="icon-btn"><i data-i="sort"></i></button></div>
+        <div class="active-sec"><div class="ah"><span>Active</span><button class="btn ghost sm">Clear all</button></div><div class="chips"><span class="chip c-gray on">30 days ×</span><span class="chip c-orange on"><i data-i="chart"></i>cautiously bearish ×</span><span class="chip c-navy on">bonds ×</span><span class="chip c-red on"><i data-i="user"></i>Macro Lens ×</span><span class="chip c-navy on">recession ×</span></div></div>
       </div>
-      <p class="meta" style="padding:12px 16px 14px">Closed, 3 active filters</p>
+      <p class="meta" style="padding:12px 16px 14px">Panel closed, 5 active filters: the Active section wraps to as many lines as it needs.</p>
     </div>
     <div class="comp" style="padding:0;overflow:hidden">
       <div class="list" style="border:0">
-        <div class="subbar lhead"><button class="btn sm ftoggle"><i data-i="filter"></i>Filters<i data-i="chev" class="chev"></i></button><div class="inline-f"><span class="meta">No filters</span></div><span class="count-txt">61</span><button class="icon-btn"><i data-i="sort"></i></button></div>
+        <div class="subbar lhead"><button class="btn sm ftoggle"><i data-i="filter"></i>Filters<i data-i="chev" class="chev"></i></button><span class="count-txt">61</span><button class="icon-btn"><i data-i="sort"></i></button></div>
       </div>
-      <p class="meta" style="padding:12px 16px 14px">Closed, no filters</p>
+      <p class="meta" style="padding:12px 16px 14px">No filters: the Active section is not shown.</p>
     </div>
   </div>
 
@@ -799,7 +804,7 @@
           <h3>Prompts</h3>
           <p class="desc">Templates of the requests sent to the model. Click a field on the right to insert it at the cursor.</p>
           <div class="prompt-tabs">
-            <div class="ptab on" data-p="summary"><b><i data-i="sparkles"></i>Summary<span class="mod">● modified</span></b><small>Used by Summary · uses 4 fields</small></div>
+            <div class="ptab on" data-p="summary"><b><i data-i="sparkles"></i>Summary</b><small>Used by Summary · uses 4 fields</small></div>
             <div class="ptab" data-p="question"><b><i data-i="help"></i>Question</b><small>Used by Questions · default</small></div>
           </div>
           <div class="editor-wrap">
@@ -994,9 +999,11 @@ Transcript:
   };
   let currentVariant = 'indigo', iconId = 0;
   function iconSvg(name, size) {
-    const v = VARIANTS[name], id = 'ic' + iconId++, small = size <= 16;
-    const shadow = small ? '' : `filter="url(#${id}sh)"`;
-    const group = v.tile ? '' : 'transform="translate(50 51) scale(1.32) translate(-50 -51)"';
+    const v = VARIANTS[name], id = 'ic' + iconId++;
+    const shadow = size < 48 ? '' : `filter="url(#${id}sh)"`;
+    // Bookmark scale by size: the mark shrinks relative to the tile at small sizes.
+    const k = !v.tile ? 1.32 : size >= 96 ? 1 : size >= 48 ? 0.94 : size >= 32 ? 0.9 : size >= 24 ? 0.87 : 0.85;
+    const group = `transform="translate(50 50.5) scale(${k}) translate(-50 -50.5)"`;
     return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true" style="display:block;overflow:visible">
       <defs><filter id="${id}sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="${v.tile ? 3 : 2}" stdDeviation="${v.tile ? 2.5 : 2}" flood-color="#000" flood-opacity="${v.tile ? .28 : .3}"/></filter></defs>
       ${v.tile ? `<rect x="2" y="2" width="96" height="96" rx="24" fill="${v.tile}" ${v.edge ? `stroke="${v.edge}" stroke-width="2"` : ''}/>` : ''}
