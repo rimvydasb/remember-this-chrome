@@ -20,7 +20,7 @@ const storedIds = () =>
 const rowTitles = () =>
   within(screen.getByRole('listbox', { name: 'Saved items' }))
     .queryAllByRole('option')
-    .map((row) => row.querySelector('p')?.textContent ?? '');
+    .map((row) => row.querySelector('h4')?.textContent ?? '');
 
 function open(items: SavedItem[]) {
   fake = installDashboardEnvironment();
@@ -142,7 +142,8 @@ describe('export and clear', () => {
     const { user } = renderApp(<App />);
     await screen.findByText('Soup');
 
-    await user.click(screen.getByRole('button', { name: 'Export JSON' }));
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Export JSON' }));
     await waitFor(() => expect(download.downloadTextFile).toHaveBeenCalledTimes(1));
     const [name, text, type] = download.downloadTextFile.mock.calls[0]!;
     expect(name).toMatch(/^remember-this-library-\d{4}-\d{2}-\d{2}\.json$/);
@@ -154,9 +155,10 @@ describe('export and clear', () => {
   });
 
   it('disables the export on an empty library', async () => {
-    open([]);
+    const { user } = open([]);
     await screen.findByText('Your library is empty');
-    expect(screen.getByRole('button', { name: 'Export JSON' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    expect(await screen.findByRole('menuitem', { name: 'Export JSON' })).toBeDisabled();
   });
 
   it('exports all transcripts as Markdown, without the web pages', async () => {
@@ -241,14 +243,14 @@ describe('bulk actions', () => {
     expect(await screen.findByText('2 items forgotten')).toBeInTheDocument();
     expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('radio', { name: 'Forgotten' }));
+    await user.click(screen.getByRole('button', { name: /^Forgotten/ }));
     await waitFor(() => expect(rowTitles()).toEqual(['Alpha', 'Beta']));
   });
 
   it('restores forgotten items', async () => {
     const { user } = open([makeItem({ id: 'a', title: 'Alpha', mark: 'forgotten' })]);
-    await screen.findByRole('radio', { name: 'Forgotten' });
-    await user.click(screen.getByRole('radio', { name: 'Forgotten' }));
+    await screen.findByRole('button', { name: /^Forgotten/ });
+    await user.click(screen.getByRole('button', { name: /^Forgotten/ }));
     await select(user, 'Alpha');
     await user.click(screen.getByRole('button', { name: 'Restore' }));
     await waitFor(() => expect(stored('a')?.mark).toBeUndefined());
@@ -261,7 +263,7 @@ describe('bulk actions', () => {
     ]);
     await screen.findByText('Alpha');
     // Forgotten items are hidden by default: show all by switching to Forgotten, select, then check the Delete button.
-    await user.click(screen.getByRole('radio', { name: 'Forgotten' }));
+    await user.click(screen.getByRole('button', { name: /^Forgotten/ }));
     await select(user, 'Beta');
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete' }));
@@ -320,7 +322,7 @@ describe('topic filters', () => {
     await waitFor(() => expect(rowTitles()).toEqual(['Alpha', 'Beta']));
     await user.click(topic('memory'));
     await waitFor(() => expect(rowTitles()).toEqual(['Alpha']));
-    expect(screen.getByText('2 filters active')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
     await user.click(topic('memory', true));
     await waitFor(() => expect(rowTitles()).toEqual(['Alpha', 'Beta']));
   });
@@ -330,10 +332,10 @@ describe('topic filters', () => {
     await screen.findByText('Alpha');
     await user.click(topic('sleep'));
     // The item was saved long ago, so the last 7 days leave no result.
-    await user.click(screen.getByRole('radio', { name: '7 days' }));
+    await user.click(screen.getByRole('button', { name: '7 days' }));
     await waitFor(() => expect(rowTitles()).toEqual([]));
     await user.click(topic('sleep', true));
-    await user.click(screen.getByRole('radio', { name: 'Any time' }));
+    await user.click(screen.getByRole('button', { name: 'Any' }));
     await waitFor(() => expect(rowTitles()).toEqual(['Alpha']));
   });
 

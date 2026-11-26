@@ -1,9 +1,10 @@
-import { Checkbox, Group, Highlight, Text } from '@mantine/core';
+import { Checkbox, Highlight } from '@mantine/core';
 import { IconBrandYoutube, IconEyeOff, IconFileText, IconFolder, IconHeartFilled } from '@tabler/icons-react';
 import { memo, useMemo, type DragEvent } from 'react';
 import { displayKeywords, type Keyword, type KeywordIndex } from '../../shared/keywords';
 import { getIndexEntry, makeSnippet, type SearchIndex } from '../../shared/search';
 import type { SavedItem } from '../../shared/types';
+import { formatDuration } from '../../shared/markdown';
 import { formatShortDate } from '../ui/format';
 import { KeywordBadges } from './KeywordBadges';
 
@@ -112,51 +113,42 @@ const ItemRow = memo(function ItemRow({
     >
       <Checkbox
         size="xs"
-        mt={3}
         checked={checked}
         aria-label={`Select ${item.title}`}
         onClick={(event) => event.stopPropagation()}
         onChange={() => onToggle(item.id)}
       />
-      {thumbnail && <img className="rt-item-thumb" src={thumbnail} alt="" draggable={false} />}
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <Highlight highlight={highlight} size="sm" fw={600} lineClamp={2} lh={1.35}>
-          {item.title || 'Untitled'}
-        </Highlight>
-        <Group gap={6} mt={4} wrap="nowrap">
-          {item.type === 'youtube_transcript' ? (
-            <IconBrandYoutube size={14} color="var(--mantine-color-red-6)" style={{ flexShrink: 0 }} />
-          ) : (
-            <IconFileText size={14} style={{ flexShrink: 0 }} />
-          )}
-          <Text size="xs" c="dimmed" truncate>
-            {formatShortDate(item.timestamp)}
-          </Text>
-          {item.mark === 'loved' && (
-            <IconHeartFilled
-              size={13}
-              color="var(--mantine-color-pink-6)"
-              aria-label="Loved"
-              style={{ flexShrink: 0 }}
-            />
-          )}
-          {item.mark === 'forgotten' && <IconEyeOff size={13} aria-label="Forgotten" style={{ flexShrink: 0 }} />}
-          {catalogLabel && (
-            <Group gap={3} wrap="nowrap" className="rt-item-catalog" title={`In ${catalogLabel}`}>
-              <IconFolder size={13} style={{ flexShrink: 0 }} />
-              <Text size="xs" c="dimmed" truncate>
+      {thumbnail ? (
+        <img className="rt-item-thumb" src={thumbnail} alt="" draggable={false} />
+      ) : (
+        <div className="rt-item-thumb" aria-hidden>
+          {item.type === 'youtube_transcript' ? <IconBrandYoutube size={20} /> : <IconFileText size={20} />}
+        </div>
+      )}
+      <div className="rt-item-body">
+        <div>
+          <Highlight highlight={highlight} className="rt-item-title" component="h4" inherit>
+            {item.title || 'Untitled'}
+          </Highlight>
+          <div className="rt-item-meta">
+            <span>
+              {[item.meta?.durationSec ? formatDuration(item.meta.durationSec) : '', formatShortDate(item.timestamp)]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+            {item.mark === 'loved' && <IconHeartFilled size={12} aria-label="Loved" style={{ color: 'var(--err)' }} />}
+            {item.mark === 'forgotten' && <IconEyeOff size={12} aria-label="Forgotten" />}
+            {catalogLabel && (
+              <span title={`In ${catalogLabel}`}>
+                <IconFolder size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />
                 {catalogLabel}
-              </Text>
-            </Group>
-          )}
-        </Group>
-        {shown.length > 0 && (
-          <div style={{ marginTop: 6 }}>
-            <KeywordBadges keywords={shown} active={activeKeywords} onToggle={onToggleKeyword} />
+              </span>
+            )}
           </div>
-        )}
+        </div>
+        {shown.length > 0 && <KeywordBadges keywords={shown} active={activeKeywords} onToggle={onToggleKeyword} />}
         {snippet && (
-          <Highlight highlight={highlight} size="xs" c="dimmed" lineClamp={2} mt={6} lh={1.45}>
+          <Highlight highlight={highlight} className="rt-item-excerpt" component="div" inherit>
             {snippet}
           </Highlight>
         )}

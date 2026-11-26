@@ -1,5 +1,6 @@
 // Generates the extension icons (public/icons/icon-<size>.png) without external tools.
-// Design: navy square (slightly rounded corners) with a silver bookmark that holds a navy star.
+// Design (Graphite): indigo tile with rounded corners, a white bookmark, the star cut out of it, and a soft
+// shadow under the bookmark at 48 px and up. Keep in sync with src/app/ui/AppIcon.tsx.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { deflateSync } from 'node:zlib';
@@ -8,16 +9,15 @@ const SIZES = [16, 32, 48, 128];
 const OUT_DIR = resolve(import.meta.dirname, '..', 'public', 'icons');
 const SAMPLES = 4;
 
-const FROM = [16, 42, 94]; // #102a5e navy
-const TO = [10, 25, 61]; // #0a193d deep navy
-const SILVER_FROM = [236, 240, 245]; // #ecf0f5
-const SILVER_TO = [160, 170, 184]; // #a0aab8
+// Shapes in a 0..1 coordinate space (the 100-unit design of src/app/ui/AppIcon.tsx, divided by 100).
+const TILE = [0x5b, 0x67, 0xe0]; // #5b67e0
+const MARK = [255, 255, 255];
 
-// Shapes in a 0..1 coordinate space.
 function insideRoundedSquare(x, y) {
-  const r = 0.08;
-  const cx = Math.min(Math.max(x, r), 1 - r);
-  const cy = Math.min(Math.max(y, r), 1 - r);
+  // Tile: x, y from 0.02 to 0.98, corner radius 0.24.
+  const r = 0.24;
+  const cx = Math.min(Math.max(x, 0.02 + r), 0.98 - r);
+  const cy = Math.min(Math.max(y, 0.02 + r), 0.98 - r);
   return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
 }
 
@@ -31,30 +31,69 @@ function insidePolygon(x, y, points) {
   return inside;
 }
 
+function distanceToSegment(x, y, [ax, ay], [bx, by]) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const t = Math.min(1, Math.max(0, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
+}
+
+/** Distance from a point to the polygon outline. */
+function distanceToOutline(x, y, points) {
+  let best = Infinity;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    best = Math.min(best, distanceToSegment(x, y, points[j], points[i]));
+  }
+  return best;
+}
+
+/** Inside the polygon, or within `grow` of it: a polygon with a round-joined stroke of width 2 × grow. */
+function insideGrown(x, y, points, grow) {
+  return insidePolygon(x, y, points) || distanceToOutline(x, y, points) <= grow;
+}
+
 const BOOKMARK = [
-  [0.3, 0.2],
-  [0.7, 0.2],
-  [0.7, 0.82],
-  [0.5, 0.66],
-  [0.3, 0.82],
+  [0.31, 0.21],
+  [0.69, 0.21],
+  [0.69, 0.8],
+  [0.5, 0.65],
+  [0.31, 0.8],
 ];
 // Five-pointed star centred in the bookmark's body.
 const STAR = Array.from({ length: 10 }, (_, i) => {
-  const radius = i % 2 === 0 ? 0.135 : 0.057;
+  const radius = i % 2 === 0 ? 0.125 : 0.054;
   const angle = -Math.PI / 2 + (i * Math.PI) / 5;
-  return [0.5 + radius * Math.cos(angle), 0.425 + radius * Math.sin(angle)];
+  return [0.5 + radius * Math.cos(angle), 0.42 + radius * Math.sin(angle)];
 });
 
-function pixelColor(x, y) {
+/** The bookmark is relatively smaller at small sizes, so the tile still reads as a tile. */
+function markScale(size) {
+  if (size >= 96) return 1;
+  if (size >= 48) return 0.94;
+  if (size >= 32) return 0.9;
+  if (size >= 24) return 0.87;
+  return 0.85;
+}
+
+/** RGBA (alpha 0..1) of the icon at a point, or null outside the tile. */
+function pixelColor(x, y, size) {
   if (!insideRoundedSquare(x, y)) return null;
-  const t = Math.min(1, Math.max(0, (x + y) / 2));
-  const background = FROM.map((c, i) => c + (TO[i] - c) * t);
-  if (insidePolygon(x, y, STAR)) return background;
-  if (insidePolygon(x, y, BOOKMARK)) {
-    const u = Math.min(1, Math.max(0, (y - 0.2) / 0.62));
-    return SILVER_FROM.map((c, i) => c + (SILVER_TO[i] - c) * u);
+  const k = markScale(size);
+  // Bookmark and star live in a group scaled around (0.5, 0.505).
+  const gx = (px, py) => [(px - 0.5) / k + 0.5, (py - 0.505) / k + 0.505];
+  const [mx, my] = gx(x, y);
+  const grow = 0.04;
+  if (insideGrown(mx, my, STAR, 0.0125)) return [...TILE, 1];
+  if (insideGrown(mx, my, BOOKMARK, grow)) return [...MARK, 1];
+  if (size >= 48) {
+    // Soft shadow under the bookmark: 3 units down, about 5 units of blur.
+    const [sx, sy] = gx(x, y - 0.03);
+    const inside = insideGrown(sx, sy, BOOKMARK, grow);
+    const distance = inside ? 0 : distanceToOutline(sx, sy, BOOKMARK) - grow;
+    const shadow = 0.28 * Math.max(0, 1 - distance / (0.05 * k));
+    if (shadow > 0) return [...TILE.map((c) => c * (1 - shadow)), 1];
   }
-  return background;
+  return [...TILE, 1];
 }
 
 function render(size) {
@@ -66,24 +105,24 @@ function render(size) {
       let r = 0,
         g = 0,
         b = 0,
-        a = 0;
+        covered = 0;
       for (let sy = 0; sy < SAMPLES; sy++) {
         for (let sx = 0; sx < SAMPLES; sx++) {
-          const color = pixelColor((px + (sx + 0.5) / SAMPLES) / size, (py + (sy + 0.5) / SAMPLES) / size);
+          const color = pixelColor((px + (sx + 0.5) / SAMPLES) / size, (py + (sy + 0.5) / SAMPLES) / size, size);
           if (!color) continue;
           r += color[0];
           g += color[1];
           b += color[2];
-          a++;
+          covered++;
         }
       }
       const offset = row + 1 + px * 4;
-      if (a > 0) {
-        data[offset] = Math.round(r / a);
-        data[offset + 1] = Math.round(g / a);
-        data[offset + 2] = Math.round(b / a);
+      if (covered > 0) {
+        data[offset] = Math.round(r / covered);
+        data[offset + 1] = Math.round(g / covered);
+        data[offset + 2] = Math.round(b / covered);
       }
-      data[offset + 3] = Math.round((a / (SAMPLES * SAMPLES)) * 255);
+      data[offset + 3] = Math.round((covered / (SAMPLES * SAMPLES)) * 255);
     }
   }
   return encodePng(size, size, data);

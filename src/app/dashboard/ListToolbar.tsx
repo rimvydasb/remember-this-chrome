@@ -1,6 +1,15 @@
-import { Badge, Button, Checkbox, CloseButton, Group, Loader, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Button, Checkbox, Loader, Tooltip } from '@mantine/core';
 import type { Catalog } from '../../shared/catalogs';
-import { IconEyeOff, IconFilter, IconFolderShare, IconMarkdown, IconRestore, IconTrash } from '@tabler/icons-react';
+import {
+  IconChevronDown,
+  IconEyeOff,
+  IconFilter,
+  IconFolderShare,
+  IconMarkdown,
+  IconRestore,
+  IconTrash,
+  IconX,
+} from '@tabler/icons-react';
 import type { SavedItem } from '../../shared/types';
 import { formatNumber } from '../ui/format';
 import { confirmDelete, exportMarkdown, markItems } from './actions';
@@ -17,7 +26,6 @@ interface ListToolbarProps {
   busy: boolean;
   narrowed: boolean;
   filtersOpen: boolean;
-  activeFilters: number;
   onToggleFilters: () => void;
   catalogs: readonly Catalog[];
   /** The catalog that all checked items are in, if they share one. */
@@ -34,7 +42,6 @@ export function ListToolbar({
   busy,
   narrowed,
   filtersOpen,
-  activeFilters,
   onToggleFilters,
   catalogs,
   checkedCatalogId,
@@ -46,8 +53,8 @@ export function ListToolbar({
 
   if (checked.size > 0) {
     return (
-      <Group justify="space-between" wrap="nowrap" gap="xs">
-        <Group gap="xs" wrap="nowrap">
+      <div className="rt-subbar">
+        <span className="rt-select-all">
           <Checkbox
             size="xs"
             checked={allVisibleChecked}
@@ -55,35 +62,35 @@ export function ListToolbar({
             onChange={onToggleAllVisible}
             aria-label="Select all visible items"
           />
-          <Text size="sm" fw={600}>
-            {checked.size} selected
-          </Text>
-        </Group>
-        <Group gap={4} wrap="nowrap">
+        </span>
+        <span className="rt-selected-count">{checked.size} selected</span>
+        <div className="rt-acts rt-selection-acts">
           <CatalogMenu
             catalogs={catalogs}
             itemIds={checkedItems.map((item) => item.id)}
             currentId={checkedCatalogId}
             onMoved={onClearChecked}
             target={
-              <Button size="compact-xs" variant="light" leftSection={<IconFolderShare size={14} />}>
+              <Button size="sm" variant="default" leftSection={<IconFolderShare size={14} />}>
                 Move
               </Button>
             }
           />
-          <Button
-            size="compact-xs"
-            variant="light"
-            leftSection={<IconMarkdown size={14} />}
-            onClick={() => exportMarkdown(checkedItems)}
-          >
-            Markdown
-          </Button>
+          <Tooltip label="Export as Markdown" withArrow>
+            <Button
+              size="sm"
+              variant="default"
+              px={8}
+              aria-label="Markdown"
+              onClick={() => exportMarkdown(checkedItems)}
+            >
+              <IconMarkdown size={16} />
+            </Button>
+          </Tooltip>
           {allForgotten ? (
             <Button
-              size="compact-xs"
-              variant="light"
-              color="gray"
+              size="sm"
+              variant="default"
               leftSection={<IconRestore size={14} />}
               onClick={() => markItems(checkedItems, undefined)}
             >
@@ -91,9 +98,8 @@ export function ListToolbar({
             </Button>
           ) : (
             <Button
-              size="compact-xs"
-              variant="light"
-              color="gray"
+              size="sm"
+              variant="default"
               leftSection={<IconEyeOff size={14} />}
               onClick={() => markItems(checkedItems, 'forgotten').then(onClearChecked)}
             >
@@ -106,9 +112,10 @@ export function ListToolbar({
               withArrow
             >
               <Button
-                size="compact-xs"
-                variant="light"
+                size="sm"
+                variant="default"
                 color="red"
+                className="rt-danger"
                 leftSection={<IconTrash size={14} />}
                 onClick={() => confirmDelete(checkedItems, onClearChecked)}
               >
@@ -116,15 +123,36 @@ export function ListToolbar({
               </Button>
             </Tooltip>
           )}
-          <CloseButton size="sm" aria-label="Clear selection" onClick={onClearChecked} />
-        </Group>
-      </Group>
+          <ActionIcon variant="subtle" aria-label="Clear selection" onClick={onClearChecked}>
+            <IconX size={16} />
+          </ActionIcon>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Group justify="space-between" wrap="nowrap">
-      <Group gap="xs" wrap="nowrap">
+    <div className="rt-subbar">
+      <Button
+        size="sm"
+        variant="default"
+        className="rt-ftoggle"
+        data-open={filtersOpen || undefined}
+        leftSection={<IconFilter size={16} />}
+        rightSection={<IconChevronDown size={14} className="rt-chev" />}
+        onClick={onToggleFilters}
+        aria-expanded={filtersOpen}
+        disabled={total === 0}
+      >
+        Filters
+      </Button>
+      {busy && <Loader size={14} />}
+      <span className="rt-list-count">
+        {narrowed
+          ? `${formatNumber(visible.length)} of ${formatNumber(total)}`
+          : `${formatNumber(visible.length)} ${visible.length === 1 ? 'item' : 'items'}`}
+      </span>
+      <span className="rt-select-all">
         <Checkbox
           size="xs"
           checked={false}
@@ -132,31 +160,7 @@ export function ListToolbar({
           onChange={onToggleAllVisible}
           aria-label="Select all visible items"
         />
-        <Text size="sm" c="dimmed">
-          {narrowed
-            ? `${formatNumber(visible.length)} of ${formatNumber(total)} items`
-            : `${formatNumber(visible.length)} ${visible.length === 1 ? 'item' : 'items'}`}
-        </Text>
-        {busy && <Loader size={14} />}
-      </Group>
-      <Button
-        size="compact-xs"
-        variant={filtersOpen ? 'light' : 'subtle'}
-        color={activeFilters > 0 ? undefined : 'gray'}
-        leftSection={<IconFilter size={14} />}
-        rightSection={
-          activeFilters > 0 ? (
-            <Badge size="xs" circle variant="filled">
-              {activeFilters}
-            </Badge>
-          ) : undefined
-        }
-        onClick={onToggleFilters}
-        aria-expanded={filtersOpen}
-        disabled={total === 0}
-      >
-        Filters
-      </Button>
-    </Group>
+      </span>
+    </div>
   );
 }

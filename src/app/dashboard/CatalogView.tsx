@@ -1,4 +1,4 @@
-import { ActionIcon, Button, EmptyState, Group, Menu, Stack, Text, Title, Tooltip } from '@mantine/core';
+import { ActionIcon, Button, Menu, Text, Tooltip } from '@mantine/core';
 import {
   IconBrandYoutube,
   IconDots,
@@ -14,7 +14,6 @@ import type { SavedItem } from '../../shared/types';
 import { formatNumber, formatShortDate } from '../ui/format';
 import { confirmDeleteCatalog, openRenameCatalog } from './catalogActions';
 import { CatalogIcon } from './CatalogMenu';
-import { PageBreadcrumbs } from './PageBreadcrumbs';
 import type { CatalogStats } from './useCatalogIndex';
 
 interface CatalogViewProps {
@@ -44,40 +43,29 @@ export function CatalogView({
   const count = stats?.count ?? 0;
 
   return (
-    <Stack gap="lg" maw={1100} mx="auto">
-      <PageBreadcrumbs crumbs={[{ label: 'Catalogs', onClick: onHome }, { label: catalog.name }]} />
-
-      <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
-          <span className="rt-block-icon rt-catalog-title-icon">
-            <CatalogIcon catalog={catalog} size={20} />
-          </span>
-          <div style={{ minWidth: 0 }}>
-            <Title order={2} lh={1.2} style={{ overflowWrap: 'anywhere' }}>
-              {catalog.name}
-            </Title>
-            <Text size="sm" c="dimmed">
-              {narrowed
-                ? `${formatNumber(items.length)} of ${formatNumber(count)} items match`
-                : `${formatNumber(count)} ${count === 1 ? 'item' : 'items'}`}
-              {isRecents && ' · new saves land here'}
-            </Text>
-          </div>
-        </Group>
+    <>
+      <div className="rt-subbar">
+        <nav className="rt-crumb" aria-label="Breadcrumb">
+          <button type="button" onClick={onHome}>
+            Catalogs
+          </button>
+          <span>/</span>
+          <b aria-current="page">{catalog.name}</b>
+        </nav>
         {!isRecents && (
-          <Group gap="xs" wrap="nowrap">
+          <span className="rt-acts">
             <Button
+              size="sm"
               variant="default"
-              size="xs"
-              leftSection={<IconPencil size={15} />}
+              leftSection={<IconPencil size={14} />}
               onClick={() => openRenameCatalog(catalog, catalogs)}
             >
               Rename
             </Button>
-            <Menu position="bottom-end" withArrow width={200}>
+            <Menu position="bottom-end" width={200}>
               <Menu.Target>
                 <Tooltip label="More" withArrow>
-                  <ActionIcon variant="default" size={30} aria-label="More catalog actions">
+                  <ActionIcon variant="subtle" aria-label="More catalog actions">
                     <IconDots size={16} />
                   </ActionIcon>
                 </Tooltip>
@@ -92,46 +80,56 @@ export function CatalogView({
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>
-          </Group>
+          </span>
         )}
-      </Group>
+      </div>
 
-      {items.length === 0 ? (
-        narrowed && (stats?.total ?? 0) > 0 ? (
-          <EmptyState
-            icon={<IconSearchOff size={28} />}
-            title="No items match"
-            description="Nothing in this catalog matches the search and filters."
-            py="xl"
-          >
-            <EmptyState.Actions>
-              <Button variant="light" size="xs" onClick={onResetFilters}>
+      <div className="rt-rcontent">
+        <div className="rt-page-head" style={{ alignItems: 'center', justifyContent: 'flex-start' }}>
+          <span className="rt-catalog-title-icon">
+            <CatalogIcon catalog={catalog} size={20} />
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <h2>{catalog.name}</h2>
+            <p>
+              {narrowed
+                ? `${formatNumber(items.length)} of ${formatNumber(count)} items match`
+                : `${formatNumber(count)} ${count === 1 ? 'item' : 'items'}`}
+              {isRecents && ' · new saves land here'}
+            </p>
+          </div>
+        </div>
+
+        {items.length === 0 ? (
+          narrowed && (stats?.total ?? 0) > 0 ? (
+            <div className="rt-empty">
+              <IconSearchOff size={24} />
+              <b>No items match</b>
+              <div className="rt-meta">Nothing in this catalog matches the search and filters.</div>
+              <Button variant="default" size="sm" mt={8} onClick={onResetFilters}>
                 Reset search and filters
               </Button>
-            </EmptyState.Actions>
-          </EmptyState>
+            </div>
+          ) : (
+            <div className="rt-empty">
+              <CatalogIcon catalog={catalog} size={24} />
+              <b>{isRecents ? 'Nothing new' : 'This catalog is empty'}</b>
+              <div className="rt-meta">
+                {isRecents
+                  ? 'Items you save appear here first.'
+                  : 'Open an item and use its catalog button, select items in the list and choose Move, or drag items onto this catalog in the sidebar.'}
+              </div>
+            </div>
+          )
         ) : (
-          <EmptyState
-            icon={<CatalogIcon catalog={catalog} size={28} />}
-            title={isRecents ? 'Nothing new' : 'This catalog is empty'}
-            description={
-              isRecents
-                ? 'Items you save appear here first.'
-                : 'Open an item and use its catalog button, select items in the list and choose Move, or drag items onto this catalog on the Catalogs page.'
-            }
-            maw={460}
-            mx="auto"
-            py="xl"
-          />
-        )
-      ) : (
-        <div className="rt-card-grid">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} onOpen={onOpenItem} />
-          ))}
-        </div>
-      )}
-    </Stack>
+          <div className="rt-card-grid">
+            {items.map((item) => (
+              <ItemCard key={item.id} item={item} onOpen={onOpenItem} />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -144,26 +142,17 @@ const ItemCard = memo(function ItemCard({ item, onOpen }: { item: SavedItem; onO
         <img className="rt-item-card-thumb" src={thumbnail} alt="" draggable={false} />
       ) : (
         <div className="rt-item-card-thumb rt-item-card-thumb-empty">
-          {isVideo ? <IconBrandYoutube size={30} stroke={1.5} /> : <IconFileText size={30} stroke={1.5} />}
+          {isVideo ? <IconBrandYoutube size={28} /> : <IconFileText size={28} />}
         </div>
       )}
       <div className="rt-item-card-body">
-        <Text size="sm" fw={600} lineClamp={2} lh={1.35}>
+        <Text size="md" fw={500} lineClamp={2}>
           {item.title || 'Untitled'}
         </Text>
-        <Group gap={6} mt={6} wrap="nowrap">
-          <Text size="xs" c="dimmed" truncate>
-            {[item.meta?.channel, formatShortDate(item.timestamp)].filter(Boolean).join(' · ')}
-          </Text>
-          {item.mark === 'loved' && (
-            <IconHeartFilled
-              size={13}
-              color="var(--mantine-color-pink-6)"
-              aria-label="Loved"
-              style={{ flexShrink: 0 }}
-            />
-          )}
-        </Group>
+        <div className="rt-item-meta">
+          <span>{[item.meta?.channel, formatShortDate(item.timestamp)].filter(Boolean).join(' · ')}</span>
+          {item.mark === 'loved' && <IconHeartFilled size={12} aria-label="Loved" style={{ color: 'var(--err)' }} />}
+        </div>
       </div>
     </button>
   );

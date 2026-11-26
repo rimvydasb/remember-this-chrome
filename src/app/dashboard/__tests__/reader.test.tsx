@@ -61,7 +61,7 @@ describe('item reader', () => {
     // In the Sentiment filter facet (with a count), the list row and the reader header.
     const all = await screen.findAllByRole('button', { name: /^informative/, pressed: false });
     expect(all.map((badge) => badge.getAttribute('data-kind'))).toEqual(['sentiment', 'sentiment', 'sentiment']);
-    const badges = all.filter((badge) => !badge.querySelector('.rt-keyword-count'));
+    const badges = all.filter((badge) => !badge.querySelector('em'));
     expect(badges).toHaveLength(2);
     for (const badge of badges) {
       const labels = Array.from(badge.parentElement!.children, (child) => child.textContent);
@@ -75,9 +75,9 @@ describe('item reader', () => {
 
     expect(screen.getByText('YouTube transcript')).toBeInTheDocument();
     expect(screen.getByText('en')).toBeInTheDocument();
-    expect(screen.getByText('Neuro Lab', { selector: 'p' })).toBeInTheDocument();
-    expect(screen.getByText(/1,200 views as of/)).toBeInTheDocument();
-    expect(screen.getByText(/25:00 video/)).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('button', { name: /^Neuro Lab/ })).toBeInTheDocument();
+    expect(screen.getByText(/views as of/)).toHaveTextContent(/1,200 views as of/);
+    expect(within(screen.getByRole('main')).getByText('25:00')).toBeInTheDocument();
     expect(screen.getByText('Deep sleep is when memory is consolidated.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Open source/ })).toHaveAttribute(
       'href',
@@ -190,7 +190,7 @@ describe('item reader', () => {
       [CATALOGS_KEY]: [{ id: 'cooking', name: 'Cooking', createdAt: '2026-01-01T00:00:00.000Z' }],
     });
     await heading('Cooked');
-    await user.click(within(screen.getByLabelText('Breadcrumb')).getByRole('button', { name: 'Cooking' }));
+    await user.click(within(screen.getByLabelText('Breadcrumb')).getByRole('button', { name: /Cooking$/ }));
     expect(await heading('Cooking')).toBeInTheDocument();
     expect(window.location.hash).toBe('#catalog=cooking');
   });
@@ -228,23 +228,28 @@ describe('item reader', () => {
   it('forgets an item, restores it, and deletes it only when forgotten', async () => {
     const { user } = open([VIDEO()], 'video');
     await heading('Sleep and memory');
-    expect(screen.queryByRole('button', { name: 'Delete item' })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Forget' }));
+    const menu = async (name: string | RegExp) => {
+      await user.click(screen.getByRole('button', { name: 'More item actions' }));
+      return user.click(await screen.findByRole('menuitem', { name }));
+    };
+    await user.click(screen.getByRole('button', { name: 'More item actions' }));
+    expect(screen.queryByRole('menuitem', { name: /Delete/ })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('menuitem', { name: 'Forget' }));
     await waitFor(() => expect(stored('video')?.mark).toBe('forgotten'));
-    expect(await screen.findByText('Forgotten', { selector: '.mantine-Badge-label' })).toBeInTheDocument();
+    expect(await screen.findByText('forgotten')).toBeInTheDocument();
     expect(await screen.findByText('1 item forgotten')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Restore' }));
+    await menu('Restore');
     await waitFor(() => expect(stored('video')?.mark).toBeUndefined());
-    await user.click(await screen.findByRole('button', { name: 'Forget' }));
+    await menu('Forget');
+    await waitFor(() => expect(stored('video')?.mark).toBe('forgotten'));
 
-    await user.click(await screen.findByRole('button', { name: 'Delete item' }));
+    await menu(/Delete permanently/);
     const dialog = await screen.findByRole('dialog', { name: 'Delete this item?' });
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(stored('video')).toBeDefined();
 
-    await user.click(screen.getByRole('button', { name: 'Delete item' }));
+    await menu(/Delete permanently/);
     await user.click(
       within(await screen.findByRole('dialog', { name: 'Delete this item?' })).getByRole('button', { name: 'Delete' }),
     );
@@ -257,8 +262,7 @@ describe('item reader', () => {
       [CATALOGS_KEY]: [{ id: 'work', name: 'Work', createdAt: '2026-01-01T00:00:00.000Z' }],
     });
     await heading('Movable');
-    // The first "Recents" is the breadcrumb; the second is the catalog button of the item.
-    await user.click(screen.getAllByRole('button', { name: /Recents/ })[1]!);
+    await user.click(screen.getByRole('button', { name: 'Move to catalog' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Work' }));
     await waitFor(() => expect(stored('x')?.catalogId).toBe('work'));
     expect(await screen.findByText('Moved to Work.')).toBeInTheDocument();

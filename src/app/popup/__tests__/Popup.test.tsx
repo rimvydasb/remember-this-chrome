@@ -52,7 +52,7 @@ describe('popup', () => {
       makeItem({ id: 'v', url: VIDEO_URL, type: 'youtube_transcript' }),
     ]);
     expect(await screen.findByRole('button', { name: 'Update transcript' })).toBeEnabled();
-    expect(screen.getByText(/In your library · last updated/)).toBeInTheDocument();
+    expect(screen.getByText('● in library')).toBeInTheDocument();
   });
 
   it('counts the items in the library', async () => {

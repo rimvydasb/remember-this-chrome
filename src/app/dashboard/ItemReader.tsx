@@ -1,37 +1,23 @@
-import {
-  ActionIcon,
-  Anchor,
-  Badge,
-  Button,
-  CopyButton,
-  Group,
-  Highlight,
-  Stack,
-  Text,
-  Title,
-  Tooltip,
-  Typography,
-} from '@mantine/core';
+import { ActionIcon, CopyButton, Highlight, Menu, Tooltip, Typography } from '@mantine/core';
 import {
   IconArticle,
-  IconCalendar,
-  IconChevronDown,
-  IconClipboard,
-  IconClipboardCheck,
-  IconClock,
+  IconBrandYoutube,
+  IconCheck,
+  IconCopy,
+  IconDots,
   IconExternalLink,
-  IconFileText,
-  IconEye,
   IconEyeOff,
+  IconFileText,
+  IconFolder,
   IconHeart,
   IconHeartFilled,
+  IconInbox,
   IconMarkdown,
   IconRestore,
   IconTrash,
-  IconUser,
 } from '@tabler/icons-react';
 import { useMemo } from 'react';
-import type { Catalog } from '../../shared/catalogs';
+import { RECENTS_ID, type Catalog } from '../../shared/catalogs';
 import { formatDuration, TYPE_LABELS } from '../../shared/markdown';
 import { countWords } from '../../shared/transcript';
 import type { Keyword } from '../../shared/keywords';
@@ -40,12 +26,12 @@ import type { SavedItem } from '../../shared/types';
 import { formatDateTime, formatNumber, formatShortDate, readingTime } from '../ui/format';
 import { confirmDelete, exportMarkdown, markItems } from './actions';
 import { AiTagsButton } from './AiTagsButton';
-import { CatalogIcon, CatalogMenu } from './CatalogMenu';
+import { CatalogMenu } from './CatalogMenu';
 import { ClampedText } from './ClampedText';
 import { ContentBlock } from './ContentBlock';
 import { KeywordBadges } from './KeywordBadges';
-import { PageBreadcrumbs } from './PageBreadcrumbs';
 import { ReaderPanels } from './panels/ReaderPanels';
+import { badgeLetters } from './Sidebar';
 
 interface ItemReaderProps {
   item: SavedItem;
@@ -90,206 +76,190 @@ export function ItemReader({
   const loved = item.mark === 'loved';
   const forgotten = item.mark === 'forgotten';
   const isTranscript = item.type === 'youtube_transcript';
+  const thumbnail = item.meta?.thumbnail;
+  const duration = item.meta?.durationSec ? formatDuration(item.meta.durationSec) : undefined;
+  const viewsAt = item.meta?.viewCountAt ?? item.timestamp;
 
   return (
-    <Stack gap="lg" maw={760} mx="auto" pb="xl">
-      <PageBreadcrumbs
-        crumbs={[
-          { label: 'Catalogs', onClick: onHome },
-          { label: catalog.name, onClick: () => onOpenCatalog(catalog.id) },
-          { label: item.title || 'Untitled' },
-        ]}
-      />
-      <Stack gap="sm">
-        <Group gap="xs">
-          <Badge variant="light" color={item.type === 'youtube_transcript' ? 'red' : 'blue'}>
-            {TYPE_LABELS[item.type]}
-          </Badge>
-          {item.meta?.language && (
-            <Badge variant="light" color="gray">
-              {item.meta.language}
-            </Badge>
-          )}
-          {forgotten && (
-            <Badge variant="light" color="gray" leftSection={<IconEyeOff size={12} />}>
-              Forgotten
-            </Badge>
-          )}
-          {terms.length > 0 && (
-            <Badge variant="light" color="yellow">
-              {matches} {matches === 1 ? 'match' : 'matches'}
-            </Badge>
-          )}
-        </Group>
-
-        <Title order={2} lh={1.25}>
-          <Highlight highlight={highlight} inherit>
-            {item.title || 'Untitled'}
-          </Highlight>
-        </Title>
-
-        <Group gap="lg" c="dimmed">
-          {item.meta?.channel && <Meta icon={<IconUser size={15} />}>{item.meta.channel}</Meta>}
-          <Meta icon={<IconCalendar size={15} />}>Saved {formatDateTime(item.timestamp)}</Meta>
-          <Meta icon={<IconClock size={15} />}>
-            {formatNumber(words)} words · {readingTime(words)}
-            {item.meta?.durationSec ? ` · ${formatDuration(item.meta.durationSec)} video` : ''}
-          </Meta>
-          {item.meta?.viewCount !== undefined && (
-            <Tooltip label={`View count on ${formatDateTime(item.meta.viewCountAt ?? item.timestamp)}`} withArrow>
-              <div>
-                <Meta icon={<IconEye size={15} />}>
-                  {formatNumber(item.meta.viewCount)} {item.meta.viewCount === 1 ? 'view' : 'views'} as of{' '}
-                  {formatShortDate(item.meta.viewCountAt ?? item.timestamp)}
-                </Meta>
-              </div>
-            </Tooltip>
-          )}
-        </Group>
-
-        <KeywordBadges
-          keywords={keywords ?? []}
-          active={activeKeywords}
-          onToggle={onToggleKeyword}
-          size="sm"
-          after={hasTopicTags(item) ? undefined : <AiTagsButton item={item} busy={aiTagging} />}
-        />
-
-        <Group gap="xs" mt={4}>
+    <>
+      <div className="rt-subbar">
+        <nav className="rt-crumb" aria-label="Breadcrumb">
+          <button type="button" onClick={onHome}>
+            Catalogs
+          </button>
+          <span>/</span>
+          <button type="button" onClick={() => onOpenCatalog(catalog.id)}>
+            <CatalogBadge catalog={catalog} />
+            {catalog.name}
+          </button>
+          <span>/</span>
+          <b aria-current="page">{item.title || 'Untitled'}</b>
+        </nav>
+        <span className="rt-acts">
+          <Tooltip label={loved ? 'Remove from loved' : 'Love'} withArrow>
+            <ActionIcon
+              variant="subtle"
+              aria-label={loved ? 'Remove from loved' : 'Love'}
+              aria-pressed={loved}
+              onClick={() => markItems([item], loved ? undefined : 'loved')}
+            >
+              {loved ? <IconHeartFilled size={16} style={{ color: 'var(--err)' }} /> : <IconHeart size={16} />}
+            </ActionIcon>
+          </Tooltip>
+          <CopyButton value={item.content} timeout={2000}>
+            {({ copied, copy }) => (
+              <Tooltip label={copied ? 'Copied' : 'Copy text'} withArrow>
+                <ActionIcon variant="subtle" aria-label={copied ? 'Copied' : 'Copy text'} onClick={copy}>
+                  {copied ? <IconCheck size={16} style={{ color: 'var(--ok)' }} /> : <IconCopy size={16} />}
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </CopyButton>
+          <Tooltip label="Export Markdown" withArrow>
+            <ActionIcon variant="subtle" aria-label="Export Markdown" onClick={() => exportMarkdown([item])}>
+              <IconMarkdown size={16} />
+            </ActionIcon>
+          </Tooltip>
           <CatalogMenu
             catalogs={catalogs}
             itemIds={[item.id]}
             currentId={catalog.id}
             target={
-              <Tooltip label="Catalog · click to move" withArrow>
-                <Button
-                  size="xs"
-                  variant="light"
-                  color="gray"
-                  leftSection={<CatalogIcon catalog={catalog} size={15} />}
-                  rightSection={<IconChevronDown size={14} />}
-                  maw={220}
-                >
-                  {catalog.name}
-                </Button>
+              <Tooltip label={`Catalog: ${catalog.name} · click to move`} withArrow>
+                <ActionIcon variant="subtle" aria-label="Move to catalog">
+                  <IconFolder size={16} />
+                </ActionIcon>
               </Tooltip>
             }
           />
-          <CopyButton value={item.content} timeout={2000}>
-            {({ copied, copy }) => (
-              <Button
-                size="xs"
-                variant={copied ? 'filled' : 'light'}
-                color={copied ? 'teal' : undefined}
-                leftSection={copied ? <IconClipboardCheck size={15} /> : <IconClipboard size={15} />}
-                onClick={copy}
-              >
-                {copied ? 'Copied' : 'Copy text'}
-              </Button>
-            )}
-          </CopyButton>
-          <Button
-            size="xs"
-            variant="default"
-            leftSection={<IconMarkdown size={16} />}
-            onClick={() => exportMarkdown([item])}
-          >
-            Export Markdown
-          </Button>
-          <Button
-            size="xs"
-            variant="default"
-            component="a"
-            href={item.url}
-            target="_blank"
-            rel="noreferrer"
-            leftSection={<IconExternalLink size={15} />}
-          >
-            Open source
-          </Button>
-          <Tooltip label={loved ? 'Remove from loved' : 'Love'} withArrow>
+          <Tooltip label="Open source" withArrow>
             <ActionIcon
-              variant={loved ? 'light' : 'subtle'}
-              color="pink"
-              aria-label={loved ? 'Remove from loved' : 'Love'}
-              aria-pressed={loved}
-              onClick={() => markItems([item], loved ? undefined : 'loved')}
+              variant="subtle"
+              component="a"
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Open source"
             >
-              {loved ? <IconHeartFilled size={17} /> : <IconHeart size={17} />}
+              <IconExternalLink size={16} />
             </ActionIcon>
           </Tooltip>
-          {forgotten ? (
-            <Button
-              size="xs"
-              variant="default"
-              leftSection={<IconRestore size={15} />}
-              onClick={() => markItems([item], undefined)}
-            >
-              Restore
-            </Button>
-          ) : (
-            <Button
-              size="xs"
-              variant="default"
-              leftSection={<IconEyeOff size={15} />}
-              onClick={() => markItems([item], 'forgotten')}
-            >
-              Forget
-            </Button>
-          )}
-          {forgotten && (
-            <Tooltip label="Delete permanently" withArrow>
-              <ActionIcon variant="subtle" color="red" aria-label="Delete item" onClick={() => confirmDelete([item])}>
-                <IconTrash size={17} />
+          <Menu position="bottom-end" width={200}>
+            <Menu.Target>
+              <ActionIcon variant="subtle" aria-label="More item actions">
+                <IconDots size={16} />
               </ActionIcon>
-            </Tooltip>
-          )}
-        </Group>
-        <Anchor href={item.url} target="_blank" rel="noreferrer" size="xs" c="dimmed" truncate="end">
-          {item.url}
-        </Anchor>
-      </Stack>
-
-      <Stack gap="md">
-        <ReaderPanels item={item} />
-
-        <ContentBlock
-          storageKey="content"
-          icon={isTranscript ? <IconFileText size={17} /> : <IconArticle size={17} />}
-          title={isTranscript ? 'Transcript' : 'Content'}
-          copy={{ value: item.content, label: isTranscript ? 'Copy transcript' : 'Copy content' }}
-          actions={
-            <Text size="xs" c="dimmed" className="rt-tabular">
-              {formatNumber(words)} words
-            </Text>
-          }
-        >
-          <ClampedText key={item.id} unclamped={highlight.length > 0}>
-            <Typography className="rt-reader">
-              {paragraphs.map((paragraph, i) =>
-                highlight.length ? (
-                  <Highlight key={i} component="p" highlight={highlight} inherit>
-                    {paragraph}
-                  </Highlight>
-                ) : (
-                  <p key={i}>{paragraph}</p>
-                ),
+            </Menu.Target>
+            <Menu.Dropdown>
+              {forgotten ? (
+                <Menu.Item leftSection={<IconRestore size={16} />} onClick={() => markItems([item], undefined)}>
+                  Restore
+                </Menu.Item>
+              ) : (
+                <Menu.Item leftSection={<IconEyeOff size={16} />} onClick={() => markItems([item], 'forgotten')}>
+                  Forget
+                </Menu.Item>
               )}
-            </Typography>
-          </ClampedText>
-        </ContentBlock>
-      </Stack>
-    </Stack>
+              {forgotten && (
+                <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={() => confirmDelete([item])}>
+                  Delete permanently…
+                </Menu.Item>
+              )}
+            </Menu.Dropdown>
+          </Menu>
+        </span>
+      </div>
+
+      <div className="rt-rcontent">
+        <div className="rt-rhead">
+          <div className="rt-rhead-thumb-wrap">
+            {thumbnail ? (
+              <img className="rt-rhead-thumb" src={thumbnail} alt="" draggable={false} />
+            ) : (
+              <div className="rt-rhead-thumb" aria-hidden>
+                {isTranscript ? <IconBrandYoutube size={28} /> : <IconFileText size={28} />}
+              </div>
+            )}
+            {duration && <span>{duration}</span>}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h2>
+              <Highlight highlight={highlight} inherit>
+                {item.title || 'Untitled'}
+              </Highlight>
+            </h2>
+            <div className="rt-facts">
+              <span>{TYPE_LABELS[item.type]}</span>
+              <span>
+                <b>{formatNumber(words)}</b> words
+              </span>
+              <span>{readingTime(words)}</span>
+              {item.meta?.viewCount !== undefined && (
+                <Tooltip label={`View count on ${formatDateTime(viewsAt)}`} withArrow>
+                  <span>
+                    <b>{formatNumber(item.meta.viewCount)}</b> {item.meta.viewCount === 1 ? 'view' : 'views'} as of{' '}
+                    {formatShortDate(viewsAt)}
+                  </span>
+                </Tooltip>
+              )}
+              {item.meta?.language && <b>{item.meta.language}</b>}
+              <span>
+                saved <b>{formatDateTime(item.timestamp)}</b>
+              </span>
+              {forgotten && <span>forgotten</span>}
+              {terms.length > 0 && (
+                <span>
+                  <b>
+                    {matches} {matches === 1 ? 'match' : 'matches'}
+                  </b>
+                </span>
+              )}
+            </div>
+            <KeywordBadges
+              keywords={keywords ?? []}
+              active={activeKeywords}
+              onToggle={onToggleKeyword}
+              size="sm"
+              after={hasTopicTags(item) ? undefined : <AiTagsButton item={item} busy={aiTagging} />}
+            />
+          </div>
+        </div>
+
+        <div className="rt-blocks">
+          <ReaderPanels item={item} />
+
+          <ContentBlock
+            storageKey="content"
+            icon={isTranscript ? <IconFileText /> : <IconArticle />}
+            title={isTranscript ? 'Transcript' : 'Content'}
+            copy={{ value: item.content, label: isTranscript ? 'Copy transcript' : 'Copy content' }}
+            actions={<span className="rt-block-count">{formatNumber(words)} words</span>}
+          >
+            <ClampedText key={item.id} unclamped={highlight.length > 0}>
+              <Typography className="rt-reader">
+                {paragraphs.map((paragraph, i) =>
+                  highlight.length ? (
+                    <Highlight key={i} component="p" highlight={highlight} inherit>
+                      {paragraph}
+                    </Highlight>
+                  ) : (
+                    <p key={i}>{paragraph}</p>
+                  ),
+                )}
+              </Typography>
+            </ClampedText>
+          </ContentBlock>
+        </div>
+      </div>
+    </>
   );
 }
 
-function Meta({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <Group gap={6} wrap="nowrap">
-      {icon}
-      <Text size="sm" c="dimmed">
-        {children}
-      </Text>
-    </Group>
+/** The letter badge of a catalog (the inbox icon for Recents). */
+export function CatalogBadge({ catalog }: { catalog: Catalog }) {
+  return catalog.id === RECENTS_ID ? (
+    <IconInbox size={16} />
+  ) : (
+    <span className="rt-mono-ic">{badgeLetters(catalog.name)}</span>
   );
 }

@@ -1,4 +1,4 @@
-import { Badge, Collapse, Group, Paper, Text, UnstyledButton } from '@mantine/core';
+import { Collapse, Group } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconChevronDown } from '@tabler/icons-react';
 import { useId, type ReactNode } from 'react';
@@ -10,7 +10,7 @@ interface ContentBlockProps {
   icon: ReactNode;
   title: string;
   count?: number;
-  /** Adds a copy button right after the title. */
+  /** Adds a copy button to the right side of the header. */
   copy?: { value: string; label: string };
   /** Extra header content (buttons), shown on the right, outside the toggle. */
   actions?: ReactNode;
@@ -43,47 +43,34 @@ export function ContentBlock({
   const toggle = () => setExpanded((value) => !value);
 
   return (
-    <Paper
-      withBorder
-      radius="md"
-      component="section"
-      className="rt-block"
-      id={id}
-      data-expanded={expanded || undefined}
-    >
-      <Group gap="xs" wrap="nowrap" className="rt-block-header">
-        <UnstyledButton
-          className="rt-block-toggle rt-block-toggle-title"
-          onClick={toggle}
+    <section className="rt-block" id={id} data-expanded={expanded || undefined}>
+      {/* The whole header toggles; the title button is the accessible control. */}
+      <div className="rt-block-header" onClick={toggle}>
+        <button
+          type="button"
+          className="rt-block-toggle"
+          onClick={(event) => {
+            event.stopPropagation();
+            toggle();
+          }}
           aria-expanded={expanded}
           aria-controls={bodyId}
         >
-          <Group gap={10} wrap="nowrap">
-            <span className="rt-block-icon">{icon}</span>
-            <Text fw={600} size="sm">
-              {title}
-            </Text>
-            {count !== undefined && (
-              <Badge size="sm" variant="light" color="gray" radius="sm">
-                {count}
-              </Badge>
-            )}
-          </Group>
-        </UnstyledButton>
-        {copy && <CopyAction value={copy.value} label={copy.label} />}
-        {/* Fills the rest of the row so the whole header toggles; the title button is the accessible one. */}
-        <UnstyledButton className="rt-block-toggle rt-block-toggle-rest" onClick={toggle} tabIndex={-1} aria-hidden>
-          <IconChevronDown size={16} className="rt-block-chevron" />
-        </UnstyledButton>
-        {actions && (
-          <Group gap={4} wrap="nowrap" pr={8}>
-            {actions}
-          </Group>
-        )}
-      </Group>
+          <span className="rt-block-icon">{icon}</span>
+          <span className="rt-block-title">{title}</span>
+          {count !== undefined && <span className="rt-block-count">{count}</span>}
+        </button>
+        <Group gap={4} wrap="nowrap" className="rt-block-right" onClick={(event) => event.stopPropagation()}>
+          {actions}
+          {copy && <CopyAction value={copy.value} label={copy.label} />}
+        </Group>
+        <span className="rt-block-chevron" aria-hidden>
+          <IconChevronDown size={16} />
+        </span>
+      </div>
       <Collapse expanded={expanded} id={bodyId}>
         <div className={flush ? 'rt-block-body rt-block-body-flush' : 'rt-block-body'}>{children}</div>
       </Collapse>
-    </Paper>
+    </section>
   );
 }

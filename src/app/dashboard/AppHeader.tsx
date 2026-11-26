@@ -1,18 +1,15 @@
 import {
   ActionIcon,
-  Burger,
-  Button,
   CloseButton,
   FileButton,
-  Group,
   Kbd,
   Menu,
   TextInput,
   Tooltip,
-  UnstyledButton,
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import {
   IconDots,
   IconDownload,
@@ -24,7 +21,6 @@ import {
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
-import { useDisclosure } from '@mantine/hooks';
 import type { Ref } from 'react';
 import type { SavedItem } from '../../shared/types';
 import { Logo } from '../ui/Logo';
@@ -36,38 +32,26 @@ interface AppHeaderProps {
   query: string;
   onQueryChange: (query: string) => void;
   searchRef: Ref<HTMLInputElement>;
-  navOpened: boolean;
-  onToggleNav: () => void;
   onImport: (file: File | null) => void;
   onHome: () => void;
 }
 
-export function AppHeader({
-  all,
-  query,
-  onQueryChange,
-  searchRef,
-  navOpened,
-  onToggleNav,
-  onImport,
-  onHome,
-}: AppHeaderProps) {
+/** The app header: logo, search, and (top right) theme, settings and library actions. */
+export function AppHeader({ all, query, onQueryChange, searchRef, onImport, onHome }: AppHeaderProps) {
   const { setColorScheme } = useMantineColorScheme();
-  const colorScheme = useComputedColorScheme('light');
+  const colorScheme = useComputedColorScheme('dark');
   const empty = all.length === 0;
   const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);
 
   return (
-    <Group h="100%" justify="space-between" wrap="nowrap" gap="md">
-      <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>
-        <Burger opened={navOpened} onClick={onToggleNav} hiddenFrom="sm" size="sm" aria-label="Toggle list" />
-        <UnstyledButton onClick={onHome} aria-label="Catalogs home" className="rt-home-link">
-          <Logo />
-        </UnstyledButton>
-      </Group>
+    <header className="rt-topbar">
+      <button type="button" onClick={onHome} aria-label="Catalogs home" className="rt-home-link">
+        <Logo />
+      </button>
 
       <TextInput
         ref={searchRef}
+        className="rt-search"
         value={query}
         onChange={(event) => onQueryChange(event.currentTarget.value)}
         onKeyDown={(event) => {
@@ -79,56 +63,32 @@ export function AppHeader({
         placeholder="Search titles and transcripts…"
         aria-label="Search library"
         leftSection={<IconSearch size={16} />}
-        rightSectionWidth={query ? 36 : 44}
+        rightSectionWidth={query ? 32 : 40}
         rightSection={
-          query ? (
-            <CloseButton size="sm" aria-label="Clear search" onClick={() => onQueryChange('')} />
-          ) : (
-            <Kbd size="xs">/</Kbd>
-          )
+          query ? <CloseButton size="sm" aria-label="Clear search" onClick={() => onQueryChange('')} /> : <Kbd>/</Kbd>
         }
-        radius="xl"
-        style={{ flex: 1, maxWidth: 560 }}
       />
 
-      <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
-        <FileButton onChange={onImport} accept="application/json,.json">
-          {(props) => (
-            <Button {...props} variant="default" size="sm" leftSection={<IconUpload size={16} />} visibleFrom="md">
-              Import JSON
-            </Button>
-          )}
-        </FileButton>
-        <Button
-          variant="light"
-          size="sm"
-          leftSection={<IconDownload size={16} />}
-          onClick={exportLibraryJson}
-          disabled={empty}
-          visibleFrom="md"
-        >
-          Export JSON
-        </Button>
-        <Tooltip label="Settings" withArrow>
-          <ActionIcon variant="default" size="lg" aria-label="Settings" onClick={openSettings}>
-            <IconSettings size={18} />
-          </ActionIcon>
-        </Tooltip>
-        <SettingsDialog opened={settingsOpened} onClose={closeSettings} />
-        <Tooltip label={colorScheme === 'dark' ? 'Light mode' : 'Dark mode'} withArrow>
+      <div className="rt-topbar-right">
+        <Tooltip label={colorScheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} withArrow>
           <ActionIcon
-            variant="default"
-            size="lg"
+            variant="subtle"
             aria-label="Toggle color scheme"
             onClick={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
           >
-            {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
+            {colorScheme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
           </ActionIcon>
         </Tooltip>
-        <Menu position="bottom-end" width={230} withArrow>
+        <Tooltip label="Settings" withArrow>
+          <ActionIcon variant="subtle" aria-label="Settings" onClick={openSettings}>
+            <IconSettings size={16} />
+          </ActionIcon>
+        </Tooltip>
+        <SettingsDialog opened={settingsOpened} onClose={closeSettings} />
+        <Menu position="bottom-end" width={264} keepMounted>
           <Menu.Target>
-            <ActionIcon variant="default" size="lg" aria-label="More actions">
-              <IconDots size={18} />
+            <ActionIcon variant="subtle" aria-label="More actions">
+              <IconDots size={16} />
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
@@ -161,7 +121,7 @@ export function AppHeader({
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
-      </Group>
-    </Group>
+      </div>
+    </header>
   );
 }

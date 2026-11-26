@@ -1,0 +1,282 @@
+/*
+ * Graphite popup: a status panel, 360 px wide. Tokens live in ../ui/tokens.css; the spec is
+ * docs/design-proposals/02-graphite.html. Shared pieces (chips, buttons, inputs) are sized by the
+ * same rules as the dashboard, repeated here because the popup does not load dashboard.css.
+ */
+body {
+  margin: 0;
+  background: var(--panel);
+  color: var(--text);
+  font: var(--fs-md) / var(--lh-md) var(--sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+.pp {
+  width: 360px;
+}
+
+.pp-head {
+  height: var(--h-bar);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--s-2) 0 var(--gutter);
+  border-bottom: 1px solid var(--line);
+}
+
+.pp-body {
+  padding: var(--gutter);
+  display: grid;
+  gap: var(--s-4);
+}
+
+.pp-video {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: start;
+}
+
+.pp-thumb {
+  width: 96px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--r-1);
+  object-fit: cover;
+  background: linear-gradient(135deg, #2a3242, #6c5a8a);
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.pp-video-info {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.pp-video h3 {
+  margin: 0 0 var(--s-1);
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pp-kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-1) var(--s-4);
+  font: var(--fs-xs) / var(--lh-xs) var(--mono);
+  margin: 0;
+  padding: var(--s-3);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+}
+
+.pp-kv dt {
+  color: var(--faint);
+}
+
+.pp-kv dd {
+  margin: 0;
+  color: var(--text-2);
+  text-align: right;
+}
+
+.pp-kv .ok {
+  color: var(--ok);
+}
+
+.pp-cta {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.pp-cta .pp-primary {
+  flex: 1;
+}
+
+.pp-foot {
+  height: var(--h-row);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--gutter);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.pp-stat {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.rt-dot {
+  width: var(--s-2);
+  height: var(--s-2);
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent);
+  flex-shrink: 0;
+}
+
+.pp-result-acts {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+
+.pp-result-acts .mantine-Button-root {
+  flex: 1;
+}
+
+.pp-result p {
+  margin: 0;
+}
+
+/* Shared label, chips, buttons */
+.rt-label {
+  font: 500 var(--fs-xs) / var(--lh-xs) var(--mono);
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.rt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+
+.rt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  height: var(--h-chip);
+  max-width: 100%;
+  padding: 0 var(--s-2);
+  border: 0;
+  border-radius: var(--r-1);
+  font: 500 var(--fs-sm) / 1 var(--sans);
+  white-space: nowrap;
+}
+
+.rt-chip svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.rt-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.c-green {
+  color: var(--c-green);
+  background: var(--c-green-bg);
+}
+.c-lime {
+  color: var(--c-lime);
+  background: var(--c-lime-bg);
+}
+.c-gray {
+  color: var(--c-gray);
+  background: var(--c-gray-bg);
+}
+.c-yellow {
+  color: var(--c-yellow);
+  background: var(--c-yellow-bg);
+}
+.c-orange {
+  color: var(--c-orange);
+  background: var(--c-orange-bg);
+}
+.c-red {
+  color: var(--c-red);
+  background: var(--c-red-bg);
+}
+.c-navy {
+  color: var(--c-navy);
+  background: var(--c-navy-bg);
+}
+.c-grape {
+  color: var(--c-grape);
+  background: var(--c-grape-bg);
+}
+
+.mantine-Button-root {
+  --button-height-sm: var(--h-sm);
+  --button-height-md: var(--h-md);
+  --button-padding-x-sm: var(--s-2);
+  --button-padding-x-md: var(--s-3);
+  --button-fz-sm: var(--fs-sm);
+  --button-fz-md: var(--fs-md);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.mantine-Button-root[data-with-left-section] {
+  padding-inline-start: var(--button-padding-x);
+}
+
+.mantine-Button-section[data-position='left'] {
+  margin-inline-end: var(--s-2);
+}
+
+.mantine-Button-root[data-size='sm'] .mantine-Button-section[data-position='left'] {
+  margin-inline-end: var(--s-1);
+}
+
+.mantine-Button-root[data-variant='default'] {
+  background: var(--raised);
+  border-color: var(--line-2);
+  color: var(--text);
+}
+
+.mantine-Button-root[data-variant='subtle'] {
+  color: var(--muted);
+}
+
+.mantine-Button-root[data-variant='subtle']:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.mantine-Button-root[data-variant='filled'] {
+  color: var(--on-accent);
+}
+
+.mantine-Kbd-root {
+  font: 500 var(--fs-xs) / var(--lh-xs) var(--mono);
+  color: var(--muted);
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-bottom-width: 1px;
+  border-radius: var(--r-1);
+  padding: 0 var(--s-1);
+}
+
+.mantine-Alert-root {
+  border-radius: var(--r-2);
+  padding: var(--s-3);
+}
+
+.rt-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  line-height: var(--lh-md);
+  white-space: nowrap;
+}

@@ -1,5 +1,5 @@
-import { AppShell, Button, Center, Collapse, Loader, ScrollArea, Select, Stack, Text } from '@mantine/core';
-import { useDisclosure, useHotkeys, useLocalStorage } from '@mantine/hooks';
+import { Button, Center, Loader, Text } from '@mantine/core';
+import { useHotkeys, useLocalStorage } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { RECENTS, RECENTS_ID } from '../../shared/catalogs';
@@ -7,7 +7,6 @@ import { ImportError, parseImport, type ParsedImport } from '../../shared/import
 import { ITEM_TYPES } from '../../shared/types';
 import { AppHeader } from './AppHeader';
 import { ITEM_DRAG_TYPE } from './catalogActions';
-import { CatalogIcon } from './CatalogMenu';
 import { CatalogsHome } from './CatalogsHome';
 import { CatalogView } from './CatalogView';
 import { EmptyLibrary } from './EmptyLibrary';
@@ -16,12 +15,13 @@ import { ImportDialog } from './ImportDialog';
 import { ItemList } from './ItemList';
 import { ItemReader } from './ItemReader';
 import { ListToolbar } from './ListToolbar';
+import { Sidebar } from './Sidebar';
 import { useAiTagging } from './useAiTagging';
 import { useCatalogIndex } from './useCatalogIndex';
 import { useCatalogs } from './useCatalogs';
 import { useKeywordIndex } from './useKeywordIndex';
 import { useLibrary } from './useLibrary';
-import { useLibraryFilters } from './useLibraryFilters';
+import { useLibraryFilters, type MarkFilter } from './useLibraryFilters';
 
 /**
  * Where the dashboard is. The URL hash holds it, so the browser's back button and deep links work:
@@ -69,7 +69,7 @@ export function App() {
 
   const [checked, setChecked] = useState<Set<string>>(() => new Set());
   const [pendingImport, setPendingImport] = useState<{ fileName: string; parsed: ParsedImport } | null>(null);
-  const [navOpened, { toggle: toggleNav, close: closeNav }] = useDisclosure(false);
+  const [sideCollapsed, setSideCollapsed] = useLocalStorage({ key: 'rt-side-collapsed', defaultValue: false });
   const [filtersOpen, setFiltersOpen] = useLocalStorage({ key: 'rt-filters-open', defaultValue: true });
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -107,19 +107,22 @@ export function App() {
     };
   }, []);
 
-  const navigate = useCallback(
-    (next: Route, options: { replace?: boolean } = {}) => {
-      setRoute(next);
-      if (options.replace) history.replaceState(null, '', routeUrl(next));
-      else history.pushState(null, '', routeUrl(next));
-      closeNav();
-      document.querySelector('.rt-main')?.scrollTo?.({ top: 0 });
-      window.scrollTo({ top: 0 });
-    },
-    [closeNav],
-  );
+  const navigate = useCallback((next: Route, options: { replace?: boolean } = {}) => {
+    setRoute(next);
+    if (options.replace) history.replaceState(null, '', routeUrl(next));
+    else history.pushState(null, '', routeUrl(next));
+    document.querySelector('.rt-main')?.scrollTo?.({ top: 0 });
+    window.scrollTo({ top: 0 });
+  }, []);
 
   const goHome = useCallback(() => navigate({}), [navigate]);
+  const selectMark = useCallback(
+    (mark: MarkFilter) => {
+      filters.setMark(mark);
+      navigate({ itemId: readRoute().itemId });
+    },
+    [filters, navigate],
+  );
   const openCatalog = useCallback((catalogId: string) => navigate({ catalogId }), [navigate]);
 
   // Rows can be dragged onto a catalog card. Dragging a checked row drags every checked item.
@@ -208,45 +211,30 @@ export function App() {
   };
 
   return (
-    <AppShell
-      header={{ height: 64 }}
-      navbar={{ width: { base: 420, lg: 520 }, breakpoint: 'sm', collapsed: { mobile: !navOpened } }}
-      padding={0}
-    >
-      <AppShell.Header px="md">
-        <AppHeader
-          all={all}
-          query={filters.query}
-          onQueryChange={filters.setQuery}
-          searchRef={searchRef}
-          navOpened={navOpened}
-          onToggleNav={toggleNav}
-          onImport={handleImportFile}
-          onHome={goHome}
-        />
-      </AppShell.Header>
+    <div className="rt-app" data-side-collapsed={sideCollapsed || undefined}>
+      <AppHeader
+        all={all}
+        query={filters.query}
+        onQueryChange={filters.setQuery}
+        searchRef={searchRef}
+        onImport={handleImportFile}
+        onHome={goHome}
+      />
 
-      <AppShell.Navbar>
-        <AppShell.Section className="rt-scope">
-          <Select
-            size="xs"
-            aria-label="Show items from"
-            allowDeselect={false}
-            value={scopeId ?? 'all'}
-            onChange={(value) => (!value || value === 'all' ? goHome() : openCatalog(value))}
-            data={[
-              { value: 'all', label: `All catalogs (${all.length})` },
-              ...catalogs.map((catalog) => ({
-                value: catalog.id,
-                label: `${catalog.name} (${catalogStats.get(catalog.id)?.total ?? 0})`,
-              })),
-            ]}
-            leftSection={scopeCatalog ? <CatalogIcon catalog={scopeCatalog} size={15} /> : undefined}
-            comboboxProps={{ withinPortal: true }}
-            disabled={all.length === 0}
-          />
-        </AppShell.Section>
-        <AppShell.Section className="rt-list-toolbar">
+      <div className="rt-cols">
+        <Sidebar
+          all={all}
+          catalogs={catalogs}
+          catalogStats={catalogStats}
+          scopeId={scopeId}
+          mark={filters.mark}
+          onMark={selectMark}
+          onOpenCatalog={openCatalog}
+          collapsed={sideCollapsed}
+          onToggleCollapsed={() => setSideCollapsed((collapsed) => !collapsed)}
+        />
+
+        <section className="rt-list" aria-label="Items">
           <ListToolbar
             total={all.length}
             visible={filtered}
@@ -257,55 +245,46 @@ export function App() {
             busy={filters.query !== filters.deferredQuery || !keywordsReady}
             narrowed={narrowed}
             filtersOpen={filtersOpen}
-            activeFilters={filters.activeCount}
             onToggleFilters={() => setFiltersOpen((open) => !open)}
             catalogs={catalogs}
             checkedCatalogId={checkedCatalogId}
           />
-        </AppShell.Section>
 
-        {all.length > 0 && (
-          <AppShell.Section className="rt-filters-section">
-            <Collapse expanded={filtersOpen}>
-              <ScrollArea.Autosize mah="45vh" scrollbarSize={6} type="hover">
-                <FilterPanel filters={filters} types={types} keywordsReady={keywordsReady} />
-              </ScrollArea.Autosize>
-            </Collapse>
-            {!filtersOpen && <ActiveFilters filters={filters} keywordIndex={keywordIndex} />}
-          </AppShell.Section>
-        )}
-
-        <AppShell.Section grow component={ScrollArea} scrollbarSize={8}>
-          {items !== null && filtered.length === 0 && all.length > 0 && (
-            <Stack align="center" gap="xs" p="xl">
-              <Text size="sm" c="dimmed" ta="center">
-                No items match{filters.deferredQuery ? ` “${filters.deferredQuery}”` : ''}
-                {filters.activeCount > 0 ? ' with these filters' : ''}.
-              </Text>
-              <Button size="compact-xs" variant="subtle" onClick={resetAll}>
-                Reset search and filters
-              </Button>
-            </Stack>
+          {all.length > 0 && filtersOpen && (
+            <FilterPanel filters={filters} types={types} keywordsReady={keywordsReady} />
           )}
-          <ItemList
-            items={filtered}
-            searchIndex={filters.searchIndex}
-            keywordIndex={keywordIndex}
-            terms={terms}
-            activeKeywords={filters.keywords}
-            selectedId={selected?.id}
-            checked={checked}
-            onSelect={select}
-            onToggle={toggleChecked}
-            onToggleKeyword={filters.toggleKeyword}
-            catalogLabels={catalogLabels}
-            onDragStart={startDrag}
-          />
-        </AppShell.Section>
-      </AppShell.Navbar>
+          {all.length > 0 && <ActiveFilters filters={filters} keywordIndex={keywordIndex} />}
 
-      <AppShell.Main className="rt-main">
-        <div className="rt-main-inner">
+          <div className="rt-rows">
+            {items !== null && filtered.length === 0 && all.length > 0 && (
+              <div className="rt-list-empty">
+                <Text size="sm" c="dimmed" ta="center">
+                  No items match{filters.deferredQuery ? ` “${filters.deferredQuery}”` : ''}
+                  {filters.activeCount > 0 ? ' with these filters' : ''}.
+                </Text>
+                <Button size="sm" variant="default" onClick={resetAll}>
+                  Reset search and filters
+                </Button>
+              </div>
+            )}
+            <ItemList
+              items={filtered}
+              searchIndex={filters.searchIndex}
+              keywordIndex={keywordIndex}
+              terms={terms}
+              activeKeywords={filters.keywords}
+              selectedId={selected?.id}
+              checked={checked}
+              onSelect={select}
+              onToggle={toggleChecked}
+              onToggleKeyword={filters.toggleKeyword}
+              catalogLabels={catalogLabels}
+              onDragStart={startDrag}
+            />
+          </div>
+        </section>
+
+        <main className="rt-reader-col rt-main">
           {items === null || loadedCatalogs === null ? (
             <Center h="60vh">
               <Loader />
@@ -340,8 +319,8 @@ export function App() {
           ) : (
             <CatalogsHome catalogs={catalogs} stats={catalogStats} onOpen={openCatalog} />
           )}
-        </div>
-      </AppShell.Main>
+        </main>
+      </div>
 
       {pendingImport && (
         <ImportDialog
@@ -351,6 +330,6 @@ export function App() {
           onClose={() => setPendingImport(null)}
         />
       )}
-    </AppShell>
+    </div>
   );
 }

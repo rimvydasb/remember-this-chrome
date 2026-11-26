@@ -1,27 +1,15 @@
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CopyButton,
-  Divider,
-  Group,
-  Kbd,
-  Stack,
-  Text,
-  Tooltip,
-} from '@mantine/core';
+import { Alert, Button, CopyButton, Kbd, Text } from '@mantine/core';
 import {
   IconAlertTriangle,
-  IconBooks,
   IconBrandYoutube,
   IconCheck,
   IconClipboard,
   IconClipboardCheck,
   IconFileText,
   IconInfoCircle,
+  IconLayoutGrid,
   IconRefresh,
+  IconUser,
   IconWorld,
 } from '@tabler/icons-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -29,6 +17,11 @@ import type { CaptureField } from '../../shared/mergeCapture';
 import { countItems, findCapture, isItemKey } from '../../shared/storage';
 import type { CaptureResponse, RuntimeMessage, SavedItem } from '../../shared/types';
 import { canonicalYouTubeUrl, getYouTubeVideoId } from '../../shared/youtube';
+import { findSentiment } from '../../shared/sentiment';
+import { formatDuration } from '../../shared/markdown';
+import { countWords } from '../../shared/transcript';
+import { CATEGORY_ICONS, MOOD_COLORS } from '../dashboard/sentimentStyle';
+import { Chip } from '../ui/Chip';
 import { Logo } from '../ui/Logo';
 import { formatDateTime, formatNumber } from '../ui/format';
 
@@ -89,62 +82,116 @@ export function Popup() {
     }
   }, [tab]);
 
+  const pageTitle = isYouTube
+    ? (tab?.title?.replace(/^\(\d+\)\s*/, '').replace(/\s*-\s*YouTube$/, '') ?? 'Video')
+    : 'Web page';
+  const channel = saved?.meta?.channel;
+  const sentiments = saved?.tags?.filter((tag) => tag.kind === 'sentiment') ?? [];
+
   return (
-    <Stack gap="sm" p="md" w={360}>
-      <Group justify="space-between" wrap="nowrap">
+    <div className="pp">
+      <header className="pp-head">
         <Logo size="sm" />
-        <Tooltip label="Open library" position="left" withArrow>
-          <ActionIcon variant="light" size="lg" aria-label="Open library" onClick={() => openLibrary()}>
-            <IconBooks size={18} />
-          </ActionIcon>
-        </Tooltip>
-      </Group>
-
-      <Card withBorder padding="sm" radius="md">
-        <Group gap="xs" wrap="nowrap" mb={6}>
-          {isYouTube ? (
-            <IconBrandYoutube size={18} color="var(--mantine-color-red-6)" style={{ flexShrink: 0 }} />
-          ) : (
-            <IconWorld size={18} color="var(--mantine-color-dimmed)" style={{ flexShrink: 0 }} />
-          )}
-          <Text size="xs" c="dimmed" fw={500} tt="uppercase">
-            {isYouTube ? 'YouTube video' : 'Current page'}
-          </Text>
-        </Group>
-        <Text size="sm" fw={600} lineClamp={2} mb={saved ? 4 : 'sm'}>
-          {isYouTube ? (tab?.title?.replace(/^\(\d+\)\s*/, '').replace(/\s*-\s*YouTube$/, '') ?? 'Video') : 'Web page'}
-        </Text>
-        {saved && (
-          <Text size="xs" c="dimmed" mb="sm">
-            In your library · last updated {formatDateTime(saved.timestamp)}
-          </Text>
-        )}
         <Button
-          fullWidth
-          loading={busy}
-          disabled={!tab || (isYouTube && saved === undefined)}
-          onClick={capture}
-          leftSection={
-            !isYouTube ? <IconFileText size={18} /> : saved ? <IconRefresh size={18} /> : <IconBrandYoutube size={18} />
-          }
-          variant={isYouTube ? 'filled' : 'light'}
+          variant="subtle"
+          size="sm"
+          leftSection={<IconLayoutGrid size={16} />}
+          aria-label="Open library"
+          onClick={() => openLibrary()}
         >
-          {!isYouTube ? 'Capture page text' : saved ? 'Update transcript' : 'Save transcript'}
+          Library
         </Button>
-      </Card>
+      </header>
 
-      {result && <CaptureResult result={result} />}
+      <div className="pp-body">
+        <div className="pp-video">
+          {saved?.meta?.thumbnail ? (
+            <img className="pp-thumb" src={saved.meta.thumbnail} alt="" />
+          ) : (
+            <div className="pp-thumb" aria-hidden>
+              {isYouTube ? <IconBrandYoutube size={20} /> : <IconWorld size={20} />}
+            </div>
+          )}
+          <div className="pp-video-info">
+            <span className="rt-label">{isYouTube ? 'YouTube video' : 'Current page'}</span>
+            <h3>{pageTitle}</h3>
+            {(channel || sentiments.length > 0) && (
+              <div className="rt-chips">
+                {channel && (
+                  <Chip color="red" icon={<IconUser size={12} />}>
+                    {channel}
+                  </Chip>
+                )}
+                {sentiments.map((tag) => {
+                  const sentiment = findSentiment(tag.label);
+                  const CategoryIcon = sentiment ? CATEGORY_ICONS[sentiment.category] : undefined;
+                  return (
+                    <Chip
+                      key={tag.label}
+                      color={sentiment ? MOOD_COLORS[sentiment.mood] : 'grape'}
+                      icon={CategoryIcon ? <CategoryIcon size={12} /> : undefined}
+                    >
+                      {tag.label}
+                    </Chip>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
 
-      <Divider />
-      <Group justify="space-between">
-        <Text size="xs" c="dimmed">
-          {count === null ? ' ' : `${formatNumber(count)} ${count === 1 ? 'item' : 'items'} in library`}
-        </Text>
-        <Text size="xs" c="dimmed">
-          Shortcut <Kbd size="xs">Alt</Kbd> + <Kbd size="xs">Shift</Kbd> + <Kbd size="xs">S</Kbd>
-        </Text>
-      </Group>
-    </Stack>
+        <dl className="pp-kv">
+          <dt>status</dt>
+          <dd className={saved ? 'ok' : undefined}>{saved ? '● in library' : 'not saved'}</dd>
+          {saved?.meta?.durationSec ? (
+            <>
+              <dt>duration</dt>
+              <dd>{formatDuration(saved.meta.durationSec)}</dd>
+            </>
+          ) : null}
+          {saved && (
+            <>
+              <dt>words</dt>
+              <dd>{formatNumber(countWords(saved.content))}</dd>
+              <dt>last capture</dt>
+              <dd>{formatDateTime(saved.timestamp)}</dd>
+            </>
+          )}
+        </dl>
+
+        <div className="pp-cta">
+          <Button
+            className="pp-primary"
+            loading={busy}
+            disabled={!tab || (isYouTube && saved === undefined)}
+            onClick={capture}
+            leftSection={
+              !isYouTube ? (
+                <IconFileText size={16} />
+              ) : saved ? (
+                <IconRefresh size={16} />
+              ) : (
+                <IconBrandYoutube size={16} />
+              )
+            }
+          >
+            {!isYouTube ? 'Capture page text' : saved ? 'Update transcript' : 'Save transcript'}
+          </Button>
+        </div>
+
+        {result && <CaptureResult result={result} />}
+      </div>
+
+      <footer className="pp-foot">
+        <span className="pp-stat">
+          <span className="rt-dot" />
+          {count === null ? ' ' : `${formatNumber(count)} ${count === 1 ? 'item' : 'items'} in library`}
+        </span>
+        <span>
+          <Kbd>Alt</Kbd> <Kbd>Shift</Kbd> <Kbd>S</Kbd>
+        </span>
+      </footer>
+    </div>
   );
 }
 
@@ -154,6 +201,7 @@ function CaptureResult({ result }: { result: CaptureResponse }) {
     return (
       <Alert
         variant="light"
+        className="pp-result"
         color={notImplemented ? 'gray' : 'red'}
         title={notImplemented ? 'Not implemented yet' : 'Could not save the transcript'}
         icon={notImplemented ? <IconInfoCircle /> : <IconAlertTriangle />}
@@ -167,44 +215,43 @@ function CaptureResult({ result }: { result: CaptureResponse }) {
   return (
     <Alert
       variant="light"
-      color="teal"
+      color="green"
       title={created ? 'Transcript saved' : 'Transcript updated'}
-      icon={<IconCheck />}
+      icon={<IconCheck size={16} />}
+      className="pp-result"
     >
-      <Group gap={6} mb="sm">
-        <Badge variant="white" color="teal" size="sm">
-          {formatNumber(stats.words)} words
-        </Badge>
-        <Badge variant="white" color="teal" size="sm">
-          {stats.paragraphs} paragraphs
-        </Badge>
-        <Badge variant="white" color="gray" size="sm">
-          {stats.extractMs} ms
-        </Badge>
-      </Group>
+      <div className="rt-chips">
+        <Chip color="green">{formatNumber(stats.words)} words</Chip>
+        <Chip color="green">{stats.paragraphs} paragraphs</Chip>
+        <Chip color="gray">{stats.extractMs} ms</Chip>
+      </div>
       {!created && (
-        <Text size="xs" mb="sm">
+        <Text size="xs" mt="sm">
           {changed.length > 0 ? `Changed: ${describeChanges(changed)}.` : 'No changes since the last capture.'}
         </Text>
       )}
-      <Group gap="xs" grow>
+      <div className="pp-result-acts">
         <CopyButton value={item.content} timeout={2000}>
           {({ copied, copy }) => (
             <Button
-              size="xs"
-              variant={copied ? 'filled' : 'default'}
-              color={copied ? 'teal' : undefined}
-              leftSection={copied ? <IconClipboardCheck size={15} /> : <IconClipboard size={15} />}
+              size="sm"
+              variant="default"
+              leftSection={copied ? <IconClipboardCheck size={14} /> : <IconClipboard size={14} />}
               onClick={copy}
             >
               {copied ? 'Copied' : 'Copy text'}
             </Button>
           )}
         </CopyButton>
-        <Button size="xs" variant="default" leftSection={<IconBooks size={15} />} onClick={() => openLibrary(item.id)}>
+        <Button
+          size="sm"
+          variant="default"
+          leftSection={<IconLayoutGrid size={14} />}
+          onClick={() => openLibrary(item.id)}
+        >
           View
         </Button>
-      </Group>
+      </div>
     </Alert>
   );
 }

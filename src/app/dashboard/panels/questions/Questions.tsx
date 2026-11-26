@@ -40,9 +40,8 @@ export function Questions({ item }: { item: SavedItem }) {
               onKeyDown={onKeyDown}
             />
             <Button
-              color="navy"
-              variant="light"
-              leftSection={<IconSend2 size={15} />}
+              size="sm"
+              leftSection={<IconSend2 size={14} />}
               disabled={!canAsk || draft.trim() === ''}
               onClick={() => void ask()}
             >

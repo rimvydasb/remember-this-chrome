@@ -31,7 +31,7 @@ const ITEMS = () => [
 
 const card = (name: RegExp) => screen.findByRole('button', { name });
 const rows = () => within(screen.getByRole('listbox', { name: 'Saved items' })).queryAllByRole('option');
-const rowTitles = () => rows().map((row) => row.querySelector('p')?.textContent ?? '');
+const rowTitles = () => rows().map((row) => row.querySelector('h4')?.textContent ?? '');
 
 describe('Catalogs home', () => {
   beforeEach(() => {
@@ -97,18 +97,17 @@ describe('Catalogs home', () => {
     expect(await screen.findByRole('heading', { name: 'Catalogs' })).toBeInTheDocument();
   });
 
-  it('scopes the list with the catalog selector', async () => {
+  it('scopes the list with the catalogs in the sidebar', async () => {
     seed(ITEMS());
     const { user } = renderApp(<App />);
     await screen.findByRole('heading', { name: 'Catalogs' });
     await waitFor(() => expect(rowTitles()).toHaveLength(4));
 
-    await user.click(screen.getAllByLabelText('Show items from')[0]!);
-    await user.click(await screen.findByRole('option', { name: 'Work (1)' }));
+    const sidebar = within(screen.getByRole('complementary', { name: 'Library' }));
+    await user.click(sidebar.getByRole('button', { name: /^W\s*Work/ }));
     await waitFor(() => expect(rowTitles()).toEqual(['Quarterly plan']));
 
-    await user.click(screen.getAllByLabelText('Show items from')[0]!);
-    await user.click(await screen.findByRole('option', { name: 'All catalogs (4)' }));
+    await user.click(sidebar.getByRole('button', { name: /^All items/ }));
     await waitFor(() => expect(rowTitles()).toHaveLength(4));
   });
 

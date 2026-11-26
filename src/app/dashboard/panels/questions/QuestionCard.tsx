@@ -48,7 +48,7 @@ export function QuestionCard({ followUp, answering, error, canAsk, onRetry, onDe
       <div className="rt-question-answer">
         {answering ? (
           <Group gap="xs">
-            <Loader size="xs" color="navy" type="dots" />
+            <Loader size="xs" type="dots" />
             <Text size="sm" c="dimmed">
               {answered ? 'Answering again…' : 'Answering…'}
             </Text>

@@ -1,8 +1,9 @@
-import { Badge, Group, type MantineSize } from '@mantine/core';
+import type { MantineSize } from '@mantine/core';
 import { IconUser } from '@tabler/icons-react';
 import { memo, type ReactNode } from 'react';
 import type { Keyword } from '../../shared/keywords';
 import { findSentiment, SENTIMENT_CATEGORIES } from '../../shared/sentiment';
+import { Chip, type ChipColor } from '../ui/Chip';
 import { CATEGORY_ICONS, MOOD_COLORS } from './sentimentStyle';
 
 interface KeywordBadgesProps {
@@ -24,7 +25,7 @@ export const KeywordBadges = memo(function KeywordBadges({
 }: KeywordBadgesProps) {
   if (keywords.length === 0 && !after) return null;
   return (
-    <Group gap={4}>
+    <div className="rt-chips">
       {keywords.map((keyword) => (
         <KeywordBadge
           key={keyword.key}
@@ -35,12 +36,12 @@ export const KeywordBadges = memo(function KeywordBadges({
         />
       ))}
       {after}
-    </Group>
+    </div>
   );
 });
 
 /** Color, icon and hover text of a keyword, by its kind. */
-function keywordLook(keyword: Keyword, iconSize: number): { color: string; icon?: ReactNode; kindName?: string } {
+function keywordLook(keyword: Keyword, iconSize: number): { color: ChipColor; icon?: ReactNode; kindName?: string } {
   if (keyword.kind === 'channel') return { color: 'red', icon: <IconUser size={iconSize} />, kindName: 'channel' };
   if (keyword.kind === 'sentiment') {
     const sentiment = findSentiment(keyword.label);
@@ -61,34 +62,30 @@ interface KeywordBadgeProps {
   onToggle: (key: string) => void;
   size?: MantineSize;
   count?: number;
+  /** Shows a × after the label: the chip removes an active filter. */
+  removable?: boolean;
 }
 
-export function KeywordBadge({ keyword, active, onToggle, size = 'xs', count }: KeywordBadgeProps) {
-  const { color, icon, kindName } = keywordLook(keyword, size === 'xs' ? 10 : 12);
+export function KeywordBadge({ keyword, active, onToggle, size = 'xs', count, removable }: KeywordBadgeProps) {
+  const { color, icon, kindName } = keywordLook(keyword, 12);
   const name = kindName ? `${kindName} “${keyword.label}”` : `“${keyword.label}”`;
+  void size;
   return (
-    <Badge
-      component="button"
-      type="button"
-      size={size}
-      radius="sm"
-      tt="none"
-      fw={500}
-      className="rt-keyword"
-      variant={active ? 'filled' : 'light'}
+    <Chip
       color={color}
-      leftSection={icon}
+      active={active}
+      icon={icon}
+      trailing={removable ? '×' : count}
+      className="rt-keyword"
       data-kind={keyword.kind}
-      rightSection={count !== undefined ? <span className="rt-keyword-count">{count}</span> : undefined}
       aria-pressed={active}
       title={active ? `Remove filter ${name}` : `Filter by ${name}`}
       onClick={(event: React.MouseEvent) => {
         event.stopPropagation();
         onToggle(keyword.key);
       }}
-      maw="100%"
     >
       {keyword.label}
-    </Badge>
+    </Chip>
   );
 }

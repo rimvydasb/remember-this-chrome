@@ -4,7 +4,6 @@ import {
   Badge,
   Button,
   Code,
-  Divider,
   Group,
   Modal,
   Paper,
@@ -139,14 +138,11 @@ export function SettingsDialog({ opened, onClose }: SettingsDialogProps) {
     <Modal
       opened={opened}
       onClose={onClose}
-      title={
-        <Text fw={600} size="lg">
-          Settings
-        </Text>
-      }
-      size={920}
+      title="Settings"
+      size={1040}
       centered
-      padding="lg"
+      padding={0}
+      classNames={{ content: 'rt-settings-modal' }}
     >
       <Tabs
         value={section}
@@ -303,8 +299,7 @@ export function SettingsDialog({ opened, onClose }: SettingsDialogProps) {
         </Tabs.Panel>
       </Tabs>
 
-      <Divider my="md" />
-      <Group justify="space-between">
+      <div className="rt-settings-foot">
         <Text size="xs" c={invalid ? 'red' : dirty ? 'orange' : 'dimmed'}>
           {invalid ? 'Fix the prompt template error to save.' : dirty ? 'You have unsaved changes.' : 'No changes.'}
         </Text>
@@ -316,7 +311,7 @@ export function SettingsDialog({ opened, onClose }: SettingsDialogProps) {
             Save
           </Button>
         </Group>
-      </Group>
+      </div>
     </Modal>
   );
 }
@@ -409,7 +404,6 @@ function PromptEditor({ icon, label, kind, value, defaultValue, expected, onChan
                 component="button"
                 type="button"
                 variant={used?.has(field.name) ? 'filled' : 'light'}
-                color="navy"
                 radius="sm"
                 className="rt-prompt-field"
                 onClick={() => insert(field.snippet)}

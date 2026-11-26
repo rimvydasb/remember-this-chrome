@@ -1,38 +1,21 @@
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  Group,
-  Stack,
-  Text,
-  ThemeIcon,
-  Tooltip,
-  type MantineSize,
-} from '@mantine/core';
+import { ActionIcon, Alert, Button, Group, Stack, Text, ThemeIcon, Tooltip } from '@mantine/core';
 import { IconAlertCircle, IconMoodSmile, IconRefresh, IconTrash } from '@tabler/icons-react';
 import { SENTIMENT_CATEGORIES, type SentimentDefinition } from '../../../../shared/sentiment';
 import type { SavedItem } from '../../../../shared/types';
 import { formatDateTime } from '../../../ui/format';
 import { ContentBlock } from '../../ContentBlock';
 import { CATEGORY_ICONS, MOOD_COLORS } from '../../sentimentStyle';
+import { Chip } from '../../../ui/Chip';
 import { useSentiment } from './useSentiment';
 
-/** One sentiment as a large badge: the icon of its kind and the color of its mood. */
-export function SentimentBadge({ sentiment, size = 'lg' }: { sentiment: SentimentDefinition; size?: MantineSize }) {
+/** One sentiment as a chip: the icon of its kind and the color of its mood. */
+export function SentimentBadge({ sentiment }: { sentiment: SentimentDefinition }) {
   const CategoryIcon = CATEGORY_ICONS[sentiment.category];
   return (
     <Tooltip label={`${SENTIMENT_CATEGORIES[sentiment.category].name} sentiment`} withArrow>
-      <Badge
-        variant="light"
-        color={MOOD_COLORS[sentiment.mood]}
-        size={size}
-        tt="none"
-        leftSection={<CategoryIcon size={size === 'xs' ? 10 : size === 'sm' ? 12 : 14} />}
-        data-mood={sentiment.mood}
-      >
+      <Chip color={MOOD_COLORS[sentiment.mood]} icon={<CategoryIcon size={12} />} data-mood={sentiment.mood}>
         {sentiment.label}
-      </Badge>
+      </Chip>
     </Tooltip>
   );
 }
@@ -76,7 +59,7 @@ export function Sentiment({ item }: { item: SavedItem }) {
     >
       {generated ? (
         <Stack gap="sm">
-          <Group gap="xs">
+          <Group gap={4}>
             {sentiments.map((entry) => (
               <SentimentBadge key={entry.label} sentiment={entry} />
             ))}
@@ -88,7 +71,7 @@ export function Sentiment({ item }: { item: SavedItem }) {
         </Stack>
       ) : (
         <Stack align="center" gap="xs" py="md">
-          <ThemeIcon variant="light" color="grape" size={40} radius="xl">
+          <ThemeIcon variant="light" size={40} radius="xl">
             <IconMoodSmile size={20} />
           </ThemeIcon>
           <Text size="sm" fw={500}>
@@ -102,7 +85,6 @@ export function Sentiment({ item }: { item: SavedItem }) {
             mt={4}
             size="xs"
             variant="light"
-            color="grape"
             leftSection={<IconMoodSmile size={15} />}
             loading={generating}
             disabled={!canGenerate}

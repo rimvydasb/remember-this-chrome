@@ -27,7 +27,7 @@ Captured data is saved locally in `chrome.storage.local`, browsable in a built-i
 ## 3. Technical Architecture
 
 | Area         | Decision                                                                   |
-| ------------ | -------------------------------------------------------------------------- |
+|--------------|----------------------------------------------------------------------------|
 | Language     | TypeScript (`.ts`, `.tsx`)                                                 |
 | Platform     | Chrome Extension, Manifest V3                                              |
 | Build tool   | Vite, configured for multi-entry Rollup compilation                        |
@@ -38,12 +38,12 @@ Captured data is saved locally in `chrome.storage.local`, browsable in a built-i
 
 ```typescript
 interface SavedItem {
-  id: string; // Unique timestamp/UUID
-  title: string;
-  url: string;
-  type: 'youtube_transcript' | 'webpage_text';
-  content: string;
-  timestamp: string; // ISO date string
+    id: string; // Unique timestamp/UUID
+    title: string;
+    url: string;
+    type: 'youtube_transcript' | 'webpage_text';
+    content: string;
+    timestamp: string; // ISO date string
 }
 ```
 
@@ -74,13 +74,13 @@ interface SavedItem {
 ### 5.2 YouTube Transcript Extraction
 
 - [x] **FR-1.1** Run the content script on `https://www.youtube.com/watch*` inside the active browser context, so it inherits the user's logged-in cookies and YouTube Premium privileges.
-  - Implementation: the extractor is injected on demand with `chrome.scripting.executeScript` into the page's MAIN world, not declared as a permanent content script. It runs only when the user captures.
+    - Implementation: the extractor is injected on demand with `chrome.scripting.executeScript` into the page's MAIN world, not declared as a permanent content script. It runs only when the user captures.
 - [x] **FR-1.2** Query internal player contexts (`window.ytInitialPlayerResponse` or track endpoints) to retrieve transcript caption tracks.
-  - Caption URLs now need a player-signed `pot` token. The extractor reuses or triggers the player's signed URL. InnerTube `get_transcript` returned `400 FAILED_PRECONDITION` (November 2026) and is a fallback only.
+    - Caption URLs now need a player-signed `pot` token. The extractor reuses or triggers the player's signed URL. InnerTube `get_transcript` returned `400 FAILED_PRECONDITION` (November 2026) and is a fallback only.
 - [x] **FR-1.3** Sanitize extracted XML/JSON lines:
-  - [x] Decode HTML entities (for example `&#39;` to `'`).
-  - [x] Remove timestamp gaps and redundant carriage returns.
-  - [x] Concatenate fragments into continuous, readable paragraph blocks.
+    - [x] Decode HTML entities (for example `&#39;` to `'`).
+    - [x] Remove timestamp gaps and redundant carriage returns.
+    - [x] Concatenate fragments into continuous, readable paragraph blocks.
 - [x] **FR-1.4** _(Should)_ Let the user copy the clean transcript to the system clipboard.
 
 ### 5.3 General Web Content Capture (Placeholder)
@@ -105,9 +105,9 @@ interface SavedItem {
 
 - [x] **FR-5.1 Export:** Provide an **"Export JSON"** button that compiles `chrome.storage.local` data into a formatted `.json` file and triggers a browser download, so the user can save it to iCloud Drive or another cloud folder.
 - [x] **FR-5.2 Import:** Provide an **"Import JSON"** file uploader that:
-  - [x] Validates the imported payload structure.
-  - [x] Merges or replaces local records without data corruption.
-  - [x] Updates the dashboard view after import.
+    - [x] Validates the imported payload structure.
+    - [x] Merges or replaces local records without data corruption.
+    - [x] Updates the dashboard view after import.
 
 ### 5.7 Phase I Quality Checks
 
@@ -122,6 +122,15 @@ interface SavedItem {
 - [ ] **General web article capture:** Extract the main body text of web pages (optionally with a Readability parser) and replace the Phase I "Not Implemented" placeholder (FR-2.1).
 - [ ] **Direct iCloud / Native Messaging Host:** Add an optional background companion script (Node.js/Python) that writes `.md` files directly to `~/Library/Mobile Documents/` without manual JSON exports.
 - [ ] **AI summarization:** Integrate a local or API-driven LLM hook (for example Chrome Built-in AI or the Gemini API) to generate concise summaries of transcripts before saving.
-  - Note: an API-driven option conflicts with NFR-1 and NFR-2. Prefer a local model, or make it strictly opt-in.
+    - Note: an API-driven option conflicts with NFR-1 and NFR-2. Prefer a local model, or make it strictly opt-in.
 - [ ] **Fetch related articles:** Fetch the pages that "Find related articles" saved (`RelatedArticle.fetchState`), extract their main text, and let the LLM summarize or compare them with the item. See `docs/find-related-articles-story.md` (Out of Scope).
 - [ ] **Tags & collections:** Let users organize saved transcripts into custom folders or tags in the dashboard.
+
+## Pot-design update
+
+- [ ] "The AI status pill and panel from the spec are missing. The app doesn't expose that connection or progress state yet, so it would be a new feature" - that is fine, show fake animated "infinity time" bar with a tasks that are in the pool, e.g. `Tagging library`. No exact time measurement is needed. However, if tasks pool contain more tasks show animated bar in half, e.g. if `5 / 12` tasks, then show infinity animated bar as nearly half.
+- [ ] `The header no longer has Import and Export buttons. Those actions are now only in the ⋯ menu, as the spec shows.` - Remove "Clear library..." and in general clear library functionality, because I do not want that someone will use that by accident. Change top three dot icon to import/export (transfer) icon. 
+- [ ] Add an icon of the "New Catalog" - now it is simply empty space. Move new catalog icon below all catalogs when Library is collapsed.
+- [ ] Top left "Remember This" logo better be put into square so a thin line separates logo from "Search titles..." search bar. Add background under logo that is very light slashed lines.
+- [ ] Fix AI integration. As of now, when AI is executed, nothing is shown in top right. If needed redesign and refactor the code to bring awareness of tasks that are processed by AI.
+- [ ] `Settings` part is absolutely not finished as designed in `02-graphite.html` - complete that part.

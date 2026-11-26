@@ -16,7 +16,7 @@ function seed(items: SavedItem[]) {
 const rowTitles = () =>
   within(screen.getByRole('listbox', { name: 'Saved items' }))
     .queryAllByRole('option')
-    .map((row) => row.querySelector('p')?.textContent ?? '');
+    .map((row) => row.querySelector('h4')?.textContent ?? '');
 
 const LIBRARY = () => [
   makeItem({
@@ -118,11 +118,11 @@ describe('library filtering', () => {
     const { user } = renderApp(<App />);
     await screen.findByText('Sleep and memory');
 
-    await user.click(screen.getByRole('radio', { name: 'Loved' }));
+    await user.click(screen.getByRole('button', { name: /^Loved/ }));
     await waitFor(() => expect(rowTitles()).toEqual(['Sourdough basics']));
-    expect(screen.getByText('1 filter active')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove filter Loved' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('radio', { name: 'Forgotten' }));
+    await user.click(screen.getByRole('button', { name: /^Forgotten/ }));
     await waitFor(() => expect(rowTitles()).toEqual(['Old forgotten note']));
   });
 
@@ -131,10 +131,10 @@ describe('library filtering', () => {
     const { user } = renderApp(<App />);
     await screen.findByText('Sleep and memory');
 
-    await user.click(screen.getByRole('radio', { name: 'YouTube' }));
+    await user.click(screen.getByRole('button', { name: 'YouTube' }));
     await waitFor(() => expect(rowTitles()).toEqual(['Sleep and memory', 'Cold brew guide']));
 
-    await user.click(screen.getByRole('radio', { name: 'Web pages' }));
+    await user.click(screen.getByRole('button', { name: 'Web pages' }));
     await waitFor(() => expect(rowTitles()).toEqual(['Sourdough basics']));
   });
 
@@ -142,7 +142,7 @@ describe('library filtering', () => {
     seed([makeItem({ id: 'x', title: 'Only page', type: 'webpage_text' })]);
     renderApp(<App />);
     await screen.findByText('Only page');
-    expect(screen.queryByRole('radio', { name: 'YouTube' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'YouTube', pressed: true })).not.toBeInTheDocument();
   });
 
   it('filters by date range', async () => {
@@ -150,13 +150,13 @@ describe('library filtering', () => {
     const { user } = renderApp(<App />);
     await screen.findByText('Sleep and memory');
 
-    await user.click(screen.getByRole('radio', { name: '7 days' }));
+    await user.click(screen.getByRole('button', { name: '7 days' }));
     await waitFor(() => expect(rowTitles()).toEqual(['Sleep and memory']));
 
-    await user.click(screen.getByRole('radio', { name: '30 days' }));
+    await user.click(screen.getByRole('button', { name: '30 days' }));
     await waitFor(() => expect(rowTitles()).toEqual(['Sleep and memory', 'Sourdough basics']));
 
-    await user.click(screen.getByRole('radio', { name: 'Year' }));
+    await user.click(screen.getByRole('button', { name: 'Year' }));
     await waitFor(() => expect(rowTitles()).toHaveLength(3));
   });
 
@@ -174,7 +174,7 @@ describe('library filtering', () => {
     await user.click((await screen.findAllByRole('button', { name: /^Coffee Hour/, pressed: false }))[0]!);
     await waitFor(() => expect(rowTitles()).toEqual(['Sleep and memory', 'Cold brew guide']));
 
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
     await waitFor(() => expect(rowTitles()).toHaveLength(3));
   });
 
@@ -183,7 +183,7 @@ describe('library filtering', () => {
     const { user } = renderApp(<App />);
     await screen.findByText('Sleep and memory');
 
-    await user.click(screen.getByRole('radio', { name: 'YouTube' }));
+    await user.click(screen.getByRole('button', { name: 'YouTube' }));
     await user.type(screen.getByRole('textbox', { name: 'Search library' }), 'water');
     await waitFor(() => expect(rowTitles()).toEqual(['Cold brew guide']));
   });
@@ -193,14 +193,15 @@ describe('library filtering', () => {
     const { user } = renderApp(<App />);
     await screen.findByText('Sleep and memory');
 
-    await user.click(screen.getByRole('radio', { name: 'Loved' }));
-    await user.click(screen.getByRole('radio', { name: '7 days' }));
-    await waitFor(() => expect(screen.getByText('2 filters active')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: /^Loved/ }));
+    await user.click(screen.getByRole('button', { name: '7 days' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove filter 7 days' })).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Remove filter Loved' })).toBeInTheDocument();
     expect(screen.getByText(/No items match/)).toHaveTextContent('with these filters');
 
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
     await waitFor(() => expect(rowTitles()).toHaveLength(3));
-    expect(screen.queryByText(/filters? active/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Remove filter/ })).not.toBeInTheDocument();
   });
 
   it('shows removable pills for active filters when the panel is collapsed', async () => {
@@ -208,13 +209,12 @@ describe('library filtering', () => {
     const { user } = renderApp(<App />);
     await screen.findByText('Sleep and memory');
 
-    await user.click(screen.getByRole('radio', { name: 'Loved' }));
+    await user.click(screen.getByRole('button', { name: /^Loved/ }));
     await user.click(screen.getByRole('button', { name: /^Filters/ }));
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /^Filters/ })).toHaveAttribute('aria-expanded', 'false'),
     );
-    const pill = (await screen.findAllByText('Loved')).find((el) => el.closest('.mantine-Pill-root'))!;
-    await user.click(pill.closest('.mantine-Pill-root')!.querySelector('.mantine-Pill-remove')!);
+    await user.click(await screen.findByRole('button', { name: 'Remove filter Loved' }));
     await waitFor(() => expect(rowTitles()).toHaveLength(3));
   });
 
@@ -222,6 +222,6 @@ describe('library filtering', () => {
     seed([]);
     renderApp(<App />);
     expect(await screen.findByText(/no (saved )?items|library is empty|nothing saved/i)).toBeInTheDocument();
-    expect(screen.queryByRole('radio', { name: 'Loved' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
   });
 });

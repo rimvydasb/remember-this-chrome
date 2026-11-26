@@ -28,11 +28,13 @@ test.describe('Filtering videos', () => {
   });
 
   test('filters by type', async ({ dashboard }) => {
-    await dashboard.getByText('YouTube', { exact: true }).click();
+    // The Type group starts folded.
+    await dashboard.getByRole('button', { name: /^Type/ }).click();
+    await dashboard.getByRole('button', { name: 'YouTube', exact: true }).click();
     await expect(dashboard.getByRole('option')).toHaveCount(3);
     await expect(dashboard.getByText('A page about gardening')).toHaveCount(0);
 
-    await dashboard.getByText('Web pages', { exact: true }).click();
+    await dashboard.getByRole('button', { name: 'Web pages', exact: true }).click();
     await expect(dashboard.getByRole('option')).toHaveCount(1);
   });
 
@@ -42,9 +44,9 @@ test.describe('Filtering videos', () => {
       .first()
       .click();
     await expect(dashboard.getByRole('option')).toHaveCount(2);
-    await expect(dashboard.getByText('1 filter active')).toBeVisible();
+    await expect(dashboard.getByText('Active', { exact: true })).toBeVisible();
 
-    await dashboard.getByRole('button', { name: 'Clear filters' }).click();
+    await dashboard.getByRole('button', { name: 'Clear all' }).click();
     await expect(dashboard.getByRole('option')).toHaveCount(4);
   });
 

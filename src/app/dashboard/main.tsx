@@ -1,5 +1,12 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-500.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/inter/latin-700.css';
+import '@fontsource/jetbrains-mono/latin-400.css';
+import '@fontsource/jetbrains-mono/latin-500.css';
+import '../ui/tokens.css';
 import './dashboard.css';
 import { MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
@@ -15,7 +22,7 @@ const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: fals
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MantineProvider theme={theme} defaultColorScheme="auto">
+      <MantineProvider theme={theme} defaultColorScheme="dark">
         <ModalsProvider>
           <Notifications position="bottom-right" />
           <App />

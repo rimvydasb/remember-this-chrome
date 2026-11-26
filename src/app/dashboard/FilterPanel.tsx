@@ -1,6 +1,6 @@
-import { Anchor, Group, Pill, SegmentedControl, Select, Stack, Text } from '@mantine/core';
-import { IconSearch } from '@tabler/icons-react';
-import { useMemo, useState } from 'react';
+import { Anchor, Button, Select, Text } from '@mantine/core';
+import { IconChevronDown, IconSearch } from '@tabler/icons-react';
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
   keywordKind,
   type Keyword,
@@ -9,11 +9,12 @@ import {
   type KeywordKind,
 } from '../../shared/keywords';
 import type { ItemType } from '../../shared/types';
+import { Chip } from '../ui/Chip';
 import { KeywordBadge } from './KeywordBadges';
 import type { DateRange, LibraryFilters, MarkFilter, TypeFilter } from './useLibraryFilters';
 
 const DATE_OPTIONS: { value: DateRange; label: string }[] = [
-  { value: 'any', label: 'Any time' },
+  { value: 'any', label: 'Any' },
   { value: '7d', label: '7 days' },
   { value: '30d', label: '30 days' },
   { value: '1y', label: 'Year' },
@@ -25,11 +26,7 @@ const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: 'webpage_text', label: 'Web pages' },
 ];
 
-const MARK_OPTIONS: { value: MarkFilter; label: string }[] = [
-  { value: 'library', label: 'Library' },
-  { value: 'loved', label: 'Loved' },
-  { value: 'forgotten', label: 'Forgotten' },
-];
+const MARK_LABELS: Record<MarkFilter, string> = { library: 'Library', loved: 'Loved', forgotten: 'Forgotten' };
 
 const CHANNELS_COLLAPSED = 6;
 const SENTIMENTS_COLLAPSED = 8;
@@ -50,68 +47,19 @@ export function FilterPanel({ filters, types, keywordsReady }: FilterPanelProps)
   const channels = useMemo(() => withSelected(channelFacets, keywords, 'channel'), [channelFacets, keywords]);
   const sentiments = useMemo(() => withSelected(sentimentFacets, keywords, 'sentiment'), [sentimentFacets, keywords]);
   const topics = useMemo(() => withSelected(topicFacets, keywords, 'topic'), [topicFacets, keywords]);
+  const selectedOf = (kind: KeywordKind) => [...keywords].filter((key) => keywordKind(key) === kind).length;
 
   return (
-    <Stack gap="sm" className="rt-filters">
-      {filters.activeCount > 0 && (
-        <Group justify="space-between">
-          <Text size="xs" c="dimmed">
-            {filters.activeCount} {filters.activeCount === 1 ? 'filter' : 'filters'} active
-          </Text>
-          <Anchor component="button" type="button" size="xs" onClick={filters.clearFilters}>
-            Clear filters
-          </Anchor>
-        </Group>
-      )}
-
-      <FilterSection label="Show">
-        <SegmentedControl
-          size="xs"
-          fullWidth
-          data={MARK_OPTIONS}
-          value={filters.mark}
-          onChange={(value) => filters.setMark(value as MarkFilter)}
-        />
-      </FilterSection>
-
-      <FilterSection label="Saved">
-        <SegmentedControl
-          size="xs"
-          fullWidth
-          data={DATE_OPTIONS}
-          value={filters.dateRange}
-          onChange={(value) => filters.setDateRange(value as DateRange)}
-        />
-      </FilterSection>
-
-      {types.length > 1 && (
-        <FilterSection label="Type">
-          <SegmentedControl
-            size="xs"
-            fullWidth
-            data={TYPE_OPTIONS}
-            value={filters.type}
-            onChange={(value) => filters.setType(value as TypeFilter)}
-          />
-        </FilterSection>
-      )}
-
-      {channels.length > 0 && (
-        <FacetSection
-          label="Channels"
-          hint="any of"
-          facets={channels}
-          active={keywords}
-          onToggle={toggleKeyword}
-          collapsed={CHANNELS_COLLAPSED}
-          expanded={Infinity}
-        />
-      )}
+    <div className="rt-fpanel">
+      <FilterGroup title="Saved" selected={filters.dateRange === 'any' ? 0 : 1}>
+        <Segments options={DATE_OPTIONS} value={filters.dateRange} onChange={filters.setDateRange} label="Saved" />
+      </FilterGroup>
 
       {sentiments.length > 0 && (
-        <FacetSection
-          label="Sentiment"
+        <FacetGroup
+          title="Sentiment"
           hint="any of"
+          selected={selectedOf('sentiment')}
           facets={sentiments}
           active={keywords}
           onToggle={toggleKeyword}
@@ -120,9 +68,23 @@ export function FilterPanel({ filters, types, keywordsReady }: FilterPanelProps)
         />
       )}
 
-      <FacetSection
-        label="Topics"
+      {channels.length > 0 && (
+        <FacetGroup
+          title="Channels"
+          hint="any of"
+          selected={selectedOf('channel')}
+          facets={channels}
+          active={keywords}
+          onToggle={toggleKeyword}
+          collapsed={CHANNELS_COLLAPSED}
+          expanded={Infinity}
+        />
+      )}
+
+      <FacetGroup
+        title="Topics"
         hint="all of"
+        selected={selectedOf('topic')}
         facets={topics}
         active={keywords}
         onToggle={toggleKeyword}
@@ -131,11 +93,90 @@ export function FilterPanel({ filters, types, keywordsReady }: FilterPanelProps)
         empty={keywordsReady ? 'No topics in these results.' : 'Extracting keywords…'}
         finder={<TopicFinder facets={topicFacets} active={keywords} onPick={toggleKeyword} />}
       />
-    </Stack>
+
+      {types.length > 1 && (
+        <FilterGroup title="Type" selected={filters.type === 'all' ? 0 : 1} defaultCollapsed>
+          <Segments options={TYPE_OPTIONS} value={filters.type} onChange={filters.setType} label="Type" />
+        </FilterGroup>
+      )}
+
+      <div className="rt-fpanel-foot">
+        <span className="rt-meta">
+          Press <kbd className="mantine-Kbd-root">F</kbd> to open or close
+        </span>
+      </div>
+    </div>
   );
 }
 
-/** Compact, removable list of the active filters. Shown when the filter panel is collapsed. */
+/** A filter group: a title row that folds the group, and the content. */
+function FilterGroup({
+  title,
+  hint,
+  selected,
+  defaultCollapsed = false,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  selected: number;
+  defaultCollapsed?: boolean;
+  children: ReactNode;
+}) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const toggle = () => setCollapsed((value) => !value);
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggle();
+    }
+  };
+  return (
+    <div className="rt-fgroup" data-collapsed={collapsed || undefined}>
+      <h6 role="button" tabIndex={0} aria-expanded={!collapsed} onClick={toggle} onKeyDown={onKeyDown}>
+        <span>
+          {title}
+          {hint && <small>{hint}</small>}
+        </span>
+        <span className="rt-r">
+          {selected > 0 && `${selected} selected`}
+          <IconChevronDown size={14} className="rt-chev" />
+        </span>
+      </h6>
+      {children}
+    </div>
+  );
+}
+
+function Segments<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div className="rt-seg" role="group" aria-label={label}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          data-active={option.value === value || undefined}
+          aria-pressed={option.value === value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The active filters, as removable chips. Always shown while something is filtered. */
 export function ActiveFilters({ filters, keywordIndex }: { filters: LibraryFilters; keywordIndex: KeywordIndex }) {
   const { keywords, dateRange, type, mark, activeCount } = filters;
   const labels = useMemo(() => {
@@ -149,38 +190,51 @@ export function ActiveFilters({ filters, keywordIndex }: { filters: LibraryFilte
   }, [keywords, keywordIndex]);
 
   if (activeCount === 0) return null;
+
+  const plainChip = (label: string, onRemove: () => void) => (
+    <Chip
+      key={label}
+      color="gray"
+      active
+      trailing="×"
+      title={`Remove filter ${label}`}
+      aria-label={`Remove filter ${label}`}
+      onClick={onRemove}
+    >
+      {label}
+    </Chip>
+  );
+
   return (
-    <Group gap={4} className="rt-active-filters">
-      {mark !== 'library' && (
-        <Pill size="sm" withRemoveButton onRemove={() => filters.setMark('library')}>
-          {MARK_OPTIONS.find((o) => o.value === mark)?.label}
-        </Pill>
-      )}
-      {dateRange !== 'any' && (
-        <Pill size="sm" withRemoveButton onRemove={() => filters.setDateRange('any')}>
-          Saved: {DATE_OPTIONS.find((o) => o.value === dateRange)?.label}
-        </Pill>
-      )}
-      {type !== 'all' && (
-        <Pill size="sm" withRemoveButton onRemove={() => filters.setType('all')}>
-          {TYPE_OPTIONS.find((o) => o.value === type)?.label}
-        </Pill>
-      )}
-      {[...keywords].map((key) => (
-        <Pill key={key} size="sm" withRemoveButton onRemove={() => filters.toggleKeyword(key)}>
-          {PILL_PREFIX[keywordKind(key)]}
-          {labels.get(key)?.label ?? key.slice(key.indexOf(':') + 1)}
-        </Pill>
-      ))}
-      <Anchor component="button" type="button" size="xs" ml={4} onClick={filters.clearFilters}>
-        Clear
-      </Anchor>
-    </Group>
+    <div className="rt-active">
+      <div className="rt-active-head">
+        <span className="rt-label">Active</span>
+        <Button size="xs" variant="subtle" onClick={filters.clearFilters}>
+          Clear all
+        </Button>
+      </div>
+      <div className="rt-chips">
+        {mark !== 'library' && plainChip(MARK_LABELS[mark], () => filters.setMark('library'))}
+        {dateRange !== 'any' &&
+          plainChip(DATE_OPTIONS.find((o) => o.value === dateRange)?.label ?? dateRange, () =>
+            filters.setDateRange('any'),
+          )}
+        {type !== 'all' &&
+          plainChip(TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type, () => filters.setType('all'))}
+        {[...keywords].map((key) => (
+          <KeywordBadge
+            key={key}
+            keyword={labels.get(key) ?? { key, kind: keywordKind(key), label: key.slice(key.indexOf(':') + 1) }}
+            active
+            removable
+            onToggle={filters.toggleKeyword}
+            size="sm"
+          />
+        ))}
+      </div>
+    </div>
   );
 }
-
-/** Marks the kind of an active filter pill. */
-const PILL_PREFIX: Readonly<Record<KeywordKind, string>> = { channel: '@ ', sentiment: '~ ', topic: '# ' };
 
 /** Adds selected keys of `kind` that are missing from `facets` (count 0), so every active filter has a pill. */
 function withSelected(facets: KeywordCount[], selected: ReadonlySet<string>, kind: KeywordKind): KeywordCount[] {
@@ -195,39 +249,23 @@ function withSelected(facets: KeywordCount[], selected: ReadonlySet<string>, kin
   return [...all.filter((f) => selected.has(f.keyword.key)), ...all.filter((f) => !selected.has(f.keyword.key))];
 }
 
-function FilterSection({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <Group gap={6} mb={6}>
-        <Text size="xs" fw={600} c="dimmed" tt="uppercase" lts={0.4}>
-          {label}
-        </Text>
-        {hint && (
-          <Text size="xs" c="dimmed">
-            ({hint})
-          </Text>
-        )}
-      </Group>
-      {children}
-    </div>
-  );
-}
-
-interface FacetSectionProps {
-  label: string;
+interface FacetGroupProps {
+  title: string;
   hint: string;
+  selected: number;
   facets: KeywordCount[];
   active: ReadonlySet<string>;
   onToggle: (key: string) => void;
   collapsed: number;
   expanded: number;
   empty?: string;
-  finder?: React.ReactNode;
+  finder?: ReactNode;
 }
 
-function FacetSection({
-  label,
+function FacetGroup({
+  title,
   hint,
+  selected,
   facets,
   active,
   onToggle,
@@ -235,20 +273,21 @@ function FacetSection({
   expanded,
   empty,
   finder,
-}: FacetSectionProps) {
+}: FacetGroupProps) {
   const [showAll, setShowAll] = useState(false);
   const limit = showAll ? expanded : collapsed;
   const visible = facets.slice(0, limit);
   const hidden = Math.min(facets.length, expanded) - visible.length;
 
   return (
-    <FilterSection label={label} hint={hint}>
+    <FilterGroup title={title} hint={hint} selected={selected}>
+      {finder && facets.length > collapsed && finder}
       {facets.length === 0 ? (
         <Text size="xs" c="dimmed">
           {empty}
         </Text>
       ) : (
-        <Group gap={5}>
+        <div className="rt-chips">
           {visible.map(({ keyword, count }) => (
             <KeywordBadge
               key={keyword.key}
@@ -264,10 +303,9 @@ function FacetSection({
               {showAll ? 'Show less' : `+${hidden} more`}
             </Anchor>
           )}
-        </Group>
+        </div>
       )}
-      {finder && facets.length > collapsed && <div style={{ marginTop: 8 }}>{finder}</div>}
-    </FilterSection>
+    </FilterGroup>
   );
 }
 

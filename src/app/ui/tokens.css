@@ -1,0 +1,157 @@
+/*
+ * Graphite design tokens. Source of truth: docs/design-proposals/02-graphite.html.
+ * Base unit 4 px. Every padding, gap, margin, height and width is a token or a multiple of 4.
+ * The gutter is 16 px; a row that ends with an icon button uses 8 px, so the glyph lands on 16.
+ */
+:root {
+  --bg: #f7f7f8;
+  --panel: #ffffff;
+  --raised: #f3f3f5;
+  --hover: #ededf0;
+  --overlay: rgba(10, 11, 13, 0.35);
+  --line: #e6e6ea;
+  --line-2: #d6d6dc;
+  --text: #121318;
+  --text-2: #3f424b;
+  --muted: #6c707a;
+  --faint: #9a9ea8;
+  --accent: #4f5bd5;
+  --accent-soft: #eceefe;
+  --accent-text: #3a45b8;
+  --on-accent: #fff;
+  --ok: #2f9e44;
+  --warn: #e8590c;
+  --err: #e03131;
+  --mark: rgba(79, 91, 213, 0.16);
+  --shadow: 0 24px 48px -24px rgba(16, 18, 24, 0.28);
+
+  /* Tag chips: color, tinted background, and the solid background of an active filter. */
+  --c-green: #2f9e44;
+  --c-green-bg: rgba(64, 192, 87, 0.12);
+  --c-lime: #5c940d;
+  --c-lime-bg: rgba(130, 201, 30, 0.14);
+  --c-gray: #495057;
+  --c-gray-bg: rgba(134, 142, 150, 0.14);
+  --c-yellow: #e67700;
+  --c-yellow-bg: rgba(250, 176, 5, 0.14);
+  --c-orange: #e8590c;
+  --c-orange-bg: rgba(253, 126, 20, 0.12);
+  --c-red: #e03131;
+  --c-red-bg: rgba(250, 82, 82, 0.1);
+  --c-navy: #1e3a75;
+  --c-navy-bg: rgba(47, 79, 143, 0.1);
+  --c-grape: #9c36b5;
+  --c-grape-bg: rgba(190, 75, 219, 0.1);
+  --c-green-f: #2f9e44;
+  --c-lime-f: #74b816;
+  --c-gray-f: #868e96;
+  --c-yellow-f: #f59f00;
+  --c-orange-f: #f76707;
+  --c-red-f: #f03e3e;
+  --c-navy-f: #1e3a75;
+  --c-grape-f: #9c36b5;
+
+  --sans: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-20: 80px;
+  --gutter: var(--s-4);
+
+  --r-1: 4px; /* chips, kbd, small thumbnails, inline marks */
+  --r-2: 6px; /* controls: buttons, inputs, nav items, menu items, segments */
+  --r-3: 8px; /* cards: blocks, panels inside a view, large thumbnails */
+  --r-4: 12px; /* surfaces: frames, popovers, dialogs */
+
+  --h-chip: 20px;
+  --h-xs: 24px;
+  --h-sm: 28px;
+  --h-md: 32px;
+  --h-row: 40px;
+  --h-bar: 48px;
+  --h-top: 56px;
+
+  --fs-xs: 11px;
+  --lh-xs: 16px; /* mono labels, counts */
+  --fs-sm: 12px;
+  --lh-sm: 16px; /* meta, chips, small buttons */
+  --fs-md: 13px;
+  --lh-md: 20px; /* UI default */
+  --fs-lg: 14px;
+  --lh-lg: 24px; /* reading text */
+  --fs-xl: 16px;
+  --lh-xl: 24px; /* section titles */
+  --fs-2xl: 22px;
+  --lh-2xl: 28px; /* item title */
+
+  --w-side: 224px;
+  --w-side-rail: 48px;
+  --w-list: 416px;
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  --bg: #0a0b0d;
+  --panel: #101114;
+  --raised: #16181c;
+  --hover: #1c1e23;
+  --overlay: rgba(0, 0, 0, 0.55);
+  --line: #1f2227;
+  --line-2: #2b2f36;
+  --text: #e8e9ec;
+  --text-2: #b9bcc4;
+  --muted: #868b95;
+  --faint: #5c616b;
+  --accent: #8b95ff;
+  --accent-soft: rgba(139, 149, 255, 0.13);
+  --accent-text: #a9b1ff;
+  --on-accent: #0a0b0d;
+  --ok: #69db7c;
+  --warn: #ffa94d;
+  --err: #ff8787;
+  --mark: rgba(139, 149, 255, 0.24);
+  --shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+  --c-green: #69db7c;
+  --c-green-bg: rgba(64, 192, 87, 0.15);
+  --c-lime: #a9e34b;
+  --c-lime-bg: rgba(130, 201, 30, 0.15);
+  --c-gray: #ced4da;
+  --c-gray-bg: rgba(134, 142, 150, 0.15);
+  --c-yellow: #ffd43b;
+  --c-yellow-bg: rgba(250, 176, 5, 0.15);
+  --c-orange: #ffa94d;
+  --c-orange-bg: rgba(253, 126, 20, 0.15);
+  --c-red: #ff8787;
+  --c-red-bg: rgba(250, 82, 82, 0.15);
+  --c-navy: #8da6d3;
+  --c-navy-bg: rgba(74, 106, 168, 0.18);
+  --c-grape: #e599f7;
+  --c-grape-bg: rgba(190, 75, 219, 0.15);
+  --c-navy-f: #4a6aa8;
+}
+
+/* Mantine reads these; pointing them at the tokens themes every Mantine component. */
+:root {
+  --mantine-color-body: var(--panel);
+  --mantine-color-text: var(--text);
+  --mantine-color-dimmed: var(--muted);
+  --mantine-color-placeholder: var(--faint);
+  --mantine-color-default: var(--raised);
+  --mantine-color-default-hover: var(--hover);
+  --mantine-color-default-color: var(--text);
+  --mantine-color-default-border: var(--line-2);
+  --mantine-color-anchor: var(--accent-text);
+  --mantine-shadow-md: var(--shadow);
+  --mantine-shadow-sm: var(--shadow);
+  --mantine-font-family: var(--sans);
+  --mantine-font-family-monospace: var(--mono);
+  --mantine-color-error: var(--err);
+}
