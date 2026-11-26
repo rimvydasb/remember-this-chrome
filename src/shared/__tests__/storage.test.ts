@@ -15,10 +15,11 @@ import {
   getItem,
   isItemKey,
   putItems,
-  setAiTags,
+  setTags,
   setItemsMark,
   upsertCapture,
 } from '../storage';
+import { sentimentTags, topicTags } from '../../test/items';
 import type { SavedItem } from '../types';
 
 const item = (id: string, timestamp: string, extra: Partial<SavedItem> = {}): SavedItem => ({
@@ -225,38 +226,88 @@ describe('marks', () => {
   });
 });
 
-describe('AI tags', () => {
-  const tags = (...values: string[]) => ({ tags: values, model: 'qwen3-8b', createdAt: '2026-03-01T00:00:00.000Z' });
+describe('tags', () => {
+  const labels = (stored: SavedItem | undefined) => stored?.tags?.map((tag) => `${tag.source}:${tag.label}`);
 
   it('stores tags without changing the timestamp', async () => {
     await putItems([item('a', '2026-01-01T00:00:00.000Z')]);
-    expect(await setAiTags('a', tags('agents'))).toBe(true);
+    expect(await setTags('a', 'ai-topics', topicTags('agents'))).toBe(true);
     const stored = await getItem('a');
-    expect(stored?.aiTags).toEqual(tags('agents'));
+    expect(stored?.tags).toEqual(topicTags('agents'));
     expect(stored?.timestamp).toBe('2026-01-01T00:00:00.000Z');
   });
 
   it('keeps existing tags with onlyIfMissing, and replaces them without it', async () => {
-    await putItems([item('a', '2026-01-01T00:00:00.000Z', { aiTags: tags('first') })]);
-    expect(await setAiTags('a', tags('second'), { onlyIfMissing: true })).toBe(false);
-    expect((await getItem('a'))?.aiTags?.tags).toEqual(['first']);
-    expect(await setAiTags('a', tags('second'))).toBe(true);
-    expect((await getItem('a'))?.aiTags?.tags).toEqual(['second']);
+    await putItems([item('a', '2026-01-01T00:00:00.000Z', { tags: topicTags('first') })]);
+    expect(await setTags('a', 'ai-topics', topicTags('second'), { onlyIfMissing: true })).toBe(false);
+    expect(labels(await getItem('a'))).toEqual(['ai-topics:first']);
+    expect(await setTags('a', 'ai-topics', topicTags('second'))).toBe(true);
+    expect(labels(await getItem('a'))).toEqual(['ai-topics:second']);
+  });
+
+  it('replaces only the tags of the given source, and removes them with an empty list', async () => {
+    await putItems([
+      item('a', '2026-01-01T00:00:00.000Z', { tags: [...topicTags('sleep'), ...sentimentTags('bearish')] }),
+    ]);
+    await setTags('a', 'ai-sentiment', sentimentTags('bullish', 'calm'));
+    expect(labels(await getItem('a'))).toEqual(['ai-topics:sleep', 'ai-sentiment:bullish', 'ai-sentiment:calm']);
+    await setTags('a', 'ai-sentiment', []);
+    expect(labels(await getItem('a'))).toEqual(['ai-topics:sleep']);
+    await setTags('a', 'ai-topics', []);
+    expect(await getItem('a')).not.toHaveProperty('tags');
   });
 
   it('does nothing for a missing item', async () => {
-    expect(await setAiTags('missing', tags('x'))).toBe(false);
+    expect(await setTags('missing', 'ai-topics', topicTags('x'))).toBe(false);
   });
 
-  it('keeps AI tags when the item is captured again', async () => {
-    await putItems([item('a', '2026-01-01T00:00:00.000Z', { aiTags: tags('agents') })]);
+  it('keeps tags when the item is captured again', async () => {
+    await putItems([item('a', '2026-01-01T00:00:00.000Z', { tags: topicTags('agents') })]);
     const { item: updated } = await upsertCapture({
       title: 'New title',
       url: 'https://www.youtube.com/watch?v=a',
       type: 'youtube_transcript',
       content: 'New content',
     });
-    expect(updated.aiTags).toEqual(tags('agents'));
+    expect(updated.tags).toEqual(topicTags('agents'));
+  });
+
+  it('reads items stored with aiTags and an llm-sentiment follow-up as tags', async () => {
+    const question = {
+      id: 'q',
+      type: 'user-question',
+      userContent: 'Why?',
+      generatedContent: 'Because.',
+      createdAt: '2026-01-02T00:00:00.000Z',
+    };
+    await chrome.storage.local.set({
+      'item:a': {
+        ...item('a', '2026-01-01T00:00:00.000Z'),
+        aiTags: { tags: ['sleep', 'memory'], model: 'm1', createdAt: '2026-01-02T00:00:00.000Z' },
+        followUps: [
+          { id: 's1', type: 'llm-sentiment', generatedContent: 'bearish', createdAt: '2026-01-02T00:00:00.000Z' },
+          question,
+          {
+            id: 's2',
+            type: 'llm-sentiment',
+            generatedContent: 'calm, informative',
+            model: 'm2',
+            createdAt: '2026-01-03T00:00:00.000Z',
+          },
+        ],
+      },
+    });
+    const stored = await getItem('a');
+    expect(stored).not.toHaveProperty('aiTags');
+    expect(stored?.followUps).toEqual([question]);
+    expect(labels(stored)).toEqual([
+      'ai-topics:sleep',
+      'ai-topics:memory',
+      'ai-sentiment:calm',
+      'ai-sentiment:informative',
+    ]);
+    expect(stored?.tags?.[0]).toMatchObject({ kind: 'topic', model: 'm1', createdAt: '2026-01-02T00:00:00.000Z' });
+    expect(stored?.tags?.[2]).toMatchObject({ kind: 'sentiment', model: 'm2', createdAt: '2026-01-03T00:00:00.000Z' });
   });
 });
 
@@ -284,15 +335,15 @@ describe('concurrent updates', () => {
     expect((await getItem('a'))?.followUps?.map((f) => f.generatedContent)).toEqual(['one', 'two']);
   });
 
-  it('keeps AI tags and follow-ups that are saved at the same time', async () => {
+  it('keeps tags and follow-ups that are saved at the same time', async () => {
     await putItems([item('a', '2026-01-01T00:00:00.000Z')]);
     await Promise.all([
-      setAiTags('a', { tags: ['sleep'], createdAt: '2026-01-02T00:00:00.000Z' }),
+      setTags('a', 'ai-topics', topicTags('sleep')),
       addFollowUp('a', followUp('q1')),
       setItemsMark(['a'], 'loved'),
     ]);
     const stored = await getItem('a');
-    expect(stored?.aiTags?.tags).toEqual(['sleep']);
+    expect(stored?.tags).toEqual(topicTags('sleep'));
     expect(stored?.followUps).toHaveLength(1);
     expect(stored?.mark).toBe('loved');
   });

@@ -34,7 +34,8 @@ import { useMemo } from 'react';
 import type { Catalog } from '../../shared/catalogs';
 import { formatDuration, TYPE_LABELS } from '../../shared/markdown';
 import { countWords } from '../../shared/transcript';
-import { isAiGeneratedTags, type Keyword } from '../../shared/keywords';
+import type { Keyword } from '../../shared/keywords';
+import { hasTopicTags } from '../../shared/tags';
 import type { SavedItem } from '../../shared/types';
 import { formatDateTime, formatNumber, formatShortDate, readingTime } from '../ui/format';
 import { confirmDelete, exportMarkdown, markItems } from './actions';
@@ -45,7 +46,6 @@ import { ContentBlock } from './ContentBlock';
 import { KeywordBadges } from './KeywordBadges';
 import { PageBreadcrumbs } from './PageBreadcrumbs';
 import { ReaderPanels } from './panels/ReaderPanels';
-import { SentimentTags } from './panels/sentiment/Sentiment';
 
 interface ItemReaderProps {
   item: SavedItem;
@@ -152,8 +152,7 @@ export function ItemReader({
           active={activeKeywords}
           onToggle={onToggleKeyword}
           size="sm"
-          afterChannel={<SentimentTags item={item} size="sm" />}
-          after={isAiGeneratedTags(item) ? undefined : <AiTagsButton item={item} busy={aiTagging} />}
+          after={hasTopicTags(item) ? undefined : <AiTagsButton item={item} busy={aiTagging} />}
         />
 
         <Group gap="xs" mt={4}>

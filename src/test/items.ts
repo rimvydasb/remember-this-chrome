@@ -1,4 +1,5 @@
-import type { SavedItem } from '../shared/types';
+import { createTags } from '../shared/tags';
+import type { SavedItem, Tag } from '../shared/types';
 
 let counter = 0;
 
@@ -15,3 +16,11 @@ export function makeItem(overrides: Partial<SavedItem> = {}): SavedItem {
     ...overrides,
   };
 }
+
+/** Stored topic tags, as the AI tagging makes them. */
+export const topicTags = (...labels: string[]): Tag[] =>
+  createTags('ai-topics', labels, { createdAt: '2026-01-01T00:00:00.000Z' });
+
+/** Stored sentiment tags, as the sentiment analysis makes them. */
+export const sentimentTags = (...labels: string[]): Tag[] =>
+  createTags('ai-sentiment', labels, { createdAt: '2026-01-01T00:00:00.000Z' });

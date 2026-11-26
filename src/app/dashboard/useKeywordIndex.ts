@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  buildKeywordIndex,
-  isAiGeneratedTags,
-  termCacheKey,
-  type KeywordIndex,
-  type TermCache,
-} from '../../shared/keywords';
+import { buildKeywordIndex, termCacheKey, type KeywordIndex, type TermCache } from '../../shared/keywords';
+import { hasTopicTags } from '../../shared/tags';
 import type { SavedItem } from '../../shared/types';
 import type { TermJob, TermRequest, TermResponse } from './termWorker';
 
@@ -45,7 +40,7 @@ export function useKeywordIndex(items: readonly SavedItem[]): { index: KeywordIn
 
     const jobs: TermJob[] = [];
     for (const item of items) {
-      if (isAiGeneratedTags(item)) continue;
+      if (hasTopicTags(item)) continue;
       const key = termCacheKey(item);
       if (!cache.has(key)) jobs.push({ key, item: { title: item.title, content: item.content, meta: item.meta } });
     }

@@ -7,8 +7,8 @@ import type { SavedItem } from '../../shared/types';
 import { formatShortDate } from '../ui/format';
 import { KeywordBadges } from './KeywordBadges';
 
-/** Keywords shown per row. The channel, when known, is always the first one. */
-const LIST_KEYWORDS = 5;
+/** Topics shown per row; the channel and sentiments always show. */
+const LIST_TOPICS = 4;
 
 const NO_KEYWORDS: Keyword[] = [];
 
@@ -97,7 +97,7 @@ const ItemRow = memo(function ItemRow({
 }: ItemRowProps) {
   const highlight = terms as string[];
   const thumbnail = item.meta?.thumbnail;
-  const shown = useMemo(() => displayKeywords(keywords, activeKeywords, LIST_KEYWORDS), [keywords, activeKeywords]);
+  const shown = useMemo(() => displayKeywords(keywords, activeKeywords, LIST_TOPICS), [keywords, activeKeywords]);
   return (
     <div
       role="option"

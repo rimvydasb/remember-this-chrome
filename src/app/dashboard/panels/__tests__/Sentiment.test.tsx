@@ -1,17 +1,16 @@
 // @vitest-environment jsdom
 import { screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createFollowUp } from '../../../../shared/followUpRecords';
 import { parseSentiments } from '../../../../shared/sentiment';
 import { makeItem, renderApp } from '../../../test/render';
-import { Sentiment, SentimentTags } from '../sentiment/Sentiment';
+import { Sentiment } from '../sentiment/Sentiment';
 import type { SentimentState } from '../sentiment/useSentiment';
 
 const state = vi.hoisted(() => ({ current: undefined as unknown as SentimentState }));
 vi.mock('../sentiment/useSentiment', () => ({ useSentiment: () => state.current }));
 
 const idle = (overrides: Partial<SentimentState> = {}): SentimentState => ({
-  sentiment: undefined,
+  generated: undefined,
   sentiments: [],
   generating: false,
   error: undefined,
@@ -42,8 +41,8 @@ describe('Sentiment panel', () => {
 
   it('shows each sentiment as a tag colored by mood, and regenerates or deletes them', async () => {
     const content = 'cautiously bearish, alarming, informative';
-    const sentiment = createFollowUp('llm-sentiment', { generatedContent: content, model: 'qwen' });
-    state.current = idle({ sentiment, sentiments: parseSentiments(content) });
+    const generated = { createdAt: '2026-03-01T00:00:00.000Z', model: 'qwen' };
+    state.current = idle({ generated, sentiments: parseSentiments(content) });
     const { user } = renderApp(<Sentiment item={makeItem()} />);
 
     expect(screen.getByText('cautiously bearish').closest('[data-mood]')).toHaveAttribute(
@@ -58,24 +57,5 @@ describe('Sentiment panel', () => {
     expect(state.current.generate).toHaveBeenCalledOnce();
     await user.click(screen.getByRole('button', { name: 'Delete sentiment' }));
     expect(state.current.remove).toHaveBeenCalledOnce();
-  });
-});
-
-describe('SentimentTags', () => {
-  it('shows the current sentiments of the item as tags', () => {
-    const old = createFollowUp('llm-sentiment', { generatedContent: 'bearish' });
-    const current = createFollowUp('llm-sentiment', { generatedContent: 'short term bullish, calm' });
-    renderApp(<SentimentTags item={makeItem({ followUps: [old, current] })} />);
-    expect(screen.getByText('short term bullish').closest('[data-mood]')).toHaveAttribute(
-      'data-mood',
-      'leaning-positive',
-    );
-    expect(screen.getByText('calm')).toBeInTheDocument();
-    expect(screen.queryByText('bearish')).not.toBeInTheDocument();
-  });
-
-  it('renders nothing without a sentiment', () => {
-    const { container } = renderApp(<SentimentTags item={makeItem()} />);
-    expect(container.querySelector('[data-mood]')).toBeNull();
   });
 });

@@ -3,7 +3,7 @@ import { LlmError } from '../../../llm';
 import { SearchError, type SearchHit } from '../../../shared/googleSearch';
 import { DEFAULT_SETTINGS } from '../../../shared/settings';
 import { createFakeStore } from '../../../test/fakeStore';
-import { makeItem } from '../../../test/items';
+import { makeItem, topicTags } from '../../../test/items';
 import { ItemDeletedError } from '../../errors';
 import { RelatedArticlesPipeline, RelatedSearchError, type RelatedProgress } from '../RelatedArticlesPipeline';
 
@@ -73,7 +73,7 @@ describe('RelatedArticlesPipeline', () => {
     const { search, pipeline } = setup({ generateError: new LlmError('Cannot reach the LLM server.') });
     const item = makeItem({
       title: 'Sleep and memory',
-      aiTags: { tags: ['sleep', 'hippocampus'], createdAt: '2026-01-01' },
+      tags: topicTags('sleep', 'hippocampus'),
     });
     const { followUp } = await pipeline.run({ settings, item });
     expect(search.mock.calls.map(([query]) => query)).toEqual(['Sleep and memory', 'sleep hippocampus']);

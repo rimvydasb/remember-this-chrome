@@ -2,14 +2,15 @@ import { notifications } from '@mantine/notifications';
 import { useMutation } from '@tanstack/react-query';
 import { sentimentPipeline } from '../../../../followups/services';
 import { errorMessage } from '../../../../llm';
-import { parseSentiments, type SentimentDefinition } from '../../../../shared/sentiment';
+import { findSentiment, type SentimentDefinition } from '../../../../shared/sentiment';
 import type { LlmSettings } from '../../../../shared/settings';
-import type { FollowUp, SavedItem } from '../../../../shared/types';
+import type { SavedItem } from '../../../../shared/types';
 import { useLlmGate } from '../common/useLlmGate';
 
 export interface SentimentState {
-  sentiment: FollowUp | undefined;
-  /** The sentiments of the current follow-up, in the order the model gave them. */
+  /** When and by which model the current sentiments were generated; undefined when there are none. */
+  generated: { createdAt: string; model?: string } | undefined;
+  /** The current sentiments, in the order the model gave them. */
   sentiments: SentimentDefinition[];
   generating: boolean;
   /** The error of the last analysis; cleared by the next one. */
@@ -22,7 +23,8 @@ export interface SentimentState {
 /** The state and actions of the sentiment of an item. */
 export function useSentiment(item: SavedItem): SentimentState {
   const gate = useLlmGate();
-  const sentiment = sentimentPipeline.current(item);
+  const tags = sentimentPipeline.current(item);
+  const sentiments = tags.flatMap((tag) => findSentiment(tag.label) ?? []);
 
   const mutation = useMutation({
     mutationFn: (llm: LlmSettings) => sentimentPipeline.run({ settings: llm, item }),
@@ -38,8 +40,8 @@ export function useSentiment(item: SavedItem): SentimentState {
   });
 
   return {
-    sentiment,
-    sentiments: sentiment ? parseSentiments(sentiment.generatedContent) : [],
+    generated: tags[0] && { createdAt: tags[0].createdAt, model: tags[0].model },
+    sentiments,
     generating: mutation.isPending,
     error: mutation.isError ? mutation.error.message : undefined,
     canGenerate: gate.ready,
@@ -56,7 +58,7 @@ export function useSentiment(item: SavedItem): SentimentState {
       mutation.mutate(access.llm);
     },
     remove: () => {
-      if (sentiment) void sentimentPipeline.remove(item, sentiment);
+      if (tags.length > 0) void sentimentPipeline.remove(item);
     },
   };
 }

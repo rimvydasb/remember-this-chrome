@@ -47,9 +47,9 @@ describe('generateTags', () => {
     const fetch = vi.fn(async () => completion('<think>hmm</think>["AI agents", "gardening"]'));
     const result = await generateTags(settings, item, { fetch });
 
-    expect(result.tags).toEqual(['AI agents', 'gardening']);
-    expect(result.model).toBe('qwen3-8b');
-    expect(Date.parse(result.createdAt)).not.toBeNaN();
+    expect(result.map((tag) => tag.label)).toEqual(['AI agents', 'gardening']);
+    expect(result[0]).toMatchObject({ kind: 'topic', source: 'ai-topics', model: 'qwen3-8b' });
+    expect(Date.parse(result[0]!.createdAt)).not.toBeNaN();
     const [, init] = fetch.mock.calls[0]! as unknown as [string, RequestInit];
     const message: string = JSON.parse(init.body as string).messages[0].content;
     expect(message.startsWith(TAG_PROMPT)).toBe(true);

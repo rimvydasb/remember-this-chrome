@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CATALOGS_KEY } from '../../../shared/catalogs';
 import { buildExportPayload } from '../../../shared/importExport';
 import type { SavedItem } from '../../../shared/types';
-import { installDashboardEnvironment, makeItem, renderApp } from '../../test/render';
+import { installDashboardEnvironment, makeItem, renderApp, topicTags } from '../../test/render';
 import { App } from '../App';
 
 const download = vi.hoisted(() => ({ downloadTextFile: vi.fn() }));
@@ -303,7 +303,7 @@ describe('topic filters', () => {
       id,
       title,
       timestamp: `2026-01-0${day}T00:00:00.000Z`,
-      aiTags: { tags, createdAt: '2026-01-01T00:00:00.000Z' },
+      tags: topicTags(...tags),
     });
   const topic = (name: string, pressed = false) =>
     screen.getAllByRole('button', { name: new RegExp(`^${name}`), pressed })[0]!;

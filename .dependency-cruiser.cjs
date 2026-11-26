@@ -100,10 +100,10 @@ module.exports = {
     {
       name: 'followup-modules-are-independent',
       comment:
-        'A follow-up module (summary, questions, tagging, related) must not import another one. Share code through src/followups/*.ts or src/shared.',
+        'A follow-up module (summary, questions, tagging, sentiment, related) must not import another one. Share code through src/followups/*.ts or src/shared.',
       severity: 'error',
-      from: { path: '^src/followups/(summary|questions|tagging|related)/', pathNot: '(^|/)__tests__/' },
-      to: { path: '^src/followups/(summary|questions|tagging|related)/', pathNot: '^src/followups/$1/' },
+      from: { path: '^src/followups/(summary|questions|tagging|sentiment|related)/', pathNot: '(^|/)__tests__/' },
+      to: { path: '^src/followups/(summary|questions|tagging|sentiment|related)/', pathNot: '^src/followups/$1/' },
     },
     {
       name: 'panels-are-independent',
@@ -111,7 +111,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/app/dashboard/panels/([^/]+)/', pathNot: '(^|/)__tests__/' },
       to: {
-        path: '^src/app/dashboard/panels/(summary|questions|videoDetails|related)/',
+        path: '^src/app/dashboard/panels/(summary|questions|sentiment|videoDetails|related)/',
         pathNot: '^src/app/dashboard/panels/$1/',
       },
     },

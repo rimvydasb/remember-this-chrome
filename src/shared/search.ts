@@ -13,7 +13,7 @@ export function parseQuery(query: string): string[] {
 }
 
 export interface IndexEntry {
-  /** Lowercase `title \n channel \n description \n content`. */
+  /** Lowercase `title \n channel \n tags \n description \n content`. */
   text: string;
   /** Where the content starts inside `text`. */
   contentStart: number;
@@ -21,7 +21,10 @@ export interface IndexEntry {
 
 export type SearchIndex = Map<string, IndexEntry>;
 
-const indexKey = (item: SavedItem) => `${item.id}\u0000${item.timestamp}`;
+/** Tag labels of the item, one per line. Tags change without a new capture, so they are part of the index key. */
+const tagText = (item: SavedItem) => (item.tags ?? []).map((tag) => tag.label).join('\n');
+
+const indexKey = (item: SavedItem) => `${item.id}\u0000${item.timestamp}\u0000${tagText(item)}`;
 
 /**
  * Precomputes a lowercase haystack per item, so each keystroke only runs `includes` checks.
@@ -36,7 +39,8 @@ export function buildSearchIndex(items: readonly SavedItem[], previous?: SearchI
       index.set(key, reused);
       continue;
     }
-    const head = `${item.title}\n${item.meta?.channel ?? ''}\n${item.meta?.description ?? ''}\n`.toLowerCase();
+    const head =
+      `${item.title}\n${item.meta?.channel ?? ''}\n${tagText(item)}\n${item.meta?.description ?? ''}\n`.toLowerCase();
     index.set(key, { text: head + item.content.toLowerCase(), contentStart: head.length });
   }
   return index;
@@ -46,7 +50,7 @@ export function getIndexEntry(index: SearchIndex, item: SavedItem): IndexEntry |
   return index.get(indexKey(item));
 }
 
-/** Returns the items that contain every term (in title, channel, description, or content). Keeps input order. */
+/** Returns the items that contain every term (in title, channel, tags, description, or content). Keeps input order. */
 export function filterItems(items: readonly SavedItem[], index: SearchIndex, terms: readonly string[]): SavedItem[] {
   if (terms.length === 0) return [...items];
   return items.filter((item) => {

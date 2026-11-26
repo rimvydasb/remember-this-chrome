@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeItem } from '../../../test/items';
+import { makeItem, topicTags } from '../../../test/items';
 import { buildFallbackQueries } from '../fallbackQueries';
 import { parseQueries } from '../parseQueries';
 import { buildQueryMessage, QUERY_PROMPT } from '../prompt';
@@ -39,7 +39,7 @@ describe('buildFallbackQueries', () => {
   it('builds a title query and a tag query without the channel', () => {
     const item = makeItem({
       title: 'Why We Sleep (Official Video) | Science Channel',
-      aiTags: { tags: ['sleep', 'Science Channel', 'memory', 'hippocampus', 'REM', 'dreams'], createdAt: '2026-01-01' },
+      tags: topicTags('sleep', 'Science Channel', 'memory', 'hippocampus', 'REM', 'dreams'),
       meta: { channel: 'Science Channel' },
     });
     expect(buildFallbackQueries(item)).toEqual(['Why We Sleep', 'sleep memory hippocampus REM']);

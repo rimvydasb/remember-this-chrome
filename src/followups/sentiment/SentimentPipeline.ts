@@ -1,20 +1,20 @@
-import { createFollowUp, followUpsOfType } from '../../shared/followUpRecords';
-import type { FollowUp, SavedItem } from '../../shared/types';
+import { tagsFrom } from '../../shared/tags';
+import type { SavedItem, Tag } from '../../shared/types';
 import { ItemDeletedError } from '../errors';
 import type { FollowUpPipeline, PipelineContext } from '../pipeline';
 import type { ItemStore } from '../ports';
 import { generateSentiment } from './generateSentiment';
 
 export interface SentimentDeps {
-  store: Pick<ItemStore, 'addFollowUp' | 'deleteFollowUp'>;
+  store: Pick<ItemStore, 'setTags'>;
   generate?: typeof generateSentiment;
 }
 
 /**
- * The sentiment follow-up: find 1 to 3 sentiments with the LLM, save them as an `llm-sentiment`,
- * and drop the earlier ones, so an item has at most one.
+ * The sentiment of an item: find 1 to 3 sentiments with the LLM and save them as `ai-sentiment`
+ * tags, in place of the earlier ones. Other tags of the item are kept.
  */
-export class SentimentPipeline implements FollowUpPipeline<void, FollowUp> {
+export class SentimentPipeline implements FollowUpPipeline<void, Tag[]> {
   readonly id = 'sentiment';
   private readonly generate: typeof generateSentiment;
 
@@ -22,23 +22,19 @@ export class SentimentPipeline implements FollowUpPipeline<void, FollowUp> {
     this.generate = deps.generate ?? generateSentiment;
   }
 
-  /** The current sentiment of the item. */
-  current(item: SavedItem): FollowUp | undefined {
-    return followUpsOfType(item, 'llm-sentiment').at(-1);
+  /** The current sentiment tags of the item; empty when it has none. */
+  current(item: SavedItem): Tag[] {
+    return tagsFrom(item, 'ai-sentiment');
   }
 
   /** Finds the sentiments and replaces the earlier ones. Throws `ItemDeletedError` when the item is gone. */
-  async run({ settings, item }: PipelineContext): Promise<FollowUp> {
-    const previous = followUpsOfType(item, 'llm-sentiment');
-    const result = await this.generate(settings, item);
-    const followUp = createFollowUp('llm-sentiment', { generatedContent: result.content });
-    if (result.model) followUp.model = result.model;
-    if (!(await this.deps.store.addFollowUp(item.id, followUp))) throw new ItemDeletedError();
-    for (const old of previous) await this.deps.store.deleteFollowUp(item.id, old.id);
-    return followUp;
+  async run({ settings, item }: PipelineContext): Promise<Tag[]> {
+    const tags = await this.generate(settings, item);
+    if (!(await this.deps.store.setTags(item.id, 'ai-sentiment', tags))) throw new ItemDeletedError();
+    return tags;
   }
 
-  remove(item: SavedItem, sentiment: FollowUp): Promise<void> {
-    return this.deps.store.deleteFollowUp(item.id, sentiment.id);
+  async remove(item: SavedItem): Promise<void> {
+    await this.deps.store.setTags(item.id, 'ai-sentiment', []);
   }
 }

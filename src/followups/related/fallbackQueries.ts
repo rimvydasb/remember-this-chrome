@@ -1,4 +1,5 @@
 import type { PromptItem } from '../../shared/promptModel';
+import { tagLabels } from '../../shared/tags';
 import { itemTerms } from '../../shared/terms';
 
 /** Text read for keyword tags when the item has no AI tags. Bounded, because extraction is slow. */
@@ -25,7 +26,7 @@ function cleanTitle(title: string): string {
  */
 export function buildFallbackQueries(item: PromptItem): string[] {
   const title = cleanTitle(item.title);
-  let tags = item.aiTags?.tags ?? [];
+  let tags = tagLabels(item, 'topic');
   if (tags.length === 0) {
     const { terms } = itemTerms({ title: item.title, content: item.content.slice(0, MAX_TERM_TEXT), meta: item.meta });
     tags = terms.map(([term]) => term);

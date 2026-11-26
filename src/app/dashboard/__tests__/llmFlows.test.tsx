@@ -5,7 +5,7 @@ import { LlmError } from '../../../llm';
 import { DEFAULT_SETTINGS, SETTINGS_KEY } from '../../../shared/settings';
 import type { FollowUp, SavedItem } from '../../../shared/types';
 import { resetLlmMocks } from '../../../test/llmMock';
-import { installDashboardEnvironment, makeItem, renderApp } from '../../test/render';
+import { installDashboardEnvironment, makeItem, renderApp, topicTags } from '../../test/render';
 import { App } from '../App';
 
 const llm = await vi.hoisted(async () => (await import('../../../test/llmMock')).createLlmMocks());
@@ -39,7 +39,7 @@ async function open(extra: Partial<SavedItem> = {}) {
     title: 'Sleep and memory',
     type: 'youtube_transcript',
     content: 'Sleep helps memory.',
-    aiTags: { tags: ['sleep'], createdAt: '2026-01-01T00:00:00.000Z' },
+    tags: topicTags('sleep'),
     ...extra,
   });
   fake.storage.local.store.set('item:a', item);
@@ -97,10 +97,7 @@ describe('summary', () => {
     fake.storage.local.store.set(SETTINGS_KEY, {
       llm: { ...DEFAULT_SETTINGS.llm, baseUrl: 'http://10.0.0.5:1234', model: 'm1' },
     });
-    fake.storage.local.store.set(
-      'item:a',
-      makeItem({ id: 'a', title: 'Sleep and memory', aiTags: { tags: ['x'], createdAt: '2026-01-01T00:00:00.000Z' } }),
-    );
+    fake.storage.local.store.set('item:a', makeItem({ id: 'a', title: 'Sleep and memory', tags: topicTags('x') }));
     window.location.hash = '#item=a';
     const { user } = renderApp(<App />);
     await screen.findByRole('heading', { level: 2, name: 'Sleep and memory' });
@@ -380,7 +377,7 @@ describe('questions', () => {
 });
 
 describe('AI tags button', () => {
-  const noTags = { aiTags: undefined };
+  const noTags = { tags: undefined };
 
   it('is not shown when the item has AI tags', async () => {
     await open();
@@ -388,15 +385,11 @@ describe('AI tags button', () => {
   });
 
   it('generates tags for an item and replaces the keyword tags', async () => {
-    llm.generateTags.mockResolvedValue({
-      tags: ['sleep', 'memory'],
-      createdAt: '2026-02-01T00:00:00.000Z',
-      model: 'm',
-    });
+    llm.generateTags.mockResolvedValue(topicTags('sleep', 'memory'));
     const { user } = await open(noTags);
     await user.click(await screen.findByRole('button', { name: 'Regenerate tags with AI' }));
 
-    await waitFor(() => expect(stored().aiTags?.tags).toEqual(['sleep', 'memory']));
+    await waitFor(() => expect(stored().tags?.map((tag) => tag.label)).toEqual(['sleep', 'memory']));
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /Regenerate tags with AI/ })).not.toBeInTheDocument(),
     );
@@ -409,7 +402,7 @@ describe('AI tags button', () => {
     await user.click(await screen.findByRole('button', { name: 'Regenerate tags with AI' }));
     expect(await screen.findByText('Cannot generate tags')).toBeInTheDocument();
     expect(screen.getByText('The LLM answer has no tags.')).toBeInTheDocument();
-    expect(stored().aiTags).toBeUndefined();
+    expect(stored().tags).toBeUndefined();
   });
 
   it('tells when the permission is denied', async () => {

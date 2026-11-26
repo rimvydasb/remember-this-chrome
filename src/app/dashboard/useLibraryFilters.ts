@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
 import {
   countKeywords,
   filterByKeywords,
-  keywordKind,
+  keysWithout,
   type KeywordCount,
   type KeywordIndex,
 } from '../../shared/keywords';
@@ -50,13 +50,15 @@ export interface LibraryFilters {
   filtered: SavedItem[];
   /** Channel counts among items that match every filter except the channel one, so other channels stay visible. */
   channelFacets: KeywordCount[];
+  /** Sentiment counts among items that match every filter except the sentiment one, so other sentiments stay visible. */
+  sentimentFacets: KeywordCount[];
   /** Topic counts among the current results. */
   topicFacets: KeywordCount[];
 }
 
 /**
  * Search plus keyword, date, and type filters. Filters combine with AND; several selected channels
- * combine with OR (see `filterByKeywords`).
+ * or sentiments combine with OR (see `filterByKeywords`).
  */
 export function useLibraryFilters(all: readonly SavedItem[], keywordIndex: KeywordIndex): LibraryFilters {
   const [query, setQuery] = useState('');
@@ -81,10 +83,21 @@ export function useLibraryFilters(all: readonly SavedItem[], keywordIndex: Keywo
 
   const filtered = useMemo(() => filterByKeywords(base, keywordIndex, keywords), [base, keywordIndex, keywords]);
 
-  const channelFacets = useMemo(() => {
-    const topicsOnly = new Set([...keywords].filter((key) => keywordKind(key) === 'topic'));
-    return countKeywords(filterByKeywords(base, keywordIndex, topicsOnly), keywordIndex, 'channel');
-  }, [base, keywordIndex, keywords]);
+  const channelFacets = useMemo(
+    () =>
+      countKeywords(filterByKeywords(base, keywordIndex, keysWithout(keywords, 'channel')), keywordIndex, 'channel'),
+    [base, keywordIndex, keywords],
+  );
+
+  const sentimentFacets = useMemo(
+    () =>
+      countKeywords(
+        filterByKeywords(base, keywordIndex, keysWithout(keywords, 'sentiment')),
+        keywordIndex,
+        'sentiment',
+      ),
+    [base, keywordIndex, keywords],
+  );
 
   const topicFacets = useMemo(() => countKeywords(filtered, keywordIndex, 'topic'), [filtered, keywordIndex]);
 
@@ -125,6 +138,7 @@ export function useLibraryFilters(all: readonly SavedItem[], keywordIndex: Keywo
     clearFilters,
     filtered,
     channelFacets,
+    sentimentFacets,
     topicFacets,
   };
 }

@@ -11,7 +11,7 @@ const store: ItemStore = {
   addFollowUp: (...args) => storage.addFollowUp(...args),
   updateFollowUp: (...args) => storage.updateFollowUp(...args),
   deleteFollowUp: (...args) => storage.deleteFollowUp(...args),
-  setAiTags: (...args) => storage.setAiTags(...args),
+  setTags: (...args) => storage.setTags(...args),
 };
 
 /**

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildExportPayload, ImportError, parseImport, planImport } from '../importExport';
+import { sentimentTags, topicTags } from '../../test/items';
 import type { SavedItem } from '../types';
 
 const item = (id: string, timestamp = '2026-01-01T00:00:00.000Z', extra: Partial<SavedItem> = {}): SavedItem => ({
@@ -170,28 +171,60 @@ describe('marks in import files', () => {
   });
 });
 
-describe('AI tags in import files', () => {
-  const raw = (aiTags: unknown) => ({
+describe('tags in import files', () => {
+  const raw = (extra: Record<string, unknown>) => ({
     id: 'a',
     title: 'T',
     url: 'u',
     type: 'youtube_transcript',
     content: 'C',
     timestamp: '2026-01-01T00:00:00.000Z',
-    aiTags,
+    ...extra,
   });
 
-  it('round-trips AI tags through export', () => {
-    const aiTags = { tags: ['AI agents', 'gardening'], model: 'qwen3-8b', createdAt: '2026-03-01T00:00:00.000Z' };
-    const exported = JSON.stringify(buildExportPayload([item('a', undefined, { aiTags })]));
-    expect(parseImport(exported).items[0]!.aiTags).toEqual(aiTags);
+  it('round-trips tags through export', () => {
+    const tags = [...topicTags('AI agents', 'gardening'), ...sentimentTags('bullish')];
+    const exported = JSON.stringify(buildExportPayload([item('a', undefined, { tags })]));
+    expect(parseImport(exported).items[0]!.tags).toEqual(tags);
   });
 
-  it('keeps string tags and drops malformed AI tags', () => {
-    const parsed = parseImport(JSON.stringify([raw({ tags: ['ok', 3, ' '], createdAt: '2026-03-01T00:00:00.000Z' })]));
-    expect(parsed.items[0]!.aiTags).toEqual({ tags: ['ok'], createdAt: '2026-03-01T00:00:00.000Z' });
+  it('drops malformed tags', () => {
+    const [good] = topicTags('ok');
+    const bad = [
+      { ...good, label: ' ' },
+      { ...good, kind: 'mood' },
+      { ...good, source: 'someone' },
+      { ...good, createdAt: 'never' },
+      'tag',
+    ];
+    expect(parseImport(JSON.stringify([raw({ tags: [good, ...bad] })])).items[0]!.tags).toEqual([good]);
+    expect(parseImport(JSON.stringify([raw({ tags: bad })])).items[0]).not.toHaveProperty('tags');
+  });
+
+  it('reads aiTags and llm-sentiment follow-ups of older exports as tags', () => {
+    const parsed = parseImport(
+      JSON.stringify([
+        raw({
+          aiTags: { tags: ['ok', 3, ' '], model: 'm', createdAt: '2026-03-01T00:00:00.000Z' },
+          followUps: [
+            {
+              id: 's',
+              type: 'llm-sentiment',
+              generatedContent: 'Bullish, nonsense',
+              createdAt: '2026-03-02T00:00:00.000Z',
+            },
+          ],
+        }),
+      ]),
+    ).items[0]!;
+    expect(parsed).not.toHaveProperty('aiTags');
+    expect(parsed).not.toHaveProperty('followUps');
+    expect(parsed.tags).toEqual([
+      { label: 'ok', kind: 'topic', source: 'ai-topics', model: 'm', createdAt: '2026-03-01T00:00:00.000Z' },
+      { label: 'bullish', kind: 'sentiment', source: 'ai-sentiment', createdAt: '2026-03-02T00:00:00.000Z' },
+    ]);
     for (const bad of [{ tags: [], createdAt: '2026-03-01T00:00:00.000Z' }, { tags: ['x'] }, 'tags', null]) {
-      expect(parseImport(JSON.stringify([raw(bad)])).items[0]).not.toHaveProperty('aiTags');
+      expect(parseImport(JSON.stringify([raw({ aiTags: bad })])).items[0]).not.toHaveProperty('tags');
     }
   });
 });

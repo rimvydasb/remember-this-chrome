@@ -1,10 +1,12 @@
 import { parseCatalog, RECENTS_ID, type Catalog } from './catalogs';
+import { upgradeLegacyTags } from './tags';
 import {
   FOLLOW_UP_TYPES,
   ITEM_MARKS,
   ITEM_TYPES,
   RELATED_ARTICLE_FETCH_STATES,
-  type AiTags,
+  TAG_KINDS,
+  TAG_SOURCES,
   type FollowUp,
   type FollowUpType,
   type ItemMark,
@@ -13,6 +15,9 @@ import {
   type RelatedArticle,
   type RelatedArticleFetchState,
   type SavedItem,
+  type Tag,
+  type TagKind,
+  type TagSource,
 } from './types';
 
 export const EXPORT_FORMAT = 'remember-this-library';
@@ -115,8 +120,10 @@ function isHttpUrl(url: string): boolean {
 }
 
 /** Validates one record. Returns the normalized item, or a reason string when it is invalid. */
-export function validateItem(value: unknown): SavedItem | string {
-  if (!isRecord(value)) return 'not an object';
+export function validateItem(input: unknown): SavedItem | string {
+  if (!isRecord(input)) return 'not an object';
+  // Files exported before `tags` existed have `aiTags` and `llm-sentiment` follow-ups.
+  const value = upgradeLegacyTags(input);
   const { id, title, url, type, content, timestamp } = value;
   if (typeof id !== 'string' || id.trim() === '') return 'missing "id"';
   if (typeof title !== 'string') return 'missing "title"';
@@ -138,23 +145,23 @@ export function validateItem(value: unknown): SavedItem | string {
   const followUps = parseList(value.followUps, parseFollowUp);
   if (followUps) item.followUps = followUps;
   if (typeof value.mark === 'string' && ITEM_MARKS.includes(value.mark as ItemMark)) item.mark = value.mark as ItemMark;
-  const aiTags = parseAiTags(value.aiTags);
-  if (aiTags) item.aiTags = aiTags;
+  const tags = parseList(value.tags, parseTag);
+  if (tags) item.tags = tags;
   if (typeof value.catalogId === 'string' && value.catalogId !== '' && value.catalogId !== RECENTS_ID) {
     item.catalogId = value.catalogId;
   }
   return item;
 }
 
-function parseAiTags(value: unknown): AiTags | undefined {
-  if (!isRecord(value) || !Array.isArray(value.tags)) return undefined;
-  const tags = value.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim() !== '');
-  if (tags.length === 0 || typeof value.createdAt !== 'string' || Number.isNaN(Date.parse(value.createdAt))) {
-    return undefined;
-  }
-  const result: AiTags = { tags, createdAt: value.createdAt };
-  if (typeof value.model === 'string' && value.model) result.model = value.model;
-  return result;
+function parseTag(entry: Record<string, unknown>): Tag | undefined {
+  const { label, kind, source, model, createdAt } = entry;
+  if (typeof label !== 'string' || label.trim() === '') return undefined;
+  if (typeof kind !== 'string' || !TAG_KINDS.includes(kind as TagKind)) return undefined;
+  if (typeof source !== 'string' || !TAG_SOURCES.includes(source as TagSource)) return undefined;
+  if (typeof createdAt !== 'string' || Number.isNaN(Date.parse(createdAt))) return undefined;
+  const tag: Tag = { label: label.trim(), kind: kind as TagKind, source: source as TagSource, createdAt };
+  if (typeof model === 'string' && model) tag.model = model;
+  return tag;
 }
 
 function parseFollowUp(entry: Record<string, unknown>): FollowUp | undefined {

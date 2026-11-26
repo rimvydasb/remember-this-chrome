@@ -1,6 +1,7 @@
 import Mustache from 'mustache';
 import { formatDuration } from './markdown';
 import { followUpsOfType } from './followUpRecords';
+import { tagLabels } from './tags';
 import type { SavedItem } from './types';
 
 /**
@@ -52,7 +53,7 @@ export interface PromptModel {
   transcript: string;
   /** The latest AI summary; empty when there is none. */
   summary: string;
-  /** AI tags, most relevant first. Each is `{{.}}` inside `{{#tags}}`. */
+  /** Topic tags, most relevant first. Each is `{{.}}` inside `{{#tags}}`. */
   tags: string[];
   links: PromptLink[];
   chapters: PromptChapter[];
@@ -107,7 +108,7 @@ export const PROMPT_FIELDS: readonly PromptFieldInfo[] = [
     snippet: '{{#links}}\n- {{url}} {{label}}\n{{/links}}',
     kinds: BOTH,
   },
-  { name: 'tags', description: 'AI tags; each one is {{.}}', snippet: '{{#tags}}{{.}}, {{/tags}}', kinds: BOTH },
+  { name: 'tags', description: 'Topic tags; each one is {{.}}', snippet: '{{#tags}}{{.}}, {{/tags}}', kinds: BOTH },
   { name: 'url', description: 'Address of the video or page', snippet: '{{url}}', kinds: BOTH },
   { name: 'kind', description: '"video" or "page"', snippet: '{{kind}}', kinds: BOTH },
   { name: 'isVideo', description: 'True for a video', snippet: '{{#isVideo}}{{/isVideo}}', kinds: BOTH },
@@ -118,7 +119,7 @@ export const PROMPT_FIELDS: readonly PromptFieldInfo[] = [
 
 /** The item fields that the model reads. */
 export type PromptItem = Pick<SavedItem, 'title' | 'url' | 'type' | 'content' | 'timestamp'> &
-  Partial<Pick<SavedItem, 'meta' | 'followUps' | 'aiTags'>>;
+  Partial<Pick<SavedItem, 'meta' | 'followUps' | 'tags'>>;
 
 const day = (iso: string) => (Number.isNaN(Date.parse(iso)) ? '' : new Date(iso).toISOString().slice(0, 10));
 
@@ -142,7 +143,7 @@ export function buildPromptModel(item: PromptItem, ask?: { question: string; que
     description: meta.description?.trim() ?? '',
     transcript: item.content,
     summary: summary?.generatedContent.trim() ?? '',
-    tags: item.aiTags?.tags ?? [],
+    tags: tagLabels(item, 'topic'),
     links: (meta.links ?? []).map((link) => ({ url: link.url, label: link.label ?? '' })),
     chapters: (meta.chapters ?? []).map((chapter) => ({
       time: formatDuration(chapter.startSec),

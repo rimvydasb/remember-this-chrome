@@ -92,4 +92,4 @@ export function installDashboardEnvironment() {
   return fake;
 }
 
-export { makeItem } from '../../test/items';
+export { makeItem, sentimentTags, topicTags } from '../../test/items';

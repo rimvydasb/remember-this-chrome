@@ -2,7 +2,8 @@ import { CATALOGS_KEY, mergeCatalogs, normalizeCatalogs, RECENTS_ID, type Catalo
 import { planImport, type ImportMode, type ImportPlan } from './importExport';
 import { sortByRecent } from './search';
 import { mergeCapture, type Capture, type CaptureField } from './mergeCapture';
-import type { AiTags, FollowUp, ItemMark, ItemType, SavedItem } from './types';
+import { replaceTags, tagsFrom, upgradeLegacyTags, withTags } from './tags';
+import type { FollowUp, ItemMark, ItemType, SavedItem, Tag, TagSource } from './types';
 
 /**
  * Each record is stored under its own key (`item:<id>`) in `chrome.storage.local`, so saving
@@ -33,10 +34,11 @@ export function isItemKey(key: string): boolean {
 
 /**
  * Reads a stored item. Follow-ups stored before `generatedContent` existed keep their text in
- * `content`; this moves it to `generatedContent`.
+ * `content`; this moves it to `generatedContent`. Tags stored before `tags` existed are converted
+ * by `upgradeLegacyTags`.
  */
 export function readStoredItem(value: unknown): SavedItem {
-  const item = value as SavedItem;
+  const item = upgradeLegacyTags(value as SavedItem & Record<string, unknown>) as SavedItem;
   if (!item.followUps?.some((followUp) => typeof followUp.generatedContent !== 'string')) return item;
   return {
     ...item,
@@ -116,17 +118,19 @@ async function addFollowUpNow(itemId: string, followUp: FollowUp): Promise<boole
 }
 
 /**
- * Stores LLM-generated tags on an item. With `onlyIfMissing`, an item that already has AI tags is
- * left alone (another dashboard tab may have tagged it). Returns false when nothing was stored.
+ * Replaces the tags of one source on an item; an empty list removes them. Tags of other sources
+ * are kept. With `onlyIfMissing`, an item that already has tags of the source is left alone
+ * (another dashboard tab may have tagged it). Returns false when nothing was stored.
  */
-async function setAiTagsNow(
+async function setTagsNow(
   itemId: string,
-  aiTags: AiTags,
+  source: TagSource,
+  tags: readonly Tag[],
   options: { onlyIfMissing?: boolean } = {},
 ): Promise<boolean> {
   const item = await getItem(itemId);
-  if (!item || (options.onlyIfMissing && item.aiTags)) return false;
-  await putItems([{ ...item, aiTags }]);
+  if (!item || (options.onlyIfMissing && tagsFrom(item, source).length > 0)) return false;
+  await putItems([withTags(item, replaceTags(item, source, tags))]);
   return true;
 }
 
@@ -263,7 +267,7 @@ async function moveItemsToCatalogNow(ids: readonly string[], catalogId: string):
 // The updates, one at a time. See `serialized`.
 export const upsertCapture: typeof upsertCaptureNow = (...args) => serialized(() => upsertCaptureNow(...args));
 export const addFollowUp: typeof addFollowUpNow = (...args) => serialized(() => addFollowUpNow(...args));
-export const setAiTags: typeof setAiTagsNow = (...args) => serialized(() => setAiTagsNow(...args));
+export const setTags: typeof setTagsNow = (...args) => serialized(() => setTagsNow(...args));
 export const updateFollowUp: typeof updateFollowUpNow = (...args) => serialized(() => updateFollowUpNow(...args));
 export const deleteFollowUp: typeof deleteFollowUpNow = (...args) => serialized(() => deleteFollowUpNow(...args));
 export const setItemsMark: typeof setItemsMarkNow = (...args) => serialized(() => setItemsMarkNow(...args));

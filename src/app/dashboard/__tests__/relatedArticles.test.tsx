@@ -7,7 +7,7 @@ import { LlmError } from '../../../llm';
 import { DEFAULT_SETTINGS, SETTINGS_KEY } from '../../../shared/settings';
 import type { SavedItem } from '../../../shared/types';
 import { resetLlmMocks } from '../../../test/llmMock';
-import { installDashboardEnvironment, makeItem, renderApp } from '../../test/render';
+import { installDashboardEnvironment, makeItem, renderApp, topicTags } from '../../test/render';
 import { App } from '../App';
 
 const llm = await vi.hoisted(async () => (await import('../../../test/llmMock')).createLlmMocks());
@@ -47,7 +47,7 @@ async function open(extra: Partial<SavedItem> = {}) {
       title: 'Sleep and memory',
       type: 'youtube_transcript',
       url: 'https://www.youtube.com/watch?v=abc',
-      aiTags: { tags: ['sleep'], createdAt: '2026-01-01T00:00:00.000Z' },
+      tags: topicTags('sleep'),
       ...extra,
     }),
   );

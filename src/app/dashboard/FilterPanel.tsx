@@ -1,7 +1,13 @@
 import { Anchor, Group, Pill, SegmentedControl, Select, Stack, Text } from '@mantine/core';
 import { IconSearch } from '@tabler/icons-react';
 import { useMemo, useState } from 'react';
-import type { Keyword, KeywordCount, KeywordIndex } from '../../shared/keywords';
+import {
+  keywordKind,
+  type Keyword,
+  type KeywordCount,
+  type KeywordIndex,
+  type KeywordKind,
+} from '../../shared/keywords';
 import type { ItemType } from '../../shared/types';
 import { KeywordBadge } from './KeywordBadges';
 import type { DateRange, LibraryFilters, MarkFilter, TypeFilter } from './useLibraryFilters';
@@ -26,6 +32,7 @@ const MARK_OPTIONS: { value: MarkFilter; label: string }[] = [
 ];
 
 const CHANNELS_COLLAPSED = 6;
+const SENTIMENTS_COLLAPSED = 8;
 const TOPICS_COLLAPSED = 14;
 const TOPICS_EXPANDED = 40;
 
@@ -37,10 +44,12 @@ interface FilterPanelProps {
 }
 
 export function FilterPanel({ filters, types, keywordsReady }: FilterPanelProps) {
-  const { channelFacets, topicFacets, keywords, toggleKeyword } = filters;
+  const { channelFacets, sentimentFacets, topicFacets, keywords, toggleKeyword } = filters;
 
-  // Selected topics that no longer occur in the results stay visible, so they can be removed.
-  const topics = useMemo(() => withSelected(topicFacets, keywords, 'topic:'), [topicFacets, keywords]);
+  // Selected keywords that no longer occur in the results stay visible, so they can be removed.
+  const channels = useMemo(() => withSelected(channelFacets, keywords, 'channel'), [channelFacets, keywords]);
+  const sentiments = useMemo(() => withSelected(sentimentFacets, keywords, 'sentiment'), [sentimentFacets, keywords]);
+  const topics = useMemo(() => withSelected(topicFacets, keywords, 'topic'), [topicFacets, keywords]);
 
   return (
     <Stack gap="sm" className="rt-filters">
@@ -87,14 +96,26 @@ export function FilterPanel({ filters, types, keywordsReady }: FilterPanelProps)
         </FilterSection>
       )}
 
-      {channelFacets.length > 0 && (
+      {channels.length > 0 && (
         <FacetSection
           label="Channels"
           hint="any of"
-          facets={withSelected(channelFacets, keywords, 'channel:')}
+          facets={channels}
           active={keywords}
           onToggle={toggleKeyword}
           collapsed={CHANNELS_COLLAPSED}
+          expanded={Infinity}
+        />
+      )}
+
+      {sentiments.length > 0 && (
+        <FacetSection
+          label="Sentiment"
+          hint="any of"
+          facets={sentiments}
+          active={keywords}
+          onToggle={toggleKeyword}
+          collapsed={SENTIMENTS_COLLAPSED}
           expanded={Infinity}
         />
       )}
@@ -145,15 +166,12 @@ export function ActiveFilters({ filters, keywordIndex }: { filters: LibraryFilte
           {TYPE_OPTIONS.find((o) => o.value === type)?.label}
         </Pill>
       )}
-      {[...keywords].map((key) => {
-        const keyword = labels.get(key);
-        return (
-          <Pill key={key} size="sm" withRemoveButton onRemove={() => filters.toggleKeyword(key)}>
-            {keyword?.kind === 'channel' ? '@ ' : '# '}
-            {keyword?.label ?? key.slice(key.indexOf(':') + 1)}
-          </Pill>
-        );
-      })}
+      {[...keywords].map((key) => (
+        <Pill key={key} size="sm" withRemoveButton onRemove={() => filters.toggleKeyword(key)}>
+          {PILL_PREFIX[keywordKind(key)]}
+          {labels.get(key)?.label ?? key.slice(key.indexOf(':') + 1)}
+        </Pill>
+      ))}
       <Anchor component="button" type="button" size="xs" ml={4} onClick={filters.clearFilters}>
         Clear
       </Anchor>
@@ -161,14 +179,16 @@ export function ActiveFilters({ filters, keywordIndex }: { filters: LibraryFilte
   );
 }
 
-/** Adds selected keys that are missing from `facets` (count 0), so every active filter has a pill. */
-function withSelected(facets: KeywordCount[], selected: ReadonlySet<string>, prefix: string): KeywordCount[] {
+/** Marks the kind of an active filter pill. */
+const PILL_PREFIX: Readonly<Record<KeywordKind, string>> = { channel: '@ ', sentiment: '~ ', topic: '# ' };
+
+/** Adds selected keys of `kind` that are missing from `facets` (count 0), so every active filter has a pill. */
+function withSelected(facets: KeywordCount[], selected: ReadonlySet<string>, kind: KeywordKind): KeywordCount[] {
   const present = new Set(facets.map((f) => f.keyword.key));
   const missing: KeywordCount[] = [];
   for (const key of selected) {
-    if (!key.startsWith(prefix) || present.has(key)) continue;
-    const label = key.slice(prefix.length);
-    missing.push({ keyword: { key, kind: prefix === 'channel:' ? 'channel' : 'topic', label }, count: 0 });
+    if (keywordKind(key) !== kind || present.has(key)) continue;
+    missing.push({ keyword: { key, kind, label: key.slice(kind.length + 1) }, count: 0 });
   }
   // Selected first, so they never fall below the "show more" cut.
   const all = [...missing, ...facets];

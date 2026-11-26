@@ -5,7 +5,7 @@ import { LlmError } from '../../../llm';
 import { DEFAULT_SETTINGS, SETTINGS_KEY } from '../../../shared/settings';
 import type { SavedItem } from '../../../shared/types';
 import { resetLlmMocks } from '../../../test/llmMock';
-import { installDashboardEnvironment, makeItem } from '../../test/render';
+import { installDashboardEnvironment, makeItem, topicTags } from '../../test/render';
 import { useAiTagging } from '../useAiTagging';
 
 const llm = await vi.hoisted(async () => (await import('../../../test/llmMock')).createLlmMocks());
@@ -19,7 +19,7 @@ vi.mock('../../../followups/questions/generateAnswer', () => ({ generateAnswer: 
 vi.mock('../../../followups/tagging/generateTags', () => ({ generateTags: llm.generateTags }));
 
 let fake: ReturnType<typeof installDashboardEnvironment>;
-const tagsOf = (id: string) => (fake.storage.local.store.get(`item:${id}`) as SavedItem).aiTags?.tags;
+const tagsOf = (id: string) => (fake.storage.local.store.get(`item:${id}`) as SavedItem).tags?.map((tag) => tag.label);
 
 function setup(items: SavedItem[], settings: Partial<typeof DEFAULT_SETTINGS.llm> = {}) {
   fake = installDashboardEnvironment();
@@ -27,7 +27,7 @@ function setup(items: SavedItem[], settings: Partial<typeof DEFAULT_SETTINGS.llm
   for (const item of items) fake.storage.local.store.set(`item:${item.id}`, item);
 }
 
-const tags = (...names: string[]) => ({ tags: names, createdAt: '2026-02-01T00:00:00.000Z', model: 'm' });
+const tags = (...names: string[]) => topicTags(...names);
 
 beforeEach(() => {
   vi.unstubAllGlobals();
@@ -74,7 +74,7 @@ describe('useAiTagging', () => {
 
   it('skips tagged, forgotten and empty items', async () => {
     const items = [
-      makeItem({ id: 'tagged', aiTags: { tags: ['x'], createdAt: '2026-01-01T00:00:00.000Z' } }),
+      makeItem({ id: 'tagged', tags: topicTags('x') }),
       makeItem({ id: 'forgotten', mark: 'forgotten' }),
       makeItem({ id: 'empty', content: '   ' }),
       makeItem({ id: 'todo' }),
@@ -158,7 +158,7 @@ describe('useAiTagging', () => {
     llm.generateTags.mockImplementation(async () => {
       fake.storage.local.store.set('item:a', {
         ...items[0]!,
-        aiTags: { tags: ['other tab'], createdAt: '2026-02-01T00:00:00.000Z' },
+        tags: topicTags('other tab'),
       });
       return tags('mine');
     });

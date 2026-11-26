@@ -1,4 +1,4 @@
-import type { AiTags, FollowUp } from '../shared/types';
+import type { FollowUp, Tag, TagSource } from '../shared/types';
 
 /**
  * What the pipelines need from the library. The storage module implements it; tests pass a fake.
@@ -8,5 +8,11 @@ export interface ItemStore {
   addFollowUp(itemId: string, followUp: FollowUp): Promise<boolean>;
   updateFollowUp(itemId: string, followUpId: string, patch: Partial<Omit<FollowUp, 'id' | 'type'>>): Promise<boolean>;
   deleteFollowUp(itemId: string, followUpId: string): Promise<void>;
-  setAiTags(itemId: string, tags: AiTags, options?: { onlyIfMissing?: boolean }): Promise<boolean>;
+  /** Replaces the item's tags of `source`; an empty list removes them. */
+  setTags(
+    itemId: string,
+    source: TagSource,
+    tags: readonly Tag[],
+    options?: { onlyIfMissing?: boolean },
+  ): Promise<boolean>;
 }

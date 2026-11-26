@@ -2,9 +2,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CATALOGS_KEY } from '../../../shared/catalogs';
-import { createFollowUp } from '../../../shared/followUpRecords';
 import type { SavedItem } from '../../../shared/types';
-import { installDashboardEnvironment, makeItem, renderApp } from '../../test/render';
+import { installDashboardEnvironment, makeItem, renderApp, sentimentTags, topicTags } from '../../test/render';
 import { App } from '../App';
 
 const download = vi.hoisted(() => ({ downloadTextFile: vi.fn() }));
@@ -53,16 +52,21 @@ describe('item reader', () => {
     localStorage.clear();
   });
 
-  it('shows the sentiment tags among the keyword tags, right after the channel', async () => {
+  it('shows the sentiment tags among the keyword tags, right after the channel, in the list and the reader', async () => {
     const item = VIDEO();
-    item.aiTags = { tags: ['sleep science'], createdAt: '2026-03-04T10:00:00.000Z' };
-    item.followUps = [createFollowUp('llm-sentiment', { generatedContent: 'informative, optimistic' })];
+    item.tags = [...sentimentTags('informative', 'optimistic'), ...topicTags('sleep science')];
     open([item], 'video');
     await heading('Sleep and memory');
 
-    const row = (await screen.findAllByText('informative'))[0]!.closest('[data-mood]')!.parentElement!;
-    const labels = Array.from(row.children, (child) => child.textContent);
-    expect(labels.slice(0, 4)).toEqual(['Neuro Lab', 'informative', 'optimistic', 'sleep science']);
+    // In the Sentiment filter facet (with a count), the list row and the reader header.
+    const all = await screen.findAllByRole('button', { name: /^informative/, pressed: false });
+    expect(all.map((badge) => badge.getAttribute('data-kind'))).toEqual(['sentiment', 'sentiment', 'sentiment']);
+    const badges = all.filter((badge) => !badge.querySelector('.rt-keyword-count'));
+    expect(badges).toHaveLength(2);
+    for (const badge of badges) {
+      const labels = Array.from(badge.parentElement!.children, (child) => child.textContent);
+      expect(labels.slice(0, 4)).toEqual(['Neuro Lab', 'informative', 'optimistic', 'sleep science']);
+    }
   });
 
   it('shows the title, details and text of a video', async () => {

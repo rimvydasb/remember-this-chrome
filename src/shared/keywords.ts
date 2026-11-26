@@ -1,16 +1,33 @@
+import { hasTopicTags } from './tags';
 import type { ItemTerms } from './terms';
-import type { SavedItem } from './types';
+import type { SavedItem, TagKind } from './types';
 
 /**
- * Keywords of the library. An item with LLM-generated tags (`aiTags`) uses those. Other items get
- * keywords from their extracted terms (see `terms.ts`), ranked by TF-IDF across the library, so
- * terms that appear in every item rank below the terms that make one item different from the others.
+ * Keywords of the library: what the list, the reader and the filters show of an item, one facet
+ * per kind. They come from three places:
+ * - `channel`: the channel in `meta.channel`;
+ * - `sentiment`: the stored sentiment tags;
+ * - `topic`: the stored topic tags, or, for items without them, the extracted terms (see
+ *   `terms.ts`) ranked by TF-IDF across the library, so terms that appear in every item rank
+ *   below the terms that make one item different from the others.
  */
 
-export type KeywordKind = 'channel' | 'topic';
+export type KeywordKind = 'channel' | TagKind;
+
+export const KEYWORD_KINDS: readonly KeywordKind[] = ['channel', 'sentiment', 'topic'];
+
+/**
+ * How selected keywords of a kind combine. An item is from one channel and has one to three
+ * sentiments, so selecting several of them means "any of". Topics narrow down: "all of".
+ */
+export const KIND_MATCH: Readonly<Record<KeywordKind, 'any' | 'all'>> = {
+  channel: 'any',
+  sentiment: 'any',
+  topic: 'all',
+};
 
 export interface Keyword {
-  /** Stable filter key: `channel:<name>` or `topic:<word>`. */
+  /** Stable filter key: `<kind>:<normalized label>`. */
   key: string;
   kind: KeywordKind;
   /** Display text. */
@@ -20,14 +37,11 @@ export interface Keyword {
 /** Number of keywords kept per item. The list shows the first few; filters use all of them. */
 export const KEYWORDS_PER_ITEM = 10;
 
-export const channelKey = (channel: string) => `channel:${channel.trim().toLowerCase()}`;
-export const topicKey = (term: string) => `topic:${term}`;
+/** The filter key of a label: "AI  Agents" and "ai agents" are the same topic. */
+export const keywordKey = (kind: KeywordKind, label: string) =>
+  `${kind}:${label.trim().replace(/\s+/g, ' ').toLowerCase()}`;
 
-/** Filter key text of a tag: "AI  Agents" and "ai agents" are the same topic. */
-const tagKey = (tag: string) => tag.trim().replace(/\s+/g, ' ').toLowerCase();
-
-/** True when the item's tags come from an LLM. Otherwise they come from keyword extraction. */
-export const isAiGeneratedTags = (item: SavedItem): boolean => (item.aiTags?.tags.length ?? 0) > 0;
+const keyword = (kind: KeywordKind, label: string): Keyword => ({ key: keywordKey(kind, label), kind, label });
 
 export type KeywordIndex = Map<string, Keyword[]>;
 /** Extracted terms by `termCacheKey`. */
@@ -43,10 +57,8 @@ const NO_TERMS: ItemTerms = { terms: [], total: 0, acronyms: [] };
  * Items whose terms are not in `cache` yet get only their channel.
  */
 export function buildKeywordIndex(items: readonly SavedItem[], cache: TermCache): KeywordIndex {
-  // AI-tagged items do not take part in the TF-IDF ranking.
-  const perItem = items.map((item) =>
-    isAiGeneratedTags(item) ? NO_TERMS : (cache.get(termCacheKey(item)) ?? NO_TERMS),
-  );
+  // Items with topic tags do not take part in the TF-IDF ranking.
+  const perItem = items.map((item) => (hasTopicTags(item) ? NO_TERMS : (cache.get(termCacheKey(item)) ?? NO_TERMS)));
 
   const documentFrequency = new Map<string, number>();
   for (const { terms } of perItem) {
@@ -69,24 +81,19 @@ export function buildKeywordIndex(items: readonly SavedItem[], cache: TermCache)
       }))
       .sort((a, b) => b.score - a.score);
 
+    // Channel, then sentiments, then topics. Channel and sentiments do not count toward the topic limit.
     const keywords: Keyword[] = [];
-    if (channel) keywords.push({ key: channelKey(channel), kind: 'channel', label: channel });
-    if (isAiGeneratedTags(item)) {
-      const seen = new Set<string>();
-      for (const tag of item.aiTags!.tags) {
-        const key = topicKey(tagKey(tag));
-        if (seen.has(key) || keywords.length >= KEYWORDS_PER_ITEM) continue;
-        seen.add(key);
-        keywords.push({ key, kind: 'topic', label: tag.trim() });
+    if (channel) keywords.push(keyword('channel', channel));
+    const topics: Keyword[] = [];
+    for (const tag of item.tags ?? []) (tag.kind === 'topic' ? topics : keywords).push(keyword(tag.kind, tag.label));
+    if (topics.length === 0) {
+      for (const { term } of scored.slice(0, KEYWORDS_PER_ITEM)) {
+        topics.push(keyword('topic', capitals.has(term) ? term.toUpperCase() : term));
       }
-      index.set(item.id, keywords);
-      return;
     }
-    for (const { term } of scored) {
-      if (keywords.length >= KEYWORDS_PER_ITEM) break;
-      keywords.push({ key: topicKey(term), kind: 'topic', label: capitals.has(term) ? term.toUpperCase() : term });
-    }
-    index.set(item.id, keywords);
+    const seen = new Set<string>();
+    const unique = (entry: Keyword) => !seen.has(entry.key) && Boolean(seen.add(entry.key));
+    index.set(item.id, [...keywords.filter(unique), ...topics.filter(unique).slice(0, KEYWORDS_PER_ITEM)]);
   });
   return index;
 }
@@ -110,11 +117,20 @@ export function countKeywords(items: readonly SavedItem[], index: KeywordIndex, 
   return [...counts.values()].sort((a, b) => b.count - a.count || a.keyword.label.localeCompare(b.keyword.label));
 }
 
-export const keywordKind = (key: string): KeywordKind => (key.startsWith('channel:') ? 'channel' : 'topic');
+export const keywordKind = (key: string): KeywordKind => {
+  const kind = key.slice(0, key.indexOf(':')) as KeywordKind;
+  return KEYWORD_KINDS.includes(kind) ? kind : 'topic';
+};
+
+/** The keys without those of `kind`. Facets of an "any of" kind count with this, so its other values stay visible. */
+export function keysWithout(keys: ReadonlySet<string>, kind: KeywordKind): ReadonlySet<string> {
+  return new Set([...keys].filter((key) => keywordKind(key) !== kind));
+}
 
 /**
- * Returns the items that match the keyword keys. An item matches when it is from **any** of the
- * selected channels and has **all** of the selected topics.
+ * Returns the items that match the keyword keys. Within a kind, keys combine by `KIND_MATCH`; the
+ * kinds combine with AND. For example: from **any** of the selected channels, with **any** of the
+ * selected sentiments, and with **all** of the selected topics.
  */
 export function filterByKeywords(
   items: readonly SavedItem[],
@@ -122,28 +138,37 @@ export function filterByKeywords(
   keys: ReadonlySet<string>,
 ): SavedItem[] {
   if (keys.size === 0) return [...items];
-  let channels = 0;
-  for (const key of keys) if (keywordKind(key) === 'channel') channels++;
-  const topics = keys.size - channels;
+  const wanted = new Map<KeywordKind, number>();
+  for (const key of keys) {
+    const kind = keywordKind(key);
+    wanted.set(kind, (wanted.get(kind) ?? 0) + 1);
+  }
   return items.filter((item) => {
     const own = index.get(item.id);
     if (!own) return false;
-    let channelFound = false;
-    let topicsFound = 0;
-    for (const keyword of own) {
-      if (!keys.has(keyword.key)) continue;
-      if (keyword.kind === 'channel') channelFound = true;
-      else topicsFound++;
+    const found = new Map<KeywordKind, number>();
+    for (const { key, kind } of own) if (keys.has(key)) found.set(kind, (found.get(kind) ?? 0) + 1);
+    for (const [kind, count] of wanted) {
+      const matched = found.get(kind) ?? 0;
+      if (KIND_MATCH[kind] === 'any' ? matched === 0 : matched < count) return false;
     }
-    return (channels === 0 || channelFound) && topicsFound === topics;
+    return true;
   });
 }
 
-/** Orders an item's keywords for display: channel first, then active filters, then the rest by rank. */
-export function displayKeywords(keywords: readonly Keyword[], active: ReadonlySet<string>, limit: number): Keyword[] {
-  if (active.size === 0) return keywords.slice(0, limit);
-  const channel = keywords.filter((k) => k.kind === 'channel');
+/**
+ * Orders an item's keywords for display: channel and sentiments first, then active topics, then
+ * the rest by rank. `topicLimit` caps the topics only; the channel and sentiments always show.
+ */
+export function displayKeywords(
+  keywords: readonly Keyword[],
+  active: ReadonlySet<string>,
+  topicLimit: number,
+): Keyword[] {
   const topics = keywords.filter((k) => k.kind === 'topic');
-  const ordered = [...channel, ...topics.filter((k) => active.has(k.key)), ...topics.filter((k) => !active.has(k.key))];
-  return ordered.slice(0, limit);
+  const ordered =
+    active.size === 0
+      ? topics
+      : [...topics.filter((k) => active.has(k.key)), ...topics.filter((k) => !active.has(k.key))];
+  return [...keywords.filter((k) => k.kind !== 'topic'), ...ordered.slice(0, topicLimit)];
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildPromptModel, PromptTemplateError, renderPrompt, templateFields, validateTemplate } from '../promptModel';
+import { topicTags } from '../../test/items';
 import type { SavedItem } from '../types';
 
 const item: SavedItem = {
@@ -16,7 +17,7 @@ const item: SavedItem = {
     chapters: [{ startSec: 65, title: 'Intro' }],
     links: [{ url: 'https://x.dev' }, { url: 'https://y.dev', label: 'Docs' }],
   },
-  aiTags: { tags: ['AI', 'code'], createdAt: '2026-03-05T00:00:00.000Z' },
+  tags: topicTags('AI', 'code'),
   followUps: [
     { id: 's1', type: 'llm-summary', generatedContent: 'Old.', createdAt: '2026-03-05T00:00:00.000Z' },
     { id: 's2', type: 'llm-summary', generatedContent: 'New summary.', createdAt: '2026-03-06T00:00:00.000Z' },

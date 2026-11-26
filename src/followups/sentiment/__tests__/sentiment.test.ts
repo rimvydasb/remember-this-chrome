@@ -31,10 +31,9 @@ describe('generateSentiment', () => {
       'fetch',
       vi.fn(async () => completion('Cautious Bullish, optimistic, whatever')),
     );
-    await expect(generateSentiment(settings, item)).resolves.toEqual({
-      content: 'cautiously bullish, optimistic',
-      model: 'qwen3-8b',
-    });
+    const tags = await generateSentiment(settings, item);
+    expect(tags.map((tag) => tag.label)).toEqual(['cautiously bullish', 'optimistic']);
+    expect(tags[0]).toMatchObject({ kind: 'sentiment', source: 'ai-sentiment', model: 'qwen3-8b' });
   });
 
   it('fails when the answer has no known sentiment', async () => {
