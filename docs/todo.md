@@ -123,4 +123,5 @@ interface SavedItem {
 - [ ] **Direct iCloud / Native Messaging Host:** Add an optional background companion script (Node.js/Python) that writes `.md` files directly to `~/Library/Mobile Documents/` without manual JSON exports.
 - [ ] **AI summarization:** Integrate a local or API-driven LLM hook (for example Chrome Built-in AI or the Gemini API) to generate concise summaries of transcripts before saving.
   - Note: an API-driven option conflicts with NFR-1 and NFR-2. Prefer a local model, or make it strictly opt-in.
+- [ ] **Fetch related articles:** Fetch the pages that "Find related articles" saved (`RelatedArticle.fetchState`), extract their main text, and let the LLM summarize or compare them with the item. See `docs/find-related-articles-story.md` (Out of Scope).
 - [ ] **Tags & collections:** Let users organize saved transcripts into custom folders or tags in the dashboard.

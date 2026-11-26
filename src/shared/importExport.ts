@@ -3,12 +3,15 @@ import {
   FOLLOW_UP_TYPES,
   ITEM_MARKS,
   ITEM_TYPES,
+  RELATED_ARTICLE_FETCH_STATES,
   type AiTags,
   type FollowUp,
   type FollowUpType,
   type ItemMark,
   type ItemMeta,
   type ItemType,
+  type RelatedArticle,
+  type RelatedArticleFetchState,
   type SavedItem,
 } from './types';
 
@@ -171,7 +174,57 @@ function parseFollowUp(entry: Record<string, unknown>): FollowUp | undefined {
   };
   if (typeof userContent === 'string' && userContent !== '') followUp.userContent = userContent;
   if (typeof model === 'string' && model !== '') followUp.model = model;
+  if (type === 'related-articles') {
+    // Older files lack the lists; then `generatedContent` alone carries the links. A list that is
+    // present must be valid as a whole, so a damaged file cannot add half of a search.
+    if (entry.articles !== undefined) {
+      const articles = parseAllOrNothing(entry.articles, parseRelatedArticle);
+      if (!articles) return undefined;
+      followUp.articles = articles;
+    }
+    if (entry.queries !== undefined) {
+      const queries = parseStrings(entry.queries);
+      if (!queries) return undefined;
+      followUp.queries = queries;
+    }
+  }
   return followUp;
+}
+
+/** Every entry parsed, or undefined when the value is not an array or any entry is invalid. */
+function parseAllOrNothing<T>(
+  value: unknown,
+  parse: (entry: Record<string, unknown>) => T | undefined,
+): T[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const result: T[] = [];
+  for (const entry of value) {
+    const parsed = isRecord(entry) ? parse(entry) : undefined;
+    if (parsed === undefined) return undefined;
+    result.push(parsed);
+  }
+  return result;
+}
+
+/** An array of non-empty strings, or undefined. */
+function parseStrings(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string' && entry.trim() !== ''))
+    return undefined;
+  return value as string[];
+}
+
+function parseRelatedArticle(entry: Record<string, unknown>): RelatedArticle | undefined {
+  const { url, title, snippet, bestRank, fetchState } = entry;
+  if (typeof url !== 'string' || !isHttpUrl(url) || typeof title !== 'string') return undefined;
+  if (typeof bestRank !== 'number' || !Number.isInteger(bestRank) || bestRank < 1) return undefined;
+  const queries = entry.queries === undefined ? [] : parseStrings(entry.queries);
+  if (!queries) return undefined;
+  const article: RelatedArticle = { url, title, queries, bestRank };
+  if (typeof snippet === 'string' && snippet !== '') article.snippet = snippet;
+  if (RELATED_ARTICLE_FETCH_STATES.includes(fetchState as RelatedArticleFetchState)) {
+    article.fetchState = fetchState as RelatedArticleFetchState;
+  }
+  return article;
 }
 
 /**

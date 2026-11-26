@@ -78,7 +78,7 @@ describe('summary', () => {
 
     expect(await screen.findByText('Main idea:', { selector: 'strong' })).toBeInTheDocument();
     expect(screen.getByText(/qwen-7b/)).toBeInTheDocument();
-    expect(llm.requestLlmPermission).toHaveBeenCalledWith(DEFAULT_SETTINGS.llm.baseUrl);
+    expect(llm.requestLlmPermission).toHaveBeenCalledWith(DEFAULT_SETTINGS.llm.baseUrl, []);
     expect(llm.summarize).toHaveBeenCalledWith(
       { ...DEFAULT_SETTINGS.llm, useForTags: false },
       expect.objectContaining({ id: 'a' }),
@@ -107,7 +107,7 @@ describe('summary', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Generate summary' })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: 'Generate summary' }));
     await waitFor(() => expect(llm.summarize).toHaveBeenCalled());
-    expect(llm.requestLlmPermission).toHaveBeenCalledWith('http://10.0.0.5:1234');
+    expect(llm.requestLlmPermission).toHaveBeenCalledWith('http://10.0.0.5:1234', []);
     expect(llm.summarize.mock.calls[0]![0]).toMatchObject({ baseUrl: 'http://10.0.0.5:1234', model: 'm1' });
   });
 

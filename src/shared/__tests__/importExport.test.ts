@@ -195,3 +195,59 @@ describe('AI tags in import files', () => {
     }
   });
 });
+
+describe('related articles in import files', () => {
+  const article = {
+    url: 'https://news.example/sleep',
+    title: 'Sleep study',
+    snippet: 'Short text.',
+    queries: ['sleep memory study'],
+    bestRank: 2,
+  };
+  const related = (extra: Record<string, unknown> = {}) => ({
+    id: 'r1',
+    type: 'related-articles',
+    generatedContent: '- [Sleep study](<https://news.example/sleep>)',
+    createdAt: '2026-11-25T10:00:00.000Z',
+    articles: [article],
+    queries: ['sleep memory study'],
+    ...extra,
+  });
+  const followUpsOf = (followUps: unknown[]) =>
+    parseImport(JSON.stringify([{ ...item('a'), followUps }])).items[0]!.followUps;
+
+  it('import accepts a related-articles follow-up and rejects an invalid articles list', () => {
+    expect(followUpsOf([related()])).toEqual([related()]);
+    // Files without the lists keep the Markdown copy.
+    expect(followUpsOf([related({ articles: undefined, queries: undefined })])).toEqual([
+      {
+        id: 'r1',
+        type: 'related-articles',
+        generatedContent: related().generatedContent,
+        createdAt: related().createdAt,
+      },
+    ]);
+    const invalid = [
+      related({ id: 'x1', articles: 'nope' }),
+      related({ id: 'x2', articles: [article, { ...article, url: 'javascript:alert(1)' }] }),
+      related({ id: 'x3', articles: [{ ...article, bestRank: 0 }] }),
+      related({ id: 'x4', articles: [{ ...article, queries: [1] }] }),
+      related({ id: 'x5', queries: 'q' }),
+    ];
+    expect(followUpsOf(invalid)).toBeUndefined();
+  });
+
+  it('keeps a known fetch state and drops an unknown one', () => {
+    const [kept, dropped] = followUpsOf([
+      related({ id: 'k', articles: [{ ...article, fetchState: 'done' }] }),
+      related({ id: 'd', articles: [{ ...article, fetchState: 'weird' }] }),
+    ])!;
+    expect(kept!.articles![0]!.fetchState).toBe('done');
+    expect(dropped!.articles![0]).not.toHaveProperty('fetchState');
+  });
+
+  it('export then import keeps related articles', () => {
+    const items = [item('a', '2026-01-01T00:00:00.000Z', { followUps: [related({ model: 'qwen' })] as never })];
+    expect(parseImport(JSON.stringify(buildExportPayload(items))).items).toEqual(items);
+  });
+});

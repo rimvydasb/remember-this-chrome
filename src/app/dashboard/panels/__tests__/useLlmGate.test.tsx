@@ -32,7 +32,15 @@ describe('useLlmGate', () => {
     const access = result.current.begin()!;
     await expect(access.permission).resolves.toBeUndefined();
     expect(access.llm).toBe(DEFAULT_SETTINGS.llm);
-    expect(llm.requestLlmPermission).toHaveBeenCalledWith(DEFAULT_SETTINGS.llm.baseUrl);
+    expect(llm.requestLlmPermission).toHaveBeenCalledWith(DEFAULT_SETTINGS.llm.baseUrl, []);
+  });
+
+  it('asks for extra origins in the same request and names them when denied', async () => {
+    llm.requestLlmPermission.mockResolvedValue(false);
+    const { result } = renderHook(() => useLlmGate());
+    const access = result.current.begin(['https://www.google.com/*'])!;
+    await expect(access.permission).rejects.toThrow(/and https:\/\/www\.google\.com was denied/);
+    expect(llm.requestLlmPermission).toHaveBeenCalledWith(DEFAULT_SETTINGS.llm.baseUrl, ['https://www.google.com/*']);
   });
 
   it('rejects with an LlmError when the permission is denied', async () => {

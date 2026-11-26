@@ -1,3 +1,4 @@
+import { followUpsOfType } from './followUpRecords';
 import type { SavedItem } from './types';
 import { countWords } from './transcript';
 import { chapterUrl } from './videoDetails';
@@ -72,6 +73,16 @@ function detailSections(item: SavedItem, heading: string): string[] {
     lines.push(`${heading} Description`, '');
     lines.push(...description.split('\n').map((line) => (line.trim() ? `> ${line.trimEnd()}` : '>')));
     lines.push('');
+  }
+  const searches = followUpsOfType(item, 'related-articles').filter((followUp) => followUp.generatedContent.trim());
+  if (searches.length > 0) {
+    lines.push(`${heading} Related articles`, '');
+    for (const search of searches) {
+      const queries = search.queries?.length
+        ? ` for ${search.queries.map((q) => `“${escapeInline(q)}”`).join(', ')}`
+        : '';
+      lines.push(`Found ${search.createdAt}${queries}:`, '', search.generatedContent.trim(), '');
+    }
   }
   return lines;
 }

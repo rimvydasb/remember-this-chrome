@@ -16,13 +16,14 @@ The main design decision is the search transport (D1). An extension page calls `
 | --- | --- | --- |
 | `src/shared/types.ts` `FollowUpType` | `'llm-summary' \| 'user-question'` | Add `'related-articles'`; add `RelatedArticle` type |
 | `src/shared/importExport.ts` `parseFollowUp` | Rejects unknown follow-up types; requires `generatedContent` string | Accept `related-articles`; validate `articles` |
-| `src/shared/llm.ts` | `chat()` is private; `generateTags()` shows the pattern for JSON answers | Add `generateSearchQueries()` that reuses `chat()` |
+| `src/llm/client.ts` `LlmClient` | `complete()` sends one message; `src/followups/tagging/generateTags.ts` shows the pattern for JSON answers | Add `src/followups/related/generateSearchQueries.ts` that calls `LlmClient.complete()` |
+| `src/followups/` pipelines | `summary/`, `questions/`, `tagging/` implement `FollowUpPipeline`; `services.ts` wires them to storage | Add `related/RelatedArticlesPipeline.ts` and wire it in `services.ts` |
 | `src/shared/storage.ts` | `addFollowUp`, `updateFollowUp`, `deleteFollowUp` serialize writes | Reuse without change |
-| `src/dashboard/ItemReader.tsx` | Renders `Summary` and `Questions` blocks | Render `RelatedArticles` below `Questions` |
-| `src/dashboard/Questions.tsx`, `AiTagsButton.tsx` | Request host permission inside the click handler | Reuse the pattern for `https://www.google.com/*` |
+| `src/app/dashboard/panels/registry.tsx` | Lists the reader panels `Summary`, `Questions`, `VideoDetails` | Add the `RelatedArticles` panel after `Questions` |
+| `src/llm/permission.ts`, `panels/common/useLlmGate.ts` | Request the LLM host permission inside the click handler | Add `extraOrigins`, so one prompt asks for the LLM host and `https://www.google.com/*` |
 | `public/manifest.json` | `optional_host_permissions` is `http://*/*` and `https://*/*` | Add the `https://www.google.com/*` host as a requested permission at click time; no manifest change if the broad optional pattern already covers it |
 
-> Context: the optional host permissions cover the LLM server today. `requestLlmPermission` in `src/shared/llm.ts` shows the call shape. The follow-up storage model is in `src/shared/types.ts`.
+> Context: the optional host permissions cover the LLM server today. `requestLlmPermission` in `src/llm/permission.ts` shows the call shape. The follow-up storage model is in `src/shared/types.ts`. The story was written before commit `51a5b04` ("major refactoring") moved the code to `src/llm`, `src/followups` and `src/app/dashboard/panels`; the tables in this story use the paths after that commit.
 
 ## Design Decisions
 
@@ -34,6 +35,8 @@ The main design decision is the search transport (D1). An extension page calls `
 - **Rejected:** a hidden incognito window - incognito has none of the user's cookies, so Google serves the cookie consent page and a stricter bot check. Incognito also requires the user to enable "Allow in Incognito" for the extension.
 - **Rejected:** DuckDuckGo `html.duckduckgo.com/html` as the primary engine - the user asked for Google. A `curl` test returned the "anomaly" bot-check page. See D5.
 - **Revisit if:** Google serves the JavaScript stub or `/sorry/` pages to extension `fetch` calls (see Assumption A1). Then switch to D2.
+
+> Clarification: a second measurement on 2026-11-25, with the result page fetched by `fetch` inside a `google.com` tab, found that a full result page also contains the string `/httpservice/retry/enablejs` (in a `<noscript>` part). `searchGoogle()` therefore treats a page as the JavaScript stub only when it has 0 results and contains that string.
 
 > Assumption: A1. The measurement above ran `fetch` inside a `google.com` tab, so it sent same-origin headers (`Sec-Fetch-Site: same-origin`). A `fetch` from `chrome-extension://<id>` sends `Origin: chrome-extension://...` and `Sec-Fetch-Site: cross-site` or `none`, and Google may treat it differently. Verify in Phase 1: write `searchGoogle()` first, run it from the dashboard page, and count the parsed results. The spike result decides between D1 and D2.
 
@@ -75,7 +78,7 @@ The main design decision is the search transport (D1). An extension page calls `
 
 ### D6: The block appears for every item type
 
-- **Decision:** `ItemReader` renders `RelatedArticles` for `youtube_transcript` and `webpage_text` items.
+- **Decision:** the reader renders `RelatedArticles` for `youtube_transcript` and `webpage_text` items.
 - **Reason:** the code does not depend on the item type. `PromptItem` already carries both types, and `Questions` already switches its wording by type.
 - **Rejected:** a block for `youtube_transcript` only - adds a type check and hides a working feature for page items.
 
@@ -134,13 +137,21 @@ sequenceDiagram
 
 | Component | File | Responsibility |
 | --- | --- | --- |
-| `RelatedArticles` | `src/dashboard/RelatedArticles.tsx` | Block with the button, progress, error text, and the saved list |
-| `generateSearchQueries` | `src/shared/llm.ts` | Builds `QUERY_PROMPT`, calls `chat()`, returns `parseQueries()` output |
-| `parseQueries` | `src/shared/llm.ts` | Reads a JSON array or lines; trims, deduplicates, drops queries over 20 words |
-| `buildFallbackQueries` | `src/shared/relatedQueries.ts` | Builds queries from title and tags without an LLM |
+| `RelatedArticles` | `src/app/dashboard/panels/related/RelatedArticles.tsx` | Block with the button, progress, error text, cooldown, and the saved list |
+| `useRelatedArticles` | `src/app/dashboard/panels/related/useRelatedArticles.ts` | Requests the permissions, runs the pipeline, holds progress, error, and cooldown |
+| `readCooldown`, `startCooldown` | `src/app/dashboard/panels/related/cooldown.ts` | Keeps the 10-minute cooldown in `localStorage` |
+| `RelatedArticlesPipeline` | `src/followups/related/RelatedArticlesPipeline.ts` | Queries, spaced searches, `mergeHits()`, `addFollowUp()` |
+| `generateSearchQueries` | `src/followups/related/generateSearchQueries.ts` | Builds the message with `QUERY_PROMPT`, calls `LlmClient.complete()`, returns `parseQueries()` output |
+| `QUERY_PROMPT`, `buildQueryMessage` | `src/followups/related/prompt.ts` | The prompt text and the message with title, channel, description, and text |
+| `parseQueries` | `src/followups/related/parseQueries.ts` | Reads a JSON array or lines; trims, deduplicates, drops queries over 20 words |
+| `buildFallbackQueries` | `src/followups/related/fallbackQueries.ts` | Builds queries from title and tags without an LLM |
 | `searchGoogle` | `src/shared/googleSearch.ts` | Fetches one result page and returns `SearchHit[]` (D1) |
 | `parseGoogleResults` | `src/shared/googleSearch.ts` | Pure function: HTML string to `SearchHit[]`. Unit-tested with saved HTML |
 | `mergeHits` | `src/shared/googleSearch.ts` | Deduplicates by normalized URL, sorts by number of queries, then rank |
+
+> Rationale: the pipeline and the query code are a follow-up module in `src/followups/related/`, like `summary/` and `tagging/`, because `.dependency-cruiser.cjs` keeps follow-up modules independent and the LLM transport free of follow-up code. `buildFallbackQueries` is in that module instead of `src/shared/relatedQueries.ts` for the same reason. `searchGoogle` stays in `src/shared/` because it is a framework-free transport that a later phase can reuse.
+
+> Clarification: when Google blocks a query after earlier queries returned results, the pipeline stops, saves the results found so far, and the panel starts the cooldown. When nothing was found, the pipeline saves nothing and the panel shows the error with the queries. The cooldown is in `localStorage`, so it holds for every item and survives a reload; losing it only allows an earlier retry.
 
 ### Search rules
 
@@ -160,7 +171,7 @@ sequenceDiagram
 
 > Assumption: A3. The delay of 1.5 to 3 seconds and the limit of 5 queries per click avoid the `/sorry/` page. No test measured this. Verify by running 10 clicks in a row during Phase 1 and counting `/sorry/` redirects.
 
-> Assumption: A4. The `a:has(h3)` selector matches Google's current markup. Google changes class names often but has kept `h3` inside result links for years. The Phase 1 test fixture `google-serp.html` pins the markup that was measured on 2026-11-25. When Google changes the markup, update the fixture and the selector together.
+> Assumption: A4. The `a:has(h3)` selector matches Google's current markup. Google changes class names often but has kept `h3` inside result links for years. The Phase 1 test fixture `google-serp.html` pins the markup that was measured on 2026-11-25: result blocks are `#rso > div.MjjYud`, the link is `a.zReHs` with a direct `https://` href around the `h3`, and the snippet is `div.VwiC3b` with a `span.YrbPuc` date prefix and an optional `a.vzmbzf` "Read more" link. The fixture keeps that nesting and those class names; the browser tool that read the page blocks output with query strings, so the fixture was rebuilt from the measured block markup and the 10 measured results, without tracking parameters. When Google changes the markup, update the fixture and the selector together.
 
 > Risk: scraping Google violates its terms of service and can lead to a CAPTCHA for the user's IP and account session. The feature runs only on a user click, with a small number of requests. The cooldown limits the harm. If the CAPTCHA appears often, switch to D2. D5 rules out a second engine for this story.
 
@@ -177,7 +188,7 @@ sequenceDiagram
 
 ### User interface
 
-- **Block:** "Related articles" in `ItemReader`, below `Questions`, built with `ContentBlock` (`storageKey="related"`).
+- **Block:** "Related articles" in the reader, below `Questions`, built with `ContentBlock` (`storageKey="related"`).
 - **Button:** "Find related articles", violet outline like `AiTagsButton`. While it works, it shows a loader and the step: "Writing queries…", "Searching 2 of 4…".
 - **Result:** a list of links. Each row shows the title, the host, and the queries that found it. A link opens in a new tab with `rel="noreferrer"`.
 - **Repeat:** a second click adds a new follow-up and keeps the old one. Each follow-up has a delete action and shows its date and queries.
@@ -208,62 +219,104 @@ sequenceDiagram
 
 The project has no E2E setup, so this story has no E2E phase.
 
+## Measurements
+
+| Assumption | Result on 2026-11-25 |
+| --- | --- |
+| A1 (extension-origin `fetch` gets the full page) | Not measured. The browser tool cannot open `chrome-extension://` pages. |
+| A2 (cookies attached to extension `fetch`) | Not measured, same cause as A1. |
+| A3 (10 spaced queries cause no `/sorry/`) | Not measured, same cause as A1. |
+| A4 (`a:has(h3)` matches) | Confirmed in a `google.com` tab: 10 results, all with direct hrefs, all inside `#rso`. |
+
+> Todo: run the snippet below in the DevTools console of the dashboard page (`dashboard.html` of the dev build) after one click on "Find related articles" granted the Google permission. Record `withCookies` (A1), `withoutCookies` (A2), and `sorry` (A3) in the table above. If `withCookies` is below 8 or shows the stub, implement D2.
+
+```js
+const run = async (q, credentials) => {
+  const r = await fetch(`https://www.google.com/search?${new URLSearchParams({ q, hl: 'en', udm: '14', pws: '0' })}`, {
+    credentials,
+  });
+  const html = await r.text();
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const hits = [...doc.querySelectorAll('#search a[href]')].filter((a) => a.querySelector('h3')).length;
+  return { status: r.status, sorry: r.url.includes('/sorry/'), hits };
+};
+const withCookies = await run('sleep deprivation memory study', 'include');
+const withoutCookies = await run('sleep deprivation memory study', 'omit');
+const sorry = [];
+for (const q of [
+  'rem sleep learning',
+  'caffeine memory study',
+  'hippocampus sleep replay',
+  'insomnia cognition',
+  'nap memory consolidation',
+  'sleep spindles memory',
+  'all-nighter exam performance',
+  'sleep and emotional memory',
+  'melatonin memory',
+  'sleep deprivation attention',
+]) {
+  await new Promise((done) => setTimeout(done, 1500 + Math.random() * 1500));
+  sorry.push((await run(q, 'include')).sorry);
+}
+console.log({ withCookies, withoutCookies, sorry: sorry.filter(Boolean).length });
+```
+
 ## Tasks
 
 **Phase 1: Search spike and parser (settles A1, A2, A3, A4):**
 
-- [ ] Ensure project compiles and existing tests are passing
-- [ ] Add `src/shared/googleSearch.ts` with `searchGoogle()`, `parseGoogleResults()`, and `mergeHits()` (D1)
-- [ ] Save one real result page as `src/shared/__tests__/fixtures/google-serp.html` and test the parser against it
-- [ ] Run `searchGoogle()` from the dashboard page with the extension loaded; record the result of A1 and A2 in this story. If A1 fails, implement D2 and record why.
-- [ ] Run 10 queries in a row and record the number of `/sorry/` redirects (A3)
-- [ ] Add tests for the code of this phase
+- [x] Ensure project compiles and existing tests are passing
+- [x] Add `src/shared/googleSearch.ts` with `searchGoogle()`, `parseGoogleResults()`, and `mergeHits()` (D1)
+- [x] Save one real result page as `src/shared/__tests__/fixtures/google-serp.html` and test the parser against it
+- [ ] Run `searchGoogle()` from the dashboard page with the extension loaded; record the result of A1 and A2 in this story. If A1 fails, implement D2 and record why. (see `## Measurements`)
+- [ ] Run 10 queries in a row and record the number of `/sorry/` redirects (A3) (see `## Measurements`)
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `parseGoogleResults extracts 10 links from the fixture`
-- [ ] `npm test` passes, including `mergeHits deduplicates by normalized URL and orders by query count`
+- [x] `npm test` passes, including `parseGoogleResults extracts 10 links from the fixture`
+- [x] `npm test` passes, including `mergeHits deduplicates by normalized URL and orders by query count`
 - [ ] Manual: `searchGoogle('sleep deprivation memory study')` from the dashboard console returns at least 8 hits
 - [ ] The story states the measured results of A1 to A3
 
 **Phase 2: Queries and storage:**
 
-- [ ] Add `'related-articles'`, `RelatedArticle`, `articles`, and `queries` to `src/shared/types.ts` (D4)
-- [ ] Update `parseFollowUp` in `src/shared/importExport.ts` to accept and validate the new type
-- [ ] Add `QUERY_PROMPT`, `parseQueries()`, and `generateSearchQueries()` to `src/shared/llm.ts` (D3)
-- [ ] Add `buildFallbackQueries()` in `src/shared/relatedQueries.ts`
-- [ ] Render a `related-articles` follow-up as Markdown in the Markdown export
-- [ ] Add tests for the code of this phase
+- [x] Add `'related-articles'`, `RelatedArticle`, `articles`, and `queries` to `src/shared/types.ts` (D4)
+- [x] Update `parseFollowUp` in `src/shared/importExport.ts` to accept and validate the new type
+- [x] Add `QUERY_PROMPT`, `parseQueries()`, and `generateSearchQueries()` to `src/shared/llm.ts` (D3)
+- [x] Add `buildFallbackQueries()` in `src/shared/relatedQueries.ts`
+- [x] Render a `related-articles` follow-up as Markdown in the Markdown export
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `parseQueries reads a JSON array inside a code fence`
-- [ ] `npm test` passes, including `import accepts a related-articles follow-up and rejects an invalid articles list`
-- [ ] `npm test` passes, including `export then import keeps related articles`
-- [ ] `npm run typecheck` and `npm run depcruise` pass
+- [x] `npm test` passes, including `parseQueries reads a JSON array inside a code fence`
+- [x] `npm test` passes, including `import accepts a related-articles follow-up and rejects an invalid articles list`
+- [x] `npm test` passes, including `export then import keeps related articles`
+- [x] `npm run typecheck` and `npm run depcruise` pass
 
 **Phase 3: Button and block:**
 
-- [ ] Add `src/dashboard/RelatedArticles.tsx` with the button, progress, error, list, and delete action
-- [ ] Request the Google host permission inside the click handler, before any `await`
-- [ ] Add the cooldown after an abort condition
-- [ ] Render the block in `ItemReader.tsx` below `Questions`
-- [ ] Add tests for the code of this phase, for a video item and for a page item (D6)
+- [x] Add `src/app/dashboard/panels/related/RelatedArticles.tsx` with the button, progress, error, list, and delete action
+- [x] Request the Google host permission inside the click handler, before any `await`
+- [x] Add the cooldown after an abort condition
+- [x] Render the block below `Questions` (`panels/registry.tsx`; `ItemReader.tsx` renders the registered panels)
+- [x] Add tests for the code of this phase, for a video item and for a page item (D6)
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `RelatedArticles renders for a webpage_text item`
-- [ ] `npm test` passes, including `RelatedArticles saves a follow-up after a successful search`
-- [ ] `npm test` passes, including `RelatedArticles shows the cooldown after a /sorry/ response`
+- [x] `npm test` passes, including `RelatedArticles renders for a webpage_text item`
+- [x] `npm test` passes, including `RelatedArticles saves a follow-up after a successful search`
+- [x] `npm test` passes, including `RelatedArticles shows the cooldown after a /sorry/ response`
 - [ ] Manual: click the button on a saved video with the dev build; links appear and survive a page reload
 
 **Phase X:**
 
-- [ ] Update `README.md`: feature list, permissions, and the privacy statement about Google requests
-- [ ] Update `docs/todo.md` with the Phase II task "fetch related articles"
-- [ ] Review the implementation against this story and the project conventions
+- [x] Update `README.md`: feature list, permissions, and the privacy statement about Google requests
+- [x] Update `docs/todo.md` with the Phase II task "fetch related articles"
+- [x] Review the implementation against this story and the project conventions
 
 Acceptance criteria:
 
 - [ ] Every command in `## Verification` passes
-- [ ] The application starts with the Start command
+- [x] The application starts with the Start command

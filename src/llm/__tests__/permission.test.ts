@@ -17,6 +17,11 @@ describe('LLM permission', () => {
     expect(permissions.request).toHaveBeenCalledWith({ origins: ['http://192.168.1.220/*'] });
   });
 
+  it('asks for extra origins in the same request', async () => {
+    await requestLlmPermission('http://localhost:1234', ['https://www.google.com/*']);
+    expect(permissions.request).toHaveBeenCalledWith({ origins: ['http://localhost/*', 'https://www.google.com/*'] });
+  });
+
   it('rejects an invalid address without asking Chrome', async () => {
     await expect(requestLlmPermission('nope')).rejects.toBeInstanceOf(LlmError);
     expect(permissions.request).not.toHaveBeenCalled();

@@ -265,6 +265,23 @@ body {
   padding: 10px 14px 12px;
 }
 
+/* Related articles: one row per found page. */
+.rt-related-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rt-related-article {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+
 /* Settings dialog: vertical section tabs and prompt editors. */
 .rt-settings-tabs {
   min-height: 460px;

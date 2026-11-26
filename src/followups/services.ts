@@ -1,6 +1,7 @@
 import * as storage from '../shared/storage';
 import { QuestionPipeline } from './questions/QuestionPipeline';
 import type { ItemStore } from './ports';
+import { RelatedArticlesPipeline } from './related/RelatedArticlesPipeline';
 import { SummaryPipeline } from './summary/SummaryPipeline';
 import { TaggingPipeline } from './tagging/TaggingPipeline';
 
@@ -19,3 +20,4 @@ const store: ItemStore = {
 export const summaryPipeline = new SummaryPipeline({ store });
 export const questionPipeline = new QuestionPipeline({ store });
 export const taggingPipeline = new TaggingPipeline({ store });
+export const relatedArticlesPipeline = new RelatedArticlesPipeline({ store });

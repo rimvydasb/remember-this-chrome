@@ -104,3 +104,35 @@ describe('markdown export of video details', () => {
     expect(itemToMarkdown(item)).not.toContain('Transcript');
   });
 });
+
+describe('related articles in the Markdown export', () => {
+  it('lists each search with its date, queries and links', () => {
+    const markdown = itemToMarkdown({
+      ...item,
+      followUps: [
+        {
+          id: 'r',
+          type: 'related-articles',
+          generatedContent: '- [Sleep study](<https://news.example/sleep>)',
+          createdAt: '2026-11-25T10:00:00.000Z',
+          queries: ['sleep memory'],
+        },
+        {
+          id: 'q',
+          type: 'user-question',
+          userContent: 'Why?',
+          generatedContent: 'Because.',
+          createdAt: '2026-11-25T10:00:00.000Z',
+        },
+      ],
+    });
+    expect(markdown).toContain(
+      '## Related articles\n\nFound 2026-11-25T10:00:00.000Z for “sleep memory”:\n\n- [Sleep study](<https://news.example/sleep>)\n',
+    );
+    expect(markdown.indexOf('## Related articles')).toBeLessThan(markdown.indexOf('## Transcript'));
+  });
+
+  it('has no section without searches', () => {
+    expect(itemToMarkdown(item)).not.toContain('Related articles');
+  });
+});

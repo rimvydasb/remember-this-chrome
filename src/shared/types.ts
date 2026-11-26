@@ -36,13 +36,34 @@ export interface ItemMeta {
 }
 
 /** Kinds of follow-up work done on a saved item. */
-export type FollowUpType = 'llm-summary' | 'user-question';
+export type FollowUpType = 'llm-summary' | 'user-question' | 'related-articles';
 
-export const FOLLOW_UP_TYPES: readonly FollowUpType[] = ['llm-summary', 'user-question'];
+export const FOLLOW_UP_TYPES: readonly FollowUpType[] = ['llm-summary', 'user-question', 'related-articles'];
+
+/** Phase II state of fetching a related article. Phase I leaves it unset. */
+export type RelatedArticleFetchState = 'pending' | 'done' | 'failed';
+
+export const RELATED_ARTICLE_FETCH_STATES: readonly RelatedArticleFetchState[] = ['pending', 'done', 'failed'];
+
+/** A web page that a search for an item found. */
+export interface RelatedArticle {
+  /** Canonical result URL, without Google tracking parameters. */
+  url: string;
+  /** Text of the result heading. */
+  title: string;
+  /** Result description, when the page has one. */
+  snippet?: string;
+  /** The queries that returned this URL, best rank first. */
+  queries: string[];
+  /** Best 1-based rank over all queries. */
+  bestRank: number;
+  /** Reserved for Phase II (fetching the articles). */
+  fetchState?: RelatedArticleFetchState;
+}
 
 /**
- * A result of follow-up work on a saved item: an LLM summary of the transcript, or a question of
- * the user with the LLM answer.
+ * A result of follow-up work on a saved item: an LLM summary of the transcript, a question of
+ * the user with the LLM answer, or the articles that a web search for the item found.
  */
 export interface FollowUp {
   id: string;
@@ -55,6 +76,10 @@ export interface FollowUp {
   createdAt: string;
   /** The model that produced the content, when an LLM made it. */
   model?: string;
+  /** The articles found, for type `related-articles`. `generatedContent` has the same links as Markdown. */
+  articles?: RelatedArticle[];
+  /** The search queries that were run, for type `related-articles`. */
+  queries?: string[];
 }
 
 /** Tags that an LLM generated for an item. Items without them get tags by keyword extraction. */
