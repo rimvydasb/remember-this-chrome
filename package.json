@@ -16,7 +16,8 @@
     "lint": "oxlint --quiet",
     "lint:all": "oxlint",
     "depcruise": "depcruise . --config .dependency-cruiser.cjs --ignore-known --output-type err-long",
-    "depcruise:baseline": "depcruise-baseline . --config .dependency-cruiser.cjs"
+    "depcruise:baseline": "depcruise-baseline . --config .dependency-cruiser.cjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@mantine/core": "^9.8.0",
@@ -33,6 +34,7 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@swc/core": "^1.16.22",
     "@testing-library/jest-dom": "^8.0.0",
     "@testing-library/react": "^16.3.3",

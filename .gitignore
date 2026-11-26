@@ -152,3 +152,8 @@ vite.config.ts.timestamp-*
 .idea
 # Extension build output
 dist/
+
+# Playwright
+.e2e/
+test-results/
+playwright-report/
