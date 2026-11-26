@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Graphite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* ============ tokens ============ */
+  :root {
+    --bg: #f7f7f8; --panel: #ffffff; --raised: #f3f3f5; --hover: #ededf0; --overlay: rgba(10, 11, 13, .35);
+    --line: #e6e6ea; --line-2: #d6d6dc;
+    --text: #121318; --text-2: #3f424b; --muted: #6c707a; --faint: #9a9ea8;
+    --accent: #4f5bd5; --accent-soft: #eceefe; --accent-text: #3a45b8; --on-accent: #fff;
+    --ok: #2f9e44; --warn: #e8590c; --err: #e03131;
+    --mark: rgba(79, 91, 213, .16);
+    --code-var: #4f5bd5; --code-sec: #b35c00; --code-txt: #3f424b;
+    --shadow: 0 24px 48px -24px rgba(16, 18, 24, .28);
+
+    /* Tag chips: Mantine "light" variant, the same colors the app uses today. */
+    --c-green: #2f9e44; --c-green-bg: rgba(64, 192, 87, .12);
+    --c-lime: #5c940d;  --c-lime-bg: rgba(130, 201, 30, .14);
+    --c-gray: #495057;  --c-gray-bg: rgba(134, 142, 150, .14);
+    --c-yellow: #e67700; --c-yellow-bg: rgba(250, 176, 5, .14);
+    --c-orange: #e8590c; --c-orange-bg: rgba(253, 126, 20, .12);
+    --c-red: #e03131;   --c-red-bg: rgba(250, 82, 82, .10);
+    --c-navy: #1e3a75;  --c-navy-bg: rgba(47, 79, 143, .10);
+    --c-grape: #9c36b5; --c-grape-bg: rgba(190, 75, 219, .10);
+    --c-green-f: #2f9e44; --c-lime-f: #74b816; --c-gray-f: #868e96; --c-yellow-f: #f59f00; --c-orange-f: #f76707; --c-red-f: #f03e3e; --c-navy-f: #1e3a75;
+
+    --sans: "Inter", -apple-system, system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a0b0d; --panel: #101114; --raised: #16181c; --hover: #1c1e23; --overlay: rgba(0, 0, 0, .55);
+      --line: #1f2227; --line-2: #2b2f36;
+      --text: #e8e9ec; --text-2: #b9bcc4; --muted: #868b95; --faint: #5c616b;
+      --accent: #8b95ff; --accent-soft: rgba(139, 149, 255, .13); --accent-text: #a9b1ff; --on-accent: #0a0b0d;
+      --ok: #69db7c; --warn: #ffa94d; --err: #ff8787;
+      --mark: rgba(139, 149, 255, .24);
+      --code-var: #a9b1ff; --code-sec: #f0b44c; --code-txt: #b9bcc4;
+      --shadow: 0 30px 60px -30px rgba(0, 0, 0, .7);
+      --c-green: #69db7c; --c-green-bg: rgba(64, 192, 87, .15);
+      --c-lime: #a9e34b;  --c-lime-bg: rgba(130, 201, 30, .15);
+      --c-gray: #ced4da;  --c-gray-bg: rgba(134, 142, 150, .15);
+      --c-yellow: #ffd43b; --c-yellow-bg: rgba(250, 176, 5, .15);
+      --c-orange: #ffa94d; --c-orange-bg: rgba(253, 126, 20, .15);
+      --c-red: #ff8787;   --c-red-bg: rgba(250, 82, 82, .15);
+      --c-navy: #8da6d3;  --c-navy-bg: rgba(74, 106, 168, .18);
+      --c-grape: #e599f7; --c-grape-bg: rgba(190, 75, 219, .15);
+      --c-navy-f: #4a6aa8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a0b0d; --panel: #101114; --raised: #16181c; --hover: #1c1e23; --overlay: rgba(0, 0, 0, .55);
+    --line: #1f2227; --line-2: #2b2f36;
+    --text: #e8e9ec; --text-2: #b9bcc4; --muted: #868b95; --faint: #5c616b;
+    --accent: #8b95ff; --accent-soft: rgba(139, 149, 255, .13); --accent-text: #a9b1ff; --on-accent: #0a0b0d;
+    --ok: #69db7c; --warn: #ffa94d; --err: #ff8787;
+    --mark: rgba(139, 149, 255, .24);
+    --code-var: #a9b1ff; --code-sec: #f0b44c; --code-txt: #b9bcc4;
+    --shadow: 0 30px 60px -30px rgba(0, 0, 0, .7);
+    --c-green: #69db7c; --c-green-bg: rgba(64, 192, 87, .15);
+    --c-lime: #a9e34b;  --c-lime-bg: rgba(130, 201, 30, .15);
+    --c-gray: #ced4da;  --c-gray-bg: rgba(134, 142, 150, .15);
+    --c-yellow: #ffd43b; --c-yellow-bg: rgba(250, 176, 5, .15);
+    --c-orange: #ffa94d; --c-orange-bg: rgba(253, 126, 20, .15);
+    --c-red: #ff8787;   --c-red-bg: rgba(250, 82, 82, .15);
+    --c-navy: #8da6d3;  --c-navy-bg: rgba(74, 106, 168, .18);
+    --c-grape: #e599f7; --c-grape-bg: rgba(190, 75, 219, .15);
+    --c-navy-f: #4a6aa8;
+  }
+
+  /* ============ base ============ */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.5 var(--sans); -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01"; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; }
+  .mono { font-family: var(--mono); }
+  i[data-i] { display: inline-flex; width: 1.15em; height: 1.15em; flex-shrink: 0; vertical-align: -.2em; }
+  i[data-i] svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .doc { max-width: 1360px; margin: 0 auto; padding: 40px 16px 96px; }
+  .topnav { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--muted); margin-bottom: 56px; flex-wrap: wrap; }
+  .topnav label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+  .eyebrow { font: 500 12px var(--mono); color: var(--accent); }
+  h1.page { font-size: clamp(36px, 6vw, 56px); font-weight: 700; letter-spacing: -.035em; line-height: 1.02; margin: 12px 0 16px; display: flex; align-items: center; gap: 16px; }
+  .lede { font-size: 17px; color: var(--text-2); max-width: 720px; margin: 0; line-height: 1.6; }
+  h2.sec-title { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin: 80px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 720px; font-size: 14px; }
+  .changes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 40px; }
+  .changes div { background: var(--panel); padding: 14px 16px; }
+  .changes b { display: block; font-weight: 600; margin-bottom: 2px; }
+  .changes span { color: var(--muted); }
+  .changes em { font: 500 11px var(--mono); color: var(--accent); font-style: normal; margin-right: 6px; }
+
+  /* ============ primitives ============ */
+  .frame { background: var(--panel); border: 1px solid var(--line-2); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+  kbd { font: 500 10.5px var(--mono); color: var(--muted); background: var(--raised); border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 5px; }
+  .btn { font: 500 12.5px var(--sans); border-radius: 6px; padding: 6px 10px; border: 1px solid var(--line-2); background: var(--raised); color: var(--text); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .btn:hover { background: var(--hover); }
+  .btn.primary { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+  .btn.ghost:hover { background: var(--hover); color: var(--text); }
+  .btn.sm { padding: 3px 7px; font-size: 12px; }
+  .icon-btn { width: 30px; height: 30px; display: inline-grid; place-items: center; border-radius: 7px; border: 1px solid transparent; background: transparent; color: var(--muted); cursor: pointer; position: relative; }
+  .icon-btn:hover { background: var(--hover); color: var(--text); }
+  .icon-btn.bordered { border-color: var(--line-2); background: var(--raised); color: var(--text-2); }
+  .meta { color: var(--muted); font-size: 12px; }
+  .thumb { background: linear-gradient(135deg, #2a3242, #6c5a8a); border-radius: 4px; }
+  .thumb.b { background: linear-gradient(135deg, #1d3a34, #4c8c74); }
+  .thumb.c { background: linear-gradient(135deg, #3b2524, #b0684e); }
+  .thumb.d { background: linear-gradient(135deg, #1b2840, #4d78b8); }
+  .thumb.e { background: linear-gradient(135deg, #2e2a1f, #a08a4e); }
+  mark { background: var(--mark); color: var(--text); border-radius: 2px; padding: 0 2px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); flex-shrink: 0; }
+  .dot.warn { background: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 22%, transparent); }
+  .dot.err { background: var(--err); box-shadow: 0 0 0 3px color-mix(in srgb, var(--err) 22%, transparent); }
+  .dot.off { background: var(--faint); box-shadow: none; }
+  .dot.pulse { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 0%, transparent); } }
+  .switch { width: 30px; height: 18px; border-radius: 9px; background: var(--accent); position: relative; flex-shrink: 0; }
+  .switch::after { content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; top: 2px; right: 2px; }
+  .switch.off { background: var(--line-2); } .switch.off::after { right: auto; left: 2px; }
+  .bar { height: 4px; background: var(--line-2); border-radius: 2px; overflow: hidden; } .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+
+  /* Tag chips (same colors and icons as today) */
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; font: 500 11.5px var(--sans); padding: 0 7px; border-radius: 4px; white-space: nowrap; border: 0; cursor: pointer; }
+  .chip i[data-i] { width: 11px; height: 11px; vertical-align: 0; }
+  .chip em { font: 500 10.5px var(--mono); font-style: normal; opacity: .75; margin-left: 2px; }
+  .c-green { color: var(--c-green); background: var(--c-green-bg); }
+  .c-lime { color: var(--c-lime); background: var(--c-lime-bg); }
+  .c-gray { color: var(--c-gray); background: var(--c-gray-bg); }
+  .c-yellow { color: var(--c-yellow); background: var(--c-yellow-bg); }
+  .c-orange { color: var(--c-orange); background: var(--c-orange-bg); }
+  .c-red { color: var(--c-red); background: var(--c-red-bg); }
+  .c-navy { color: var(--c-navy); background: var(--c-navy-bg); }
+  .c-grape { color: var(--c-grape); background: var(--c-grape-bg); }
+  .chip.on { color: #fff; }
+  .c-green.on { background: var(--c-green-f); } .c-lime.on { background: var(--c-lime-f); } .c-gray.on { background: var(--c-gray-f); }
+  .c-yellow.on { background: var(--c-yellow-f); } .c-orange.on { background: var(--c-orange-f); } .c-red.on { background: var(--c-red-f); } .c-navy.on { background: var(--c-navy-f); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  /* annotation pins */
+  .pin { position: absolute; top: -9px; right: -9px; width: 18px; height: 18px; border-radius: 50%; background: #f59f00; color: #111; font: 700 10.5px var(--sans); display: grid; place-items: center; z-index: 5; box-shadow: 0 0 0 2px var(--panel); pointer-events: none; }
+  body:not(.annotate) .pin { display: none; }
+  .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 24px; margin-top: 18px; color: var(--text-2); }
+  .legend div { display: flex; gap: 10px; align-items: flex-start; }
+  .legend .pin { position: static; flex-shrink: 0; box-shadow: none; }
+  body:not(.annotate) .legend { display: none; }
+
+  /* ============ app icon ============ */
+  .variants { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .variant { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); cursor: pointer; }
+  .variant:hover { border-color: var(--line-2); }
+  .variant.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .vb { display: grid; grid-template-rows: auto auto; }
+  .vs { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 16px; }
+  .vs.dark { background: #16181c; padding: 22px 16px; }
+  .vs.light { background: #f1f2f4; padding: 10px 16px; }
+  .vn { padding: 10px 12px; border-top: 1px solid var(--line); }
+  .vn b { display: block; font-size: 13px; } .vn span { color: var(--muted); font-size: 12px; }
+  .appicon { display: inline-block; line-height: 0; }
+
+  /* ============ popup ============ */
+  .popup-row { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
+  .popup { width: 360px; max-width: 100%; }
+  .p-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px 10px 14px; border-bottom: 1px solid var(--line); }
+  .logo { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 13.5px; white-space: nowrap; }
+  .p-body { padding: 14px; }
+  .p-video { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; }
+  .p-video .thumb { aspect-ratio: 16/9; }
+  .p-video h3 { margin: 0 0 4px; font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font: 11.5px var(--mono); margin: 12px 0; padding: 10px 12px; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; }
+  .kv dt { color: var(--faint); } .kv dd { margin: 0; color: var(--text-2); text-align: right; }
+  .kv .ok { color: var(--ok); }
+  .p-cta { display: flex; gap: 8px; } .p-cta .btn.primary { flex: 1; justify-content: center; padding: 8px; }
+  .p-foot { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; }
+  .note { flex: 1; min-width: 260px; }
+  .note h4 { margin: 0 0 8px; font-size: 14px; }
+  .note ul { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 13.5px; } .note li { margin-bottom: 6px; }
+
+  /* ============ dashboard ============ */
+  .app { display: grid; grid-template-rows: 52px 1fr; height: 900px; position: relative; }
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); }
+  .topbar .logo { width: 204px; }
+  .cmd { flex: 1; max-width: 560px; display: flex; align-items: center; gap: 8px; background: var(--raised); border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 10px; color: var(--muted); }
+  .cmd span { flex: 1; color: var(--text); } .cmd em { font-style: normal; color: var(--faint); font: 11.5px var(--mono); }
+  .tb-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+  .tb-sep { width: 1px; height: 20px; background: var(--line-2); margin: 0 6px; }
+  .ai-pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 15px; border: 1px solid var(--line-2); background: var(--raised); cursor: pointer; color: var(--text-2); font-size: 12px; position: relative; }
+  .ai-pill:hover { border-color: var(--accent); }
+  .ai-pill b { font-weight: 500; color: var(--text); }
+  .ai-pill .mini { width: 34px; height: 3px; background: var(--line-2); border-radius: 2px; overflow: hidden; } .ai-pill .mini i { display: block; height: 100%; width: 42%; background: var(--accent); }
+
+  .cols { display: grid; grid-template-columns: 216px 420px minmax(0, 1fr); min-height: 0; transition: grid-template-columns .18s ease; }
+  .app.side-collapsed .cols { grid-template-columns: 52px 420px minmax(0, 1fr); }
+
+  /* One sub-header band: the same height and bottom line in all three columns. */
+  .subbar { height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .side { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .side .subbar { padding: 0 8px 0 14px; justify-content: space-between; }
+  .side .subbar .ttl { font: 500 10.5px var(--mono); color: var(--faint); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .side-body { padding: 8px; overflow: auto; flex: 1; }
+  .side .collapse-btn i[data-i] { transition: transform .18s ease; }
+  .app.side-collapsed .side .subbar { padding: 0; justify-content: center; }
+  .app.side-collapsed .side .subbar .ttl,
+  .app.side-collapsed .side .lbl,
+  .app.side-collapsed .side .nav small,
+  .app.side-collapsed .side .grp span { display: none; }
+  .app.side-collapsed .side .collapse-btn i[data-i] { transform: rotate(180deg); }
+  .app.side-collapsed .side-body { padding: 8px 6px; }
+  .app.side-collapsed .side .nav { justify-content: center; padding: 7px 0; }
+  .app.side-collapsed .side .grp { justify-content: center; padding: 10px 0 6px; border-top: 1px solid var(--line); margin-top: 8px; }
+  .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mono-ic { width: 18px; height: 18px; border-radius: 5px; display: inline-grid; place-items: center; font: 700 10px var(--sans); flex-shrink: 0; background: var(--raised); color: var(--text-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+  .nav.on .mono-ic { background: var(--accent); color: var(--on-accent); box-shadow: none; }
+  .grp { font: 500 10.5px var(--mono); color: var(--faint); text-transform: uppercase; letter-spacing: .06em; padding: 16px 8px 6px; display: flex; justify-content: space-between; align-items: center; }
+  .nav { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; color: var(--text-2); cursor: pointer; }
+  .nav:hover { background: var(--hover); }
+  .nav.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 500; }
+  .nav i[data-i] { color: var(--faint); } .nav.on i[data-i] { color: var(--accent); }
+  .nav small { margin-left: auto; font: 11px var(--mono); color: var(--faint); }
+
+  .list { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .lhead .inline-f { flex: 1; min-width: 0; display: flex; gap: 4px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .lhead .inline-f .chip { flex-shrink: 0; }
+  .lhead .count-txt { font: 11.5px var(--mono); color: var(--faint); white-space: nowrap; }
+  .ftoggle { position: relative; }
+  .ftoggle .count { font: 600 10.5px var(--mono); background: var(--accent); color: var(--on-accent); border-radius: 8px; padding: 0 5px; }
+  .ftoggle .chev { transition: transform .15s ease; }
+  .list.f-open .ftoggle { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+  .list.f-open .ftoggle .chev { transform: rotate(180deg); }
+  .fpanel { display: none; border-bottom: 1px solid var(--line); background: var(--raised); padding: 4px 12px 12px; max-height: 470px; overflow: auto; }
+  .list.f-open .fpanel { display: block; }
+  .fgroup { padding: 10px 0 2px; border-bottom: 1px dashed var(--line-2); }
+  .fgroup:last-of-type { border-bottom: 0; }
+  .fgroup h6 { margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; font: 600 11.5px var(--sans); color: var(--text-2); cursor: pointer; }
+  .fgroup h6 small { font: 400 11px var(--sans); color: var(--faint); margin-left: 6px; }
+  .fgroup h6 .r { font: 11px var(--mono); color: var(--faint); font-weight: 400; display: flex; gap: 8px; align-items: center; }
+  .fgroup .chips { padding-bottom: 8px; }
+  .fgroup.collapsed .chips, .fgroup.collapsed .seg, .fgroup.collapsed .finder { display: none; }
+  .fgroup.collapsed h6 .chev { transform: rotate(-90deg); }
+  .seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line-2); border-radius: 7px; padding: 2px; margin-bottom: 8px; }
+  .seg span { padding: 3px 10px; border-radius: 5px; color: var(--muted); cursor: pointer; font-size: 12px; }
+  .seg .on { background: var(--raised); color: var(--text); box-shadow: 0 0 0 1px var(--line-2); }
+  .finder { display: flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 6px; padding: 3px 8px; color: var(--faint); margin-bottom: 8px; font-size: 12px; }
+  .fpanel .foot { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; }
+  .rows { overflow: auto; min-height: 0; flex: 1; }
+  .row { display: grid; grid-template-columns: 16px 72px minmax(0, 1fr); gap: 4px 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .row:hover { background: var(--hover); }
+  .row.on { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+  .row input { accent-color: var(--accent); margin: 3px 0 0; }
+  .row .thumb { aspect-ratio: 16/9; }
+  .row h4 { margin: 0; font-size: 13px; font-weight: 500; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .row .m { font: 11px var(--mono); color: var(--faint); margin-top: 2px; }
+  .row .chips, .row .ex { grid-column: 3; }
+  .row .ex { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .reader { min-width: 0; overflow: auto; }
+  .reader { display: flex; flex-direction: column; }
+  .reader .subbar { position: sticky; top: 0; z-index: 2; justify-content: space-between; padding: 0 12px 0 20px; }
+  .reader-body { flex: 1; }
+  .crumb { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; } .crumb b { color: var(--text-2); font-weight: 500; }
+  .reader .acts { display: flex; gap: 2px; }
+  .lib-menu { position: absolute; top: 46px; right: 12px; width: 260px; z-index: 20; display: none; padding: 6px; }
+  .app.menu-open .lib-menu { display: block; }
+  .menu-label { font: 500 10.5px var(--mono); color: var(--faint); text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px 4px; }
+  .menu-item { display: flex; gap: 10px; align-items: center; padding: 7px 8px; border-radius: 6px; color: var(--text-2); cursor: pointer; }
+  .menu-item:hover { background: var(--hover); color: var(--text); }
+  .menu-item.danger { color: var(--err); }
+  .menu-sep { height: 1px; background: var(--line); margin: 4px 0; }
+  .rcontent { max-width: 860px; margin: 0 auto; padding: 22px 28px 64px; }
+  .rhead { display: grid; grid-template-columns: 200px 1fr; gap: 18px; align-items: start; margin-bottom: 16px; }
+  .rhead .thumb { aspect-ratio: 16/9; border-radius: 8px; position: relative; }
+  .rhead .thumb span { position: absolute; right: 6px; bottom: 6px; font: 500 10.5px var(--mono); background: rgba(0,0,0,.7); color: #fff; padding: 1px 5px; border-radius: 4px; }
+  .rhead h1 { font-size: 22px; letter-spacing: -.02em; margin: 0 0 8px; font-weight: 600; line-height: 1.25; }
+  .facts { display: flex; flex-wrap: wrap; gap: 4px 16px; font: 12px var(--mono); color: var(--muted); margin-bottom: 10px; }
+  .facts b { color: var(--text-2); font-weight: 500; }
+
+  .block { border: 1px solid var(--line); border-radius: 10px; margin-top: 12px; background: var(--panel); }
+  .bh { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; user-select: none; }
+  .bh .t { font-weight: 600; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .bh .t i[data-i] { color: var(--accent); }
+  .bh .n { font: 11px var(--mono); color: var(--faint); }
+  .bh .r { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+  .bh .chev { color: var(--faint); transition: transform .15s ease; margin-left: 4px; }
+  .block.collapsed .bh .chev { transform: rotate(-90deg); }
+  .block.collapsed .bb { display: none; }
+  .bb { padding: 2px 16px 16px; }
+  .bb p, .bb li { color: var(--text-2); font-size: 14px; line-height: 1.65; }
+  .bb p { margin: 0 0 10px; } .bb ul { margin: 0; padding-left: 18px; }
+  .bmeta { font: 11px var(--mono); color: var(--faint); }
+
+  .gauge { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--c-red-f), var(--c-orange-f) 25%, var(--c-gray-f) 50%, var(--c-lime-f) 75%, var(--c-green-f)); position: relative; margin: 12px 0 6px; }
+  .gauge i { position: absolute; top: -5px; width: 3px; height: 16px; background: var(--text); left: 28%; border-radius: 2px; }
+  .gl { display: flex; justify-content: space-between; font: 10.5px var(--mono); color: var(--faint); }
+  .sent-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 14px; }
+  .sent-grid div { background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .sent-grid small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+
+  .qa { border-left: 2px solid var(--line-2); padding: 2px 0 2px 12px; margin-bottom: 14px; }
+  .qa .q { font-weight: 600; color: var(--text); font-size: 13.5px; }
+  .qa .a { color: var(--text-2); margin-top: 4px; font-size: 13.5px; line-height: 1.6; }
+  .qa .bmeta { margin-top: 4px; }
+  .ask { display: flex; gap: 8px; align-items: center; background: var(--raised); border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 6px 6px 12px; color: var(--faint); }
+  .ask span { flex: 1; }
+
+  .rel { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .rel:last-of-type { border-bottom: 0; }
+  .rel a { color: var(--accent-text); font-weight: 500; }
+  .rel .site { font: 11px var(--mono); color: var(--faint); }
+  .rel p { grid-column: 1 / -1; margin: 0; font-size: 12.5px; color: var(--muted); }
+
+  .chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px 18px; margin-bottom: 12px; }
+  .chapters div { display: flex; gap: 10px; padding: 3px 0; color: var(--text-2); } .chapters span { font: 11.5px var(--mono); color: var(--accent-text); width: 40px; }
+  .sublabel { font: 500 10.5px var(--mono); color: var(--faint); text-transform: uppercase; letter-spacing: .06em; margin: 12px 0 6px; }
+  .links { display: flex; flex-wrap: wrap; gap: 6px; }
+  .links a { font: 11.5px var(--mono); color: var(--text-2); background: var(--raised); border: 1px solid var(--line); padding: 2px 8px; border-radius: 5px; }
+  .tx p { font-size: 14.5px; line-height: 1.75; color: var(--text-2); margin: 0 0 14px; }
+
+  /* AI popover */
+  .ai-pop { position: absolute; top: 46px; right: 92px; width: 340px; z-index: 20; display: none; }
+  .app.ai-open .ai-pop { display: block; }
+  .pop { background: var(--panel); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--shadow), 0 2px 8px rgba(0,0,0,.2); overflow: hidden; }
+  .pop-h { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .pop-h b { font-size: 13.5px; } .pop-h .meta { margin-left: auto; }
+  .pop-b { padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .job, .pop-kv { min-width: 0; }
+  .pop-kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font-size: 12px; }
+  .pop-kv span { color: var(--muted); } .pop-kv b { font: 500 12px var(--mono); color: var(--text-2); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .job { background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .job .top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; } .job .top b { font-weight: 500; }
+  .job .cur { font-size: 12px; color: var(--muted); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; }
+  .toggle-row small { display: block; color: var(--muted); font-size: 11.5px; }
+  .pop-f { display: flex; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--line); background: var(--raised); }
+  .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+  .state-label { font: 500 11px var(--mono); color: var(--faint); text-transform: uppercase; margin: 0 0 8px; letter-spacing: .05em; display: flex; gap: 10px; align-items: center; }
+  .alert { border-radius: 8px; padding: 10px; font-size: 12px; display: flex; gap: 8px; }
+  .alert.err { background: var(--c-red-bg); color: var(--c-red); } .alert.warn { background: var(--c-yellow-bg); color: var(--c-yellow); }
+  .alert p { margin: 2px 0 0; color: var(--text-2); }
+
+  /* ============ settings ============ */
+  .modal-stage { background: var(--overlay); padding: 32px 16px; border-radius: 12px; border: 1px solid var(--line-2); }
+  .modal { max-width: 1040px; margin: 0 auto; background: var(--panel); border: 1px solid var(--line-2); border-radius: 14px; box-shadow: var(--shadow); display: grid; grid-template-columns: 200px minmax(0, 1fr); grid-template-rows: auto 1fr auto; overflow: hidden; height: 760px; }
+  .m-head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 12px 18px; border-bottom: 1px solid var(--line); }
+  .m-head b { font-size: 15px; }
+  .m-nav { border-right: 1px solid var(--line); padding: 10px 8px; background: var(--raised); }
+  .m-main { padding: 18px 22px; overflow: auto; min-height: 0; }
+  .m-main h3 { margin: 0 0 4px; font-size: 16px; letter-spacing: -.01em; }
+  .m-main .desc { color: var(--muted); margin: 0 0 16px; max-width: 620px; }
+  .m-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 10px 18px; border-top: 1px solid var(--line); }
+  .m-foot .warn { color: var(--warn); display: flex; gap: 6px; align-items: center; }
+  .pane { display: none; } .pane.on { display: block; }
+
+  .prompt-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .ptab { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 8px; cursor: pointer; min-width: 170px; background: var(--panel); }
+  .ptab b { font-weight: 600; display: flex; gap: 6px; align-items: center; }
+  .ptab small { color: var(--muted); font-size: 11.5px; }
+  .ptab.on { border-color: var(--accent); background: var(--accent-soft); }
+  .ptab .mod { font: 500 10px var(--mono); color: var(--warn); margin-left: auto; }
+  .editor-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 220px; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; }
+  .etool { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--raised); flex-wrap: wrap; }
+  .etool .seg { margin: 0; }
+  .etool .sp { flex: 1; }
+  .code { font: 12.5px/1.7 var(--mono); padding: 10px 0; background: var(--panel); min-height: 360px; counter-reset: ln; overflow: auto; }
+  .code div { padding: 0 14px 0 0; white-space: pre-wrap; color: var(--code-txt); display: grid; grid-template-columns: 40px 1fr; }
+  .code div::before { counter-increment: ln; content: counter(ln); color: var(--faint); text-align: right; padding-right: 14px; user-select: none; }
+  .code div.cur { background: var(--accent-soft); }
+  .code .v { color: var(--code-var); background: var(--accent-soft); border-radius: 3px; padding: 0 2px; }
+  .code .s { color: var(--code-sec); font-weight: 500; }
+  .code .caret { display: inline-block; width: 2px; height: 1.1em; background: var(--accent); vertical-align: -.2em; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .code.diff .add { background: color-mix(in srgb, var(--ok) 12%, transparent); } .code.diff .add::before { content: "+"; color: var(--ok); }
+  .code.diff .del { background: color-mix(in srgb, var(--err) 12%, transparent); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--err) 60%, transparent); } .code.diff .del::before { content: "−"; color: var(--err); }
+  .preview { font-size: 13px; line-height: 1.65; padding: 14px 16px; color: var(--text-2); white-space: pre-wrap; background: var(--panel); min-height: 360px; }
+  .preview .fill { background: var(--accent-soft); color: var(--accent-text); border-radius: 3px; padding: 0 2px; }
+  .preview .trunc { color: var(--faint); font-style: italic; }
+  .fields { border-left: 1px solid var(--line); background: var(--raised); padding: 10px; overflow: auto; }
+  .fields h6 { margin: 0 0 8px; font: 500 10.5px var(--mono); text-transform: uppercase; color: var(--faint); letter-spacing: .05em; }
+  .field { display: block; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; margin-bottom: 6px; cursor: pointer; }
+  .field:hover { border-color: var(--accent); }
+  .field code { font: 500 12px var(--mono); color: var(--code-var); display: flex; justify-content: space-between; align-items: center; }
+  .field code .used { font: 500 10px var(--sans); color: var(--ok); display: flex; gap: 2px; align-items: center; }
+  .field small { display: block; color: var(--muted); font-size: 11px; line-height: 1.35; margin-top: 2px; }
+  .field.block-f code { color: var(--code-sec); }
+  .vbar { grid-column: 1 / -1; display: flex; gap: 16px; align-items: center; padding: 7px 12px; border-top: 1px solid var(--line); background: var(--raised); font: 11.5px var(--mono); color: var(--muted); flex-wrap: wrap; }
+  .vbar .ok { color: var(--ok); display: flex; gap: 4px; align-items: center; }
+  .vbar .sp { flex: 1; }
+  .syntax { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .syntax code { font: 11.5px var(--mono); color: var(--code-sec); background: var(--raised); border: 1px solid var(--line); padding: 1px 5px; border-radius: 4px; }
+  .form { display: grid; gap: 16px; max-width: 620px; }
+  .form label { display: block; font-weight: 600; font-size: 12.5px; margin-bottom: 4px; }
+  .form .hint { color: var(--muted); font-size: 12px; margin: 0 0 6px; }
+  .input { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line-2); border-radius: 7px; padding: 7px 10px; background: var(--panel); font: 12.5px var(--mono); color: var(--text); }
+  .input span { flex: 1; }
+  .models { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .models span { font: 11.5px var(--mono); padding: 2px 8px; border-radius: 5px; border: 1px solid var(--line-2); color: var(--text-2); cursor: pointer; }
+  .models span.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+  .theme-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 560px; }
+  .tcard { border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; cursor: pointer; }
+  .tcard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .tcard .pv { height: 70px; display: grid; grid-template-columns: 30% 1fr; }
+  .tcard .pv.l { background: #fff; } .tcard .pv.l i { background: #f3f3f5; border-right: 1px solid #e6e6ea; }
+  .tcard .pv.d { background: #101114; } .tcard .pv.d i { background: #16181c; border-right: 1px solid #1f2227; }
+  .tcard .pv.s { background: linear-gradient(90deg, #fff 50%, #101114 50%); grid-template-columns: 1fr; }
+  .tcard div.n { padding: 7px 10px; font-size: 12.5px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); }
+  .card-box { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; justify-content: space-between; gap: 16px; align-items: center; max-width: 620px; }
+  .card-box small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  .comps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .comp { border: 1px solid var(--line); border-radius: 10px; padding: 16px; background: var(--panel); }
+  .comp h4 { font: 500 11px var(--mono); color: var(--faint); text-transform: uppercase; margin: 0 0 12px; letter-spacing: .05em; }
+  .comp .chips { gap: 6px; }
+  .comp p.meta { margin: 10px 0 0; }
+
+  @media (max-width: 1240px) {
+    .app { height: auto; }
+    .cols, .app.side-collapsed .cols { grid-template-columns: 1fr; }
+    .cols > * { border-right: 0 !important; border-bottom: 1px solid var(--line); }
+    .rows { max-height: 520px; }
+    .topbar .logo { width: auto; }
+    .ai-pop { right: 12px; }
+  }
+  @media (max-width: 760px) {
+    .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; } .app { grid-template-rows: auto 1fr; }
+    .cmd { order: 3; flex-basis: 100%; max-width: none; }
+    .ai-pill b, .ai-pill .mini { display: none; }
+    .rhead { grid-template-columns: 1fr; }
+    .rcontent { padding: 16px 14px 48px; }
+    .modal { grid-template-columns: 1fr; height: auto; }
+    .m-nav { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+    .editor-wrap { grid-template-columns: 1fr; } .fields { border-left: 0; border-top: 1px solid var(--line); }
+    .ai-pop { left: 12px; right: 12px; width: auto; top: 96px; }
+    .theme-cards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body class="annotate">
+<div class="doc">
+  <nav class="topnav">
+    <span class="eyebrow">design proposal · v2</span>
+    <label><input type="checkbox" checked onchange="document.body.classList.toggle('annotate', this.checked)" /> Show annotations</label>
+    <button class="btn" onclick="toggleTheme()"><i data-i="sun"></i> Toggle light / dark</button>
+  </nav>
+
+  <h1 class="page"><span class="appicon" data-size="56"></span>Graphite</h1>
+  <p class="lede">A solid, dynamic workspace for the library. Dark by default, monospace for data, one indigo accent. The whole width goes to content: no inspector column and no status bar. AI state lives in one header control that opens a detailed panel.</p>
+
+  <div class="changes">
+    <div><em>01</em><b>Collapsible filters</b><span>A Filters button opens a panel above the list; each group folds on its own. When closed, active filters show as removable chips in the same row.</span></div>
+    <div><em>01b</em><b>Collapsible sidebar</b><span>Folds to an icon rail; catalogs keep letter badges.</span></div>
+    <div><em>01c</em><b>Aligned sub-header</b><span>One 44 px band across all columns with a single straight bottom line.</span></div>
+    <div><em>01d</em><b>Plain transcript</b><span>Plain paragraphs, no timestamps, exactly as stored and sent to the AI.</span></div>
+    <div><em>02</em><b>Local AI panel</b><span>A header pill shows AI state and progress; click it for server, model, queue and controls.</span></div>
+    <div><em>03</em><b>Tag chips unchanged</b><span>Same colors and icons as the app today: mood colors, category icons, red channel, navy topics.</span></div>
+    <div><em>04</em><b>No inspector</b><span>Facts, sentiment, chapters and links are part of the main column.</span></div>
+    <div><em>05</em><b>Settings &amp; prompt editor</b><span>Prompt editor with line numbers, field palette, validation, live preview and diff against the default.</span></div>
+    <div><em>06</em><b>Bookmark + star icon</b><span>Flat, no gradients: five variants to choose from.</span></div>
+    <div><em>07</em><b>Sections, not tabs</b><span>Summary, sentiment, questions, related, details and transcript are stacked sections that fold.</span></div>
+    <div><em>08</em><b>Theme &amp; settings placement</b><span>Top-right of the header, marked with pins below.</span></div>
+    <div><em>09</em><b>No footer bar</b><span>Content runs to the bottom of the window.</span></div>
+  </div>
+
+  <!-- ================= ICON ================= -->
+  <h2 class="sec-title">App icon</h2>
+  <p class="sub">Flat colors only, no gradients. The bookmark and the star have rounded corners; a soft shadow lifts the bookmark off the tile. Each variant is shown on a dark and a light toolbar at 128, 32 and 16 px. <b style="color:var(--text-2)">Click a variant</b> to use it everywhere on this page.</p>
+  <div class="variants" id="variants">
+    <div class="variant" data-v="indigo"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="indigo"></span><span class="appicon" data-size="32" data-variant="indigo"></span><span class="appicon" data-size="16" data-variant="indigo"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="indigo"></span><span class="appicon" data-size="16" data-variant="indigo"></span></div></div><div class="vn"><b>A · Indigo tile</b><span>White bookmark, star cut out. Strongest at 16 px. Recommended.</span></div></div>
+    <div class="variant" data-v="graphite"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="graphite"></span><span class="appicon" data-size="32" data-variant="graphite"></span><span class="appicon" data-size="16" data-variant="graphite"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="graphite"></span><span class="appicon" data-size="16" data-variant="graphite"></span></div></div><div class="vn"><b>B · Graphite tile</b><span>Today’s design, flat: dark tile, white bookmark, indigo star.</span></div></div>
+    <div class="variant" data-v="night"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="night"></span><span class="appicon" data-size="32" data-variant="night"></span><span class="appicon" data-size="16" data-variant="night"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="night"></span><span class="appicon" data-size="16" data-variant="night"></span></div></div><div class="vn"><b>C · Night</b><span>Dark tile, indigo bookmark, star cut out.</span></div></div>
+    <div class="variant" data-v="ribbon"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="ribbon"></span><span class="appicon" data-size="32" data-variant="ribbon"></span><span class="appicon" data-size="16" data-variant="ribbon"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="ribbon"></span><span class="appicon" data-size="16" data-variant="ribbon"></span></div></div><div class="vn"><b>D · Bookmark only</b><span>No tile: the bookmark is the icon. Lightest look.</span></div></div>
+    <div class="variant" data-v="paper"><div class="vb"><div class="vs dark"><span class="appicon" data-size="96" data-variant="paper"></span><span class="appicon" data-size="32" data-variant="paper"></span><span class="appicon" data-size="16" data-variant="paper"></span></div><div class="vs light"><span class="appicon" data-size="32" data-variant="paper"></span><span class="appicon" data-size="16" data-variant="paper"></span></div></div><div class="vn"><b>E · Paper</b><span>White tile, graphite bookmark, star cut out.</span></div></div>
+  </div>
+
+  <!-- ================= CHIPS ================= -->
+  <h2 class="sec-title">Tag chips</h2>
+  <p class="sub">Unchanged from the app: the icon shows the kind of sentiment, the color shows the mood (green → lime → gray / yellow → orange → red). Channels are red with a person icon; topics are navy. A filled chip is an active filter.</p>
+  <div class="comps">
+    <div class="comp"><h4>Market</h4><div class="chips">
+      <span class="chip c-green"><i data-i="chart"></i>bullish</span><span class="chip c-lime"><i data-i="chart"></i>cautiously bullish</span><span class="chip c-lime"><i data-i="chart"></i>short term bullish</span><span class="chip c-gray"><i data-i="chart"></i>neutral</span><span class="chip c-yellow"><i data-i="chart"></i>uncertain</span><span class="chip c-orange"><i data-i="chart"></i>cautiously bearish</span><span class="chip c-red"><i data-i="chart"></i>bearish</span></div></div>
+    <div class="comp"><h4>News · opinion · review · tone</h4><div class="chips">
+      <span class="chip c-lime"><i data-i="news"></i>hopeful</span><span class="chip c-orange"><i data-i="news"></i>concerning</span><span class="chip c-orange"><i data-i="msg"></i>skeptical</span><span class="chip c-yellow"><i data-i="msg"></i>controversial</span><span class="chip c-green"><i data-i="star"></i>recommended</span><span class="chip c-gray"><i data-i="smile"></i>informative</span><span class="chip c-red"><i data-i="smile"></i>pessimistic</span></div></div>
+    <div class="comp"><h4>Channel · topics · active · with count</h4><div class="chips">
+      <span class="chip c-red"><i data-i="user"></i>Macro Lens</span><span class="chip c-navy">bonds</span><span class="chip c-navy">recession</span><span class="chip c-navy on">yield curve</span><span class="chip c-orange on"><i data-i="chart"></i>cautiously bearish</span><span class="chip c-navy">gold<em>12</em></span></div></div>
+  </div>
+
+  <!-- ================= POPUP ================= -->
+  <h2 class="sec-title">Popup</h2>
+  <p class="sub">A status panel: one glance answers “is this saved, and is it current?”. It follows the theme chosen in Settings.</p>
+  <div class="popup-row">
+    <div class="frame popup">
+      <div class="p-head"><div class="logo"><span class="appicon" data-size="22"></span>Remember This</div><button class="btn ghost sm"><i data-i="grid"></i>Library</button></div>
+      <div class="p-body">
+        <div class="p-video"><div class="thumb"></div><div><h3>Why the bond market is flashing a warning</h3><div class="chips"><span class="chip c-red"><i data-i="user"></i>Macro Lens</span><span class="chip c-orange"><i data-i="chart"></i>cautiously bearish</span></div></div></div>
+        <dl class="kv">
+          <dt>status</dt><dd class="ok">● saved · up to date</dd>
+          <dt>duration</dt><dd>24:13</dd>
+          <dt>words</dt><dd>4,812 · 38 ¶</dd>
+          <dt>catalog</dt><dd>Markets</dd>
+          <dt>last capture</dt><dd>2026-11-12 18:42</dd>
+        </dl>
+        <div class="p-cta"><button class="btn primary"><i data-i="refresh"></i>Update transcript</button><button class="btn" title="Copy text"><i data-i="copy"></i></button></div>
+      </div>
+      <div class="p-foot"><span style="display:flex;gap:8px;align-items:center"><span class="dot"></span>248 items</span><span><kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>S</kbd></span></div>
+    </div>
+    <div class="note">
+      <h4>Notes</h4>
+      <ul>
+        <li>Channel and sentiment show as the same colored chips as in the library.</li>
+        <li>After a capture, the key-value block updates in place; changed fields flash in indigo.</li>
+        <li>The primary action is the only filled control. Copy is an icon button.</li>
+        <li>No settings in the popup: they live in the dashboard header (pin 3 below).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ================= DASHBOARD ================= -->
+  <h2 class="sec-title">Dashboard</h2>
+  <p class="sub">Three columns: catalogs, list, reader. The reader uses all the remaining width. Try it: click <b>Filters</b>, the filter group titles, the section headers in the reader, the AI pill, and the theme button.</p>
+  <div class="frame">
+    <div class="app" id="app">
+      <header class="topbar">
+        <div class="logo"><span class="appicon" data-size="24"></span>Remember This</div>
+        <div class="cmd"><i data-i="search"></i><span>yield curve</span><em>14 results</em><kbd>/</kbd></div>
+        <div class="tb-right">
+          <button class="ai-pill" onclick="document.getElementById('app').classList.toggle('ai-open')" title="Local AI status">
+            <span class="pin">1</span><span class="dot pulse"></span><b>AI</b><span>tagging 5/12</span><span class="mini"><i></i></span>
+          </button>
+          <span class="tb-sep"></span>
+          <button class="icon-btn" title="Switch to light / dark theme" onclick="toggleTheme()"><span class="pin">2</span><i data-i="sun" class="theme-ico"></i></button>
+          <button class="icon-btn" title="Settings" onclick="document.getElementById('settings').scrollIntoView({behavior:'smooth'})"><span class="pin">3</span><i data-i="settings"></i></button>
+          <button class="icon-btn" title="Library actions" onclick="document.getElementById('app').classList.toggle('menu-open')"><span class="pin">4</span><i data-i="dots"></i></button>
+        </div>
+      </header>
+
+      <!-- Library menu: the actions that exist today (AppHeader.tsx) -->
+      <div class="lib-menu pop">
+        <div class="menu-label">Library</div>
+        <div class="menu-item"><i data-i="upload"></i>Import JSON…</div>
+        <div class="menu-item"><i data-i="download"></i>Export JSON</div>
+        <div class="menu-item"><i data-i="file"></i>Export all transcripts as Markdown</div>
+        <div class="menu-sep"></div>
+        <div class="menu-item danger"><i data-i="trash"></i>Clear library…</div>
+      </div>
+
+      <!-- AI popover -->
+      <div class="ai-pop">
+        <div class="pop">
+          <div class="pop-h"><span class="dot pulse"></span><b>Local AI connected</b><span class="meta mono">142 ms</span></div>
+          <div class="pop-b">
+            <div class="pop-kv"><span>Server</span><b>192.168.1.220:1234</b><span>Model</span><b>qwen3-14b</b><span>Last call</span><b>12 s ago · ok</b></div>
+            <div class="job"><div class="top"><b>Tagging library</b><span class="mono meta">5 / 12</span></div><div class="bar"><i style="width:42%"></i></div><div class="cur">Now: The everything code: liquidity and the business…</div></div>
+            <div class="toggle-row"><div>Tag new items in the background<small>Open item first, then newest first</small></div><span class="switch"></span></div>
+          </div>
+          <div class="pop-f"><button class="btn sm"><i data-i="pause"></i>Pause</button><button class="btn sm"><i data-i="plug"></i>Test</button><button class="btn sm ghost" style="margin-left:auto"><i data-i="settings"></i>AI settings</button></div>
+        </div>
+      </div>
+
+      <div class="cols">
+        <aside class="side">
+          <div class="subbar">
+            <span class="ttl">Library</span>
+            <button class="icon-btn collapse-btn" title="Collapse sidebar  [" onclick="document.getElementById('app').classList.toggle('side-collapsed')"><span class="pin">6</span><i data-i="sidebar"></i></button>
+          </div>
+          <div class="side-body">
+            <div class="nav" title="All items · 248"><i data-i="grid"></i><span class="lbl">All items</span><small>248</small></div>
+            <div class="nav" title="Loved · 23"><i data-i="heart"></i><span class="lbl">Loved</span><small>23</small></div>
+            <div class="nav" title="Forgotten · 7"><i data-i="eyeoff"></i><span class="lbl">Forgotten</span><small>7</small></div>
+            <div class="grp"><span>Catalogs</span><button class="icon-btn" style="width:22px;height:22px" title="New catalog"><i data-i="plus"></i></button></div>
+            <div class="nav" title="Recents · 42"><i data-i="inbox"></i><span class="lbl">Recents</span><small>42</small></div>
+            <div class="nav on" title="Markets · 61"><span class="mono-ic">M</span><span class="lbl">Markets</span><small>61</small></div>
+            <div class="nav" title="AI research · 37"><span class="mono-ic">AI</span><span class="lbl">AI research</span><small>37</small></div>
+            <div class="nav" title="Health · 18"><span class="mono-ic">H</span><span class="lbl">Health</span><small>18</small></div>
+            <div class="nav" title="Cooking · 9"><span class="mono-ic">C</span><span class="lbl">Cooking</span><small>9</small></div>
+          </div>
+        </aside>
+
+        <section class="list f-open" id="list">
+          <div class="subbar lhead">
+            <button class="btn sm ftoggle" onclick="document.getElementById('list').classList.toggle('f-open')"><span class="pin">5</span><i data-i="filter"></i>Filters<span class="count">3</span><i data-i="chev" class="chev"></i></button>
+            <div class="inline-f"><span class="chip c-gray on">30 days ×</span><span class="chip c-orange on"><i data-i="chart"></i>cautiously bearish ×</span><span class="chip c-navy on">bonds ×</span></div>
+            <span class="count-txt">14/61</span>
+            <button class="icon-btn" title="Sort: newest first"><i data-i="sort"></i></button>
+          </div>
+          <div class="fpanel">
+            <div class="fgroup"><h6 onclick="fold(this)"><span>Saved</span><span class="r"><i data-i="chev" class="chev"></i></span></h6>
+              <div class="seg"><span>Any</span><span>7 days</span><span class="on">30 days</span><span>Year</span></div>
+            </div>
+            <div class="fgroup"><h6 onclick="fold(this)"><span>Sentiment <small>any of</small></span><span class="r">1 selected<i data-i="chev" class="chev"></i></span></h6>
+              <div class="chips"><span class="chip c-green"><i data-i="chart"></i>bullish<em>14</em></span><span class="chip c-lime"><i data-i="chart"></i>short term bullish<em>5</em></span><span class="chip c-orange on"><i data-i="chart"></i>cautiously bearish<em>9</em></span><span class="chip c-yellow"><i data-i="chart"></i>uncertain<em>6</em></span><span class="chip c-gray"><i data-i="smile"></i>informative<em>21</em></span><span class="chip c-orange"><i data-i="msg"></i>skeptical<em>4</em></span></div>
+            </div>
+            <div class="fgroup"><h6 onclick="fold(this)"><span>Channels <small>any of</small></span><span class="r"><i data-i="chev" class="chev"></i></span></h6>
+              <div class="chips"><span class="chip c-red"><i data-i="user"></i>Macro Lens<em>21</em></span><span class="chip c-red"><i data-i="user"></i>Real Vision<em>12</em></span><span class="chip c-red"><i data-i="user"></i>Patrick Boyle<em>8</em></span><span class="chip c-red"><i data-i="user"></i>+ 6 more</span></div>
+            </div>
+            <div class="fgroup"><h6 onclick="fold(this)"><span>Topics <small>all of</small></span><span class="r">1 selected<i data-i="chev" class="chev"></i></span></h6>
+              <div class="finder"><i data-i="search"></i>Find a topic…</div>
+              <div class="chips"><span class="chip c-navy on">bonds<em>18</em></span><span class="chip c-navy">fed<em>15</em></span><span class="chip c-navy">recession<em>11</em></span><span class="chip c-navy">gold<em>12</em></span><span class="chip c-navy">liquidity<em>7</em></span><span class="chip c-navy">qe<em>4</em></span></div>
+            </div>
+            <div class="fgroup collapsed"><h6 onclick="fold(this)"><span>Type</span><span class="r"><i data-i="chev" class="chev"></i></span></h6>
+              <div class="chips"><span class="chip c-gray"><i data-i="youtube"></i>YouTube<em>58</em></span><span class="chip c-gray"><i data-i="file"></i>Web page<em>3</em></span></div>
+            </div>
+            <div class="foot"><span class="meta">Press <kbd>F</kbd> to open or close</span><button class="btn ghost sm">Clear all</button></div>
+          </div>
+          <div class="rows">
+            <div class="row on">
+              <input type="checkbox" /><div class="thumb"></div>
+              <div><h4>Why the bond market is flashing a warning</h4><div class="m">24:13 · Nov 12</div></div>
+              <div class="chips"><span class="chip c-red"><i data-i="user"></i>Macro Lens</span><span class="chip c-orange"><i data-i="chart"></i>cautiously bearish</span><span class="chip c-navy">bonds</span></div>
+              <div class="ex">…the <mark>yield curve</mark> has now been inverted for longer than any time since 1980…</div>
+            </div>
+            <div class="row">
+              <input type="checkbox" /><div class="thumb b"></div>
+              <div><h4>The everything code: liquidity and the business cycle</h4><div class="m">1:02:44 · Nov 9</div></div>
+              <div class="chips"><span class="chip c-red"><i data-i="user"></i>Real Vision</span><span class="chip c-orange"><i data-i="chart"></i>cautiously bearish</span><span class="chip c-navy">bonds</span></div>
+              <div class="ex">…when the <mark>yield curve</mark> steepens on the back of rate cuts, risk assets follow…</div>
+            </div>
+            <div class="row">
+              <input type="checkbox" /><div class="thumb c"></div>
+              <div><h4>Is the recession signal broken this time?</h4><div class="m">18:50 · Nov 3</div></div>
+              <div class="chips"><span class="chip c-red"><i data-i="user"></i>Patrick Boyle</span><span class="chip c-orange"><i data-i="chart"></i>cautiously bearish</span><span class="chip c-orange"><i data-i="msg"></i>skeptical</span></div>
+              <div class="ex">…critics argue the <mark>yield curve</mark> has lost its predictive power…</div>
+            </div>
+            <div class="row">
+              <input type="checkbox" /><div class="thumb d"></div>
+              <div><h4>Treasury auctions: who is still buying?</h4><div class="m">42:18 · Oct 21</div></div>
+              <div class="chips"><span class="chip c-red"><i data-i="user"></i>Real Vision</span><span class="chip c-orange"><i data-i="chart"></i>cautiously bearish</span><span class="chip c-navy">bonds</span></div>
+              <div class="ex">…a flat <mark>yield curve</mark> makes the carry trade unattractive for banks…</div>
+            </div>
+          </div>
+        </section>
+
+        <article class="reader">
+          <div class="subbar">
+            <span class="crumb"><span class="mono-ic">M</span>Markets <span>/</span> <b>Why the bond market…</b></span>
+            <span class="acts"><button class="icon-btn" title="Love"><i data-i="heart"></i></button><button class="icon-btn" title="Copy text"><i data-i="copy"></i></button><button class="icon-btn" title="Export Markdown"><i data-i="download"></i></button><button class="icon-btn" title="Move to catalog"><i data-i="folder"></i></button><button class="icon-btn" title="More"><i data-i="dots"></i></button></span>
+          </div>
+          <div class="rcontent reader-body">
+            <div class="rhead">
+              <div class="thumb"><span>24:13</span></div>
+              <div>
+                <h1>Why the bond market is flashing a warning</h1>
+                <div class="facts"><span><b>4,812</b> words</span><span><b>19 min</b> read</span><span><b>312k</b> views</span><span><b>en</b></span><span>saved <b>2026-11-12</b></span></div>
+                <div class="chips"><span class="chip c-red"><i data-i="user"></i>Macro Lens</span><span class="chip c-orange"><i data-i="chart"></i>cautiously bearish</span><span class="chip c-gray"><i data-i="smile"></i>informative</span><span class="chip c-orange"><i data-i="msg"></i>skeptical</span><span class="chip c-navy">bonds</span><span class="chip c-navy">recession</span><span class="chip c-navy on">yield curve</span><span class="chip c-navy">term premium</span></div>
+              </div>
+            </div>
+
+            <section class="block"><div class="bh" onclick="fold(this)"><span class="t"><i data-i="sparkles"></i>Summary</span><span class="bmeta">qwen3-14b · 2 days ago</span><span class="r"><button class="icon-btn" title="Copy" onclick="event.stopPropagation()"><i data-i="copy"></i></button><button class="icon-btn" title="Regenerate" onclick="event.stopPropagation()"><i data-i="refresh"></i></button><i data-i="chev" class="chev"></i></span></div>
+              <div class="bb"><p>The host argues that the long inversion of the US yield curve is ending, and that the return to a normal slope — not the inversion itself — has historically come right before recessions.</p>
+                <ul><li>Term premium is rising as foreign demand for Treasuries falls.</li><li>Credit spreads remain tight, which the host reads as complacency.</li><li>Suggested hedge: shorter duration and a modest gold allocation.</li></ul></div>
+            </section>
+
+            <section class="block"><div class="bh" onclick="fold(this)"><span class="t"><i data-i="smile"></i>Sentiment</span><span class="n">3 tags</span><span class="r"><button class="icon-btn" title="Regenerate" onclick="event.stopPropagation()"><i data-i="refresh"></i></button><i data-i="chev" class="chev"></i></span></div>
+              <div class="bb">
+                <div class="gauge"><i></i></div><div class="gl"><span>bearish</span><span>neutral</span><span>bullish</span></div>
+                <div class="sent-grid">
+                  <div><span class="chip c-orange"><i data-i="chart"></i>cautiously bearish</span><small>Market outlook</small></div>
+                  <div><span class="chip c-gray"><i data-i="smile"></i>informative</span><small>Tone</small></div>
+                  <div><span class="chip c-orange"><i data-i="msg"></i>skeptical</span><small>Opinion on credit markets</small></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="block"><div class="bh" onclick="fold(this)"><span class="t"><i data-i="help"></i>Questions</span><span class="n">2</span><span class="r"><i data-i="chev" class="chev"></i></span></div>
+              <div class="bb">
+                <div class="qa"><div class="q">What does the host recommend for a bond portfolio?</div><div class="a">Shorter duration (2–5 year Treasuries) and keeping 5–10% in gold until the curve has fully normalized.</div><div class="bmeta">qwen3-14b · Nov 13</div></div>
+                <div class="qa"><div class="q">Which data does he use for the 1980 comparison?</div><div class="a">The 10y–3m spread from FRED, with recession bands from NBER.</div><div class="bmeta">qwen3-14b · Nov 13</div></div>
+                <div class="ask"><span>Ask about this video…</span><kbd>⌘↵</kbd><button class="btn primary sm"><i data-i="send"></i>Ask</button></div>
+              </div>
+            </section>
+
+            <section class="block"><div class="bh" onclick="fold(this)"><span class="t"><i data-i="link"></i>Related articles</span><span class="n">12 · 2 searches</span><span class="r"><button class="btn ghost sm" onclick="event.stopPropagation()"><i data-i="search"></i>Find more</button><i data-i="chev" class="chev"></i></span></div>
+              <div class="bb">
+                <div class="rel"><a href="#">Yield curve un-inversion and recession timing</a><span class="site">stlouisfed.org</span><p>Historical analysis of the lag between the end of an inversion and the start of a recession.</p></div>
+                <div class="rel"><a href="#">Why the term premium is back</a><span class="site">ft.com</span><p>Foreign demand for Treasuries has fallen while issuance keeps rising.</p></div>
+                <div class="rel"><a href="#">Credit spreads near 20-year lows</a><span class="site">bloomberg.com</span><p>High-yield spreads remain tight despite slowing growth.</p></div>
+                <button class="btn ghost sm" style="margin-top:6px">Show all 12</button>
+              </div>
+            </section>
+
+            <section class="block"><div class="bh" onclick="fold(this)"><span class="t"><i data-i="list"></i>Video details</span><span class="n">7 chapters · 3 links</span><span class="r"><i data-i="chev" class="chev"></i></span></div>
+              <div class="bb">
+                <div class="sublabel">Chapters</div>
+                <div class="chapters"><div><span>00:00</span>Intro</div><div><span>02:15</span>Inversion history</div><div><span>07:40</span>Term premium</div><div><span>13:02</span>Credit spreads</div><div><span>17:45</span>Foreign demand</div><div><span>19:30</span>Positioning</div><div><span>22:50</span>Summary</div></div>
+                <div class="sublabel">Links from the description</div>
+                <div class="links"><a href="#">fred.stlouisfed.org/series/T10Y3M</a><a href="#">treasurydirect.gov</a><a href="#">macrolens.substack.com</a></div>
+              </div>
+            </section>
+
+            <section class="block"><div class="bh" onclick="fold(this)"><span class="t"><i data-i="file"></i>Transcript</span><span class="n">4,812 words · 38 ¶ · 3 matches</span><span class="r"><button class="icon-btn" title="Copy" onclick="event.stopPropagation()"><i data-i="copy"></i></button><i data-i="chev" class="chev"></i></span></div>
+              <div class="bb tx">
+                <p>Welcome back. Today I want to talk about something that most people have stopped paying attention to, because it has been flashing red for so long that it feels like background noise.</p>
+                <p>The <mark>yield curve</mark> has now been inverted for longer than any time since 1980, and the un-inversion is historically the more dangerous moment. Let me show you why.</p>
+                <p>Now look at the term premium. For most of the last decade it was negative, which means investors paid for the privilege of lending long…</p>
+              </div>
+            </section>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <div><span class="pin">1</span><span><b>Local AI status.</b> Dot color = state; text = current job. Click to open the AI panel.</span></div>
+    <div><span class="pin">2</span><span><b>Theme toggle.</b> One click switches light ↔ dark. “Follow system” is in Settings → Appearance.</span></div>
+    <div><span class="pin">3</span><span><b>Settings.</b> Always top-right, opens the Settings dialog. Shortcut <kbd>,</kbd></span></div>
+    <div><span class="pin">4</span><span><b>Library menu.</b> The actions that exist today: Import JSON, Export JSON, Export all as Markdown, Clear library. They move from visible buttons into this menu. Click it.</span></div>
+    <div><span class="pin">5</span><span><b>Filters.</b> Opens and closes the filter panel (<kbd>F</kbd>). The badge counts active filters; the active ones stay visible in the same row.</span></div>
+    <div><span class="pin">6</span><span><b>Collapse sidebar.</b> Leaves a 52 px icon rail (<kbd>[</kbd>). Catalogs keep a letter badge, so they stay distinct; hover shows the name and count.</span></div>
+  </div>
+  <p class="sub" style="margin-top:20px"><b style="color:var(--text-2)">Aligned sub-header.</b> The first row under the header is one band, 44 px high, in all three columns: <i>Library</i> + collapse, Filters + active chips + count + sort, and breadcrumb + item actions. Their bottom lines form one straight line; nothing wraps onto a second row.</p>
+
+  <!-- ================= FILTERS ================= -->
+  <h2 class="sec-title">Filters: closed and open</h2>
+  <p class="sub">The row height never changes. Closed, the list gets all the height and the active filters stay in the same row as removable chips (they fade out at the edge when there are many; the badge still counts them). Open, each group can fold; “any of” and “all of” are written next to the group name. The state is remembered.</p>
+  <div class="comps">
+    <div class="comp" style="padding:0;overflow:hidden">
+      <div class="list" style="border:0">
+        <div class="subbar lhead"><button class="btn sm ftoggle"><i data-i="filter"></i>Filters<span class="count">3</span><i data-i="chev" class="chev"></i></button><div class="inline-f"><span class="chip c-gray on">30 days ×</span><span class="chip c-orange on"><i data-i="chart"></i>cautiously bearish ×</span><span class="chip c-navy on">bonds ×</span></div><span class="count-txt">14/61</span><button class="icon-btn"><i data-i="sort"></i></button></div>
+      </div>
+      <p class="meta" style="padding:12px 16px 14px">Closed, 3 active filters</p>
+    </div>
+    <div class="comp" style="padding:0;overflow:hidden">
+      <div class="list" style="border:0">
+        <div class="subbar lhead"><button class="btn sm ftoggle"><i data-i="filter"></i>Filters<i data-i="chev" class="chev"></i></button><div class="inline-f"><span class="meta">No filters</span></div><span class="count-txt">61</span><button class="icon-btn"><i data-i="sort"></i></button></div>
+      </div>
+      <p class="meta" style="padding:12px 16px 14px">Closed, no filters</p>
+    </div>
+  </div>
+
+  <!-- ================= AI PANEL ================= -->
+  <h2 class="sec-title">Local AI panel</h2>
+  <p class="sub">The header pill is the only place AI status appears. Its dot and text change with the state; the panel explains the state and offers the next action.</p>
+  <div class="states">
+    <div>
+      <div class="state-label"><span class="ai-pill" style="cursor:default"><span class="dot pulse"></span><b>AI</b><span>tagging 5/12</span></span>working</div>
+      <div class="pop">
+        <div class="pop-h"><span class="dot pulse"></span><b>Local AI connected</b><span class="meta mono">142 ms</span></div>
+        <div class="pop-b">
+          <div class="pop-kv"><span>Server</span><b>192.168.1.220:1234</b><span>Model</span><b>qwen3-14b</b><span>Last call</span><b>12 s ago · ok</b></div>
+          <div class="job"><div class="top"><b>Tagging library</b><span class="mono meta">5 / 12</span></div><div class="bar"><i style="width:42%"></i></div><div class="cur">Now: The everything code: liquidity and the business…</div></div>
+          <div class="toggle-row"><div>Tag new items in the background<small>Open item first, then newest first</small></div><span class="switch"></span></div>
+        </div>
+        <div class="pop-f"><button class="btn sm"><i data-i="pause"></i>Pause</button><button class="btn sm"><i data-i="plug"></i>Test</button><button class="btn sm ghost" style="margin-left:auto"><i data-i="settings"></i>AI settings</button></div>
+      </div>
+    </div>
+    <div>
+      <div class="state-label"><span class="ai-pill" style="cursor:default"><span class="dot"></span><b>AI</b><span>ready</span></span>idle</div>
+      <div class="pop">
+        <div class="pop-h"><span class="dot"></span><b>Local AI connected</b><span class="meta mono">98 ms</span></div>
+        <div class="pop-b">
+          <div class="pop-kv"><span>Server</span><b>192.168.1.220:1234</b><span>Model</span><b>qwen3-14b</b><span>Tagged</span><b>248 / 248 items</b></div>
+          <div class="toggle-row"><div>Tag new items in the background<small>All items are tagged</small></div><span class="switch"></span></div>
+        </div>
+        <div class="pop-f"><button class="btn sm"><i data-i="plug"></i>Test</button><button class="btn sm ghost" style="margin-left:auto"><i data-i="settings"></i>AI settings</button></div>
+      </div>
+    </div>
+    <div>
+      <div class="state-label"><span class="ai-pill" style="cursor:default"><span class="dot err"></span><b>AI</b><span>offline</span></span>unreachable</div>
+      <div class="pop">
+        <div class="pop-h"><span class="dot err"></span><b>Cannot reach the AI server</b></div>
+        <div class="pop-b">
+          <div class="alert err"><i data-i="alert"></i><div><b>Connection refused</b><p>Is LM Studio running, with the server started? Background tagging is paused and retries in <span class="mono">1:42</span>.</p></div></div>
+          <div class="pop-kv"><span>Server</span><b>192.168.1.220:1234</b><span>Last success</span><b>yesterday 21:14</b><span>Waiting</span><b>7 items</b></div>
+        </div>
+        <div class="pop-f"><button class="btn sm primary"><i data-i="refresh"></i>Retry now</button><button class="btn sm ghost" style="margin-left:auto"><i data-i="settings"></i>AI settings</button></div>
+      </div>
+    </div>
+    <div>
+      <div class="state-label"><span class="ai-pill" style="cursor:default"><span class="dot off"></span><b>AI</b><span>off</span></span>not set up</div>
+      <div class="pop">
+        <div class="pop-h"><span class="dot off"></span><b>Local AI is not set up</b></div>
+        <div class="pop-b">
+          <p class="meta" style="margin:0;font-size:12.5px;color:var(--text-2)">Connect an OpenAI-compatible server (for example LM Studio) to get summaries, sentiment, answers and tags. Transcripts are sent only to that server.</p>
+        </div>
+        <div class="pop-f"><button class="btn sm primary"><i data-i="plug"></i>Connect a server</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SETTINGS ================= -->
+  <h2 class="sec-title" id="settings">Settings</h2>
+  <p class="sub">A large dialog with sections on the left. The prompt editor is built for editing Mustache templates safely: highlighted fields, a field palette that inserts at the cursor, instant validation, a preview filled with the open item, and a diff against the default. Click the left sections, the prompt cards, and Edit / Preview / Diff.</p>
+  <div class="modal-stage">
+    <div class="modal">
+      <div class="m-head"><b>Settings</b><button class="icon-btn" title="Close"><i data-i="x"></i></button></div>
+      <nav class="m-nav" id="mnav">
+        <div class="nav" data-pane="server"><i data-i="server"></i>AI server</div>
+        <div class="nav on" data-pane="prompts"><i data-i="sparkles"></i>Prompts</div>
+        <div class="nav" data-pane="tagging"><i data-i="tag"></i>Tagging</div>
+        <div class="nav" data-pane="appearance"><i data-i="sun"></i>Appearance</div>
+        <div class="nav" data-pane="storage"><i data-i="db"></i>Storage</div>
+      </nav>
+      <div class="m-main">
+        <!-- Prompts -->
+        <div class="pane on" id="pane-prompts">
+          <h3>Prompts</h3>
+          <p class="desc">Templates of the requests sent to the model. Click a field on the right to insert it at the cursor.</p>
+          <div class="prompt-tabs">
+            <div class="ptab on" data-p="summary"><b><i data-i="sparkles"></i>Summary<span class="mod">● modified</span></b><small>Used by Summary · uses 4 fields</small></div>
+            <div class="ptab" data-p="question"><b><i data-i="help"></i>Question</b><small>Used by Questions · default</small></div>
+          </div>
+          <div class="editor-wrap">
+            <div class="etool">
+              <div class="seg" id="emode"><span class="on" data-m="edit">Edit</span><span data-m="preview">Preview</span><span data-m="diff">Diff vs default</span></div>
+              <span class="meta" id="pv-item" style="display:none">with <b style="color:var(--text-2);font-weight:500">Why the bond market is flashing a warning</b> <i data-i="chev"></i></span>
+              <span class="sp"></span>
+              <button class="btn ghost sm"><i data-i="refresh"></i>Reset to default</button>
+            </div>
+            <div class="code" id="m-edit">
+<div>You are an assistant that summarizes video transcripts.</div>
+<div>Write a short summary in Markdown: one paragraph,</div>
+<div>then 3–5 bullet points with the key claims.</div>
+<div></div>
+<div>Title: <span class="v">{{title}}</span></div>
+<div>Channel: <span class="v">{{channel}}</span></div>
+<div class="cur"><span class="s">{{#chapters}}</span></div>
+<div>- <span class="v">{{time}}</span> <span class="v">{{title}}</span><span class="caret"></span></div>
+<div><span class="s">{{/chapters}}</span></div>
+<div></div>
+<div>Transcript:</div>
+<div><span class="v">{{transcript}}</span></div>
+            </div>
+            <div class="preview" id="m-preview" style="display:none">You are an assistant that summarizes video transcripts.
+Write a short summary in Markdown: one paragraph,
+then 3–5 bullet points with the key claims.
+
+Title: <span class="fill">Why the bond market is flashing a warning</span>
+Channel: <span class="fill">Macro Lens</span>
+<span class="fill">- 00:00 Intro
+- 02:15 Inversion history
+- 07:40 Term premium
+- …4 more</span>
+
+Transcript:
+<span class="fill">Welcome back. Today I want to talk about something that most people have stopped paying attention to…</span> <span class="trunc">(4,780 more words)</span></div>
+            <div class="code diff" id="m-diff" style="display:none">
+<div>You are an assistant that summarizes video transcripts.</div>
+<div class="del">Summarize the transcript below in a few paragraphs.</div>
+<div class="add">Write a short summary in Markdown: one paragraph,</div>
+<div class="add">then 3–5 bullet points with the key claims.</div>
+<div></div>
+<div>Title: {{title}}</div>
+<div class="add">Channel: {{channel}}</div>
+<div class="add">{{#chapters}}</div>
+<div class="add">- {{time}} {{title}}</div>
+<div class="add">{{/chapters}}</div>
+<div></div>
+<div>Transcript:</div>
+<div>{{transcript}}</div>
+            </div>
+            <aside class="fields">
+              <h6>Insert field</h6>
+              <button class="field"><code>transcript<span class="used"><i data-i="check"></i>used</span></code><small>Transcript or page text</small></button>
+              <button class="field"><code>title<span class="used"><i data-i="check"></i>used</span></code><small>Title of the video or page</small></button>
+              <button class="field"><code>channel<span class="used"><i data-i="check"></i>used</span></code><small>Channel of the video</small></button>
+              <button class="field"><code>description</code><small>Video description</small></button>
+              <button class="field"><code>tags</code><small>Topic tags</small></button>
+              <h6 style="margin-top:12px">Repeat blocks</h6>
+              <button class="field block-f"><code>chapters<span class="used"><i data-i="check"></i>used</span></code><small>Each chapter: time, title</small></button>
+              <button class="field block-f"><code>links</code><small>Each link: url, label</small></button>
+              <button class="field block-f"><code>questions</code><small>Earlier Q&amp;A: question, answer</small></button>
+            </aside>
+            <div class="vbar"><span class="ok"><i data-i="check"></i>Valid template</span><span>uses transcript · title · channel · chapters</span><span class="sp"></span><span>≈ 6,400 tokens with the open item</span><span>Ln 8, Col 27</span></div>
+          </div>
+          <div class="syntax"><span><code>{{field}}</code> inserts a value</span><span><code>{{#list}}…{{/list}}</code> repeats, or shows when not empty</span><span><code>{{^field}}…{{/field}}</code> shows when empty</span></div>
+        </div>
+
+        <!-- AI server -->
+        <div class="pane" id="pane-server">
+          <h3>AI server</h3>
+          <p class="desc">Summaries, sentiment, answers and tags use a local LLM through an OpenAI-compatible API. The transcript is sent only to this server.</p>
+          <div class="form">
+            <div><label>Server address</label><p class="hint">LM Studio: Developer → Start server. Use the address of the computer that runs it.</p><div class="input"><span>http://192.168.1.220:1234</span><span class="dot"></span><span style="flex:0;color:var(--ok);font-family:var(--sans);font-size:12px;white-space:nowrap">connected · 142 ms</span></div></div>
+            <div><label>Model</label><p class="hint">Empty = the model the server has loaded. Click one to choose it.</p><div class="input"><span>qwen3-14b</span><button class="btn sm"><i data-i="plug"></i>Test &amp; list</button></div>
+              <div class="models"><span class="on">qwen3-14b</span><span>llama-3.3-8b-instruct</span><span>gemma-3-12b</span><span>mistral-small-24b</span></div></div>
+            <div><label>Request timeout</label><div class="seg"><span>1 min</span><span class="on">3 min</span><span>10 min</span></div></div>
+          </div>
+        </div>
+
+        <!-- Tagging -->
+        <div class="pane" id="pane-tagging">
+          <h3>Tagging</h3>
+          <p class="desc">How items get their tags.</p>
+          <div class="card-box"><div><b>Use the LLM for tagging</b><small>Generates tags in the background while the dashboard is open. Until then, and when the LLM is unreachable, items show keyword-extraction tags.</small></div><span class="switch"></span></div>
+          <div class="card-box" style="margin-top:10px"><div><b>Sentiment tags</b><small>Up to 3 labels from the fixed vocabulary.</small></div><span class="switch"></span></div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="pane" id="pane-appearance">
+          <h3>Appearance</h3>
+          <p class="desc">Applies to the dashboard and the popup. The sun / moon button in the header switches between light and dark directly.</p>
+          <div class="theme-cards">
+            <div class="tcard"><div class="pv l"><i></i></div><div class="n">Light</div></div>
+            <div class="tcard"><div class="pv d"><i></i></div><div class="n">Dark</div></div>
+            <div class="tcard on"><div class="pv s"></div><div class="n">System <i data-i="check" style="color:var(--accent)"></i></div></div>
+          </div>
+          <div class="card-box" style="margin-top:16px"><div><b>Compact list</b><small>Smaller rows without excerpts, for large libraries.</small></div><span class="switch off"></span></div>
+        </div>
+
+        <!-- Storage -->
+        <div class="pane" id="pane-storage">
+          <h3>Storage</h3>
+          <p class="desc">Everything is stored on this computer in the browser's extension storage. Nothing is uploaded.</p>
+          <div class="card-box"><div><span class="meta mono" style="text-transform:uppercase">used now</span><div style="font:600 24px var(--mono)">38.4 MB</div><small>248 items · 231 thumbnails</small></div><button class="btn sm">Download 17 missing thumbnails</button></div>
+        </div>
+      </div>
+      <div class="m-foot"><span class="warn"><i data-i="alert"></i>Unsaved changes in Summary prompt</span><span style="display:flex;gap:8px"><button class="btn">Cancel</button><button class="btn primary">Save <kbd style="background:transparent;border-color:currentColor;color:inherit;opacity:.7">⌘S</kbd></button></span></div>
+    </div>
+  </div>
+
+  <!-- ================= COMPONENTS ================= -->
+  <h2 class="sec-title">Other components</h2>
+  <p class="sub">Empty state and a toast.</p>
+  <div class="comps">
+    <div class="comp"><h4>Empty catalog</h4>
+      <div style="text-align:center;padding:24px 8px;border:1px dashed var(--line-2);border-radius:8px"><i data-i="folder" style="width:22px;height:22px;color:var(--faint)"></i><div style="font-weight:500;margin-top:6px">No items in Health</div><div class="meta">Drag rows here, or select items and press <kbd>M</kbd>.</div></div>
+    </div>
+    <div class="comp"><h4>Toast</h4>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--raised);border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;box-shadow:var(--shadow)"><i data-i="check" style="color:var(--ok)"></i><span>Moved 3 items to Markets</span><button class="btn ghost sm" style="margin-left:auto">Undo</button></div>
+    </div>
+    <div class="comp"><h4>Summary while generating</h4>
+      <div class="block" style="margin:0"><div class="bh"><span class="t"><i data-i="sparkles"></i>Summary</span><span class="bmeta">generating · 0:14</span><span class="r"><button class="btn ghost sm">Stop</button></span></div><div class="bb"><div class="bar"><i style="width:30%"></i></div><p class="meta" style="margin-top:8px">The host argues that the long inversion…</p></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Tabler-style icons (24 × 24, stroke 2).
+  const ICONS = {
+    search: 'M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0M21 21l-6 -6',
+    settings: 'M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065zM9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0',
+    sun: 'M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7',
+    moon: 'M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z',
+    filter: 'M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z',
+    chev: 'M6 9l6 6l6 -6',
+    heart: 'M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572',
+    copy: 'M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667zM4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1',
+    download: 'M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2M7 11l5 5l5 -5M12 4l0 12',
+    upload: 'M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2M7 9l5 -5l5 5M12 4l0 12',
+    trash: 'M4 7l16 0M10 11l0 6M14 11l0 6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3',
+    sidebar: 'M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2zM9 4v16M15 10l-2 2l2 2',
+    inbox: 'M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2zM4 13h3l3 3h4l3 -3h3',
+    sort: 'M4 6l9 0M4 12l7 0M4 18l7 0M15 15l3 3l3 -3M18 6l0 12',
+    folder: 'M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2',
+    refresh: 'M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4',
+    sparkles: 'M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6z',
+    dots: 'M4 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0M18 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0',
+    x: 'M18 6l-12 12M6 6l12 12',
+    check: 'M5 12l5 5l10 -10',
+    server: 'M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3zM3 15a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3zM7 8l0 .01M7 16l0 .01',
+    tag: 'M6.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3z',
+    db: 'M4 6a8 3 0 1 0 16 0a8 3 0 1 0 -16 0M4 6v6a8 3 0 0 0 16 0v-6M4 12v6a8 3 0 0 0 16 0v-6',
+    help: 'M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0M12 17l0 .01M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4',
+    link: 'M9 15l6 -6M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463',
+    list: 'M9 6l11 0M9 12l11 0M9 18l11 0M5 6l0 .01M5 12l0 .01M5 18l0 .01',
+    file: 'M14 3v4a1 1 0 0 0 1 1h4M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2zM9 9l1 0M9 13l6 0M9 17l6 0',
+    plug: 'M7 12l5 5l-1.5 1.5a3.536 3.536 0 1 1 -5 -5l1.5 -1.5zM17 12l-5 -5l1.5 -1.5a3.536 3.536 0 1 1 5 5l-1.5 1.5zM3 21l2.5 -2.5M18.5 5.5l2.5 -2.5M10 11l-2 2M13 14l-2 2',
+    pause: 'M6 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1zM14 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z',
+    grid: 'M4 4h6v6h-6zM14 4h6v6h-6zM4 14h6v6h-6zM14 14h6v6h-6z',
+    clock: 'M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0M12 7v5l3 3',
+    eyeoff: 'M3 3l18 18M10.584 10.587a2 2 0 0 0 2.828 2.83M9.363 5.365a9.466 9.466 0 0 1 2.637 -.365c4 0 7.333 2.333 10 7c-.778 1.361 -1.612 2.524 -2.503 3.488m-2.14 1.861c-1.631 1.1 -3.415 1.651 -5.357 1.651c-4 0 -7.333 -2.333 -10 -7c1.369 -2.395 2.913 -4.175 4.632 -5.341',
+    send: 'M10 14l11 -11M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5',
+    youtube: 'M2 8a4 4 0 0 1 4 -4h12a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-12a4 4 0 0 1 -4 -4v-8zM10 9l5 3l-5 3z',
+    alert: 'M12 9v4M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0zM12 16h.01',
+    plus: 'M12 5l0 14M5 12l14 0',
+    user: 'M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2',
+    // Sentiment categories (same icons as src/app/dashboard/sentimentStyle.ts)
+    chart: 'M4 19l16 0M4 15l4 -6l4 2l4 -5l4 4',
+    news: 'M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1 -4 0v-13a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1v12a3 3 0 0 0 3 3h11M8 8l4 0M8 12l4 0M8 16l4 0',
+    msg: 'M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1',
+    star: 'M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z',
+    smile: 'M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0M9 10l.01 0M15 10l.01 0M9.5 15a3.5 3.5 0 0 0 5 0',
+  };
+  function drawIcons(root = document) {
+    root.querySelectorAll('i[data-i]').forEach((el) => {
+      el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[el.dataset.i] || ''}"/></svg>`;
+    });
+  }
+
+  // App icon: the bookmark-with-star shape of src/app/ui/AppIcon.tsx, flat colors, rounded corners, soft shadow.
+  const STAR = Array.from({ length: 10 }, (_, i) => {
+    const r = i % 2 === 0 ? 12.5 : 5.4, a = -Math.PI / 2 + (i * Math.PI) / 5;
+    return `${(50 + r * Math.cos(a)).toFixed(2)},${(42 + r * Math.sin(a)).toFixed(2)}`;
+  }).join(' ');
+  const VARIANTS = {
+    indigo:   { tile: '#5b67e0', mark: '#ffffff', star: '#5b67e0' },
+    graphite: { tile: '#1c1e23', mark: '#eef0f4', star: '#6f7bf7', edge: 'rgba(255,255,255,.10)' },
+    night:    { tile: '#1c1e23', mark: '#8b95ff', star: '#1c1e23', edge: 'rgba(255,255,255,.10)' },
+    ribbon:   { tile: null,      mark: '#5b67e0', star: '#ffffff' },
+    paper:    { tile: '#ffffff', mark: '#1c1e23', star: '#ffffff', edge: '#d9dbe0' },
+  };
+  let currentVariant = 'indigo', iconId = 0;
+  function iconSvg(name, size) {
+    const v = VARIANTS[name], id = 'ic' + iconId++, small = size <= 16;
+    const shadow = small ? '' : `filter="url(#${id}sh)"`;
+    const group = v.tile ? '' : 'transform="translate(50 51) scale(1.32) translate(-50 -51)"';
+    return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true" style="display:block;overflow:visible">
+      <defs><filter id="${id}sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="${v.tile ? 3 : 2}" stdDeviation="${v.tile ? 2.5 : 2}" flood-color="#000" flood-opacity="${v.tile ? .28 : .3}"/></filter></defs>
+      ${v.tile ? `<rect x="2" y="2" width="96" height="96" rx="24" fill="${v.tile}" ${v.edge ? `stroke="${v.edge}" stroke-width="2"` : ''}/>` : ''}
+      <g ${group}>
+        <polygon points="31,21 69,21 69,80 50,65 31,80" fill="${v.mark}" stroke="${v.mark}" stroke-width="8" stroke-linejoin="round" ${shadow}/>
+        <polygon points="${STAR}" fill="${v.star}" stroke="${v.star}" stroke-width="2.5" stroke-linejoin="round"/>
+      </g>
+    </svg>`;
+  }
+  function drawAppIcons() {
+    document.querySelectorAll('.appicon').forEach((el) => {
+      el.innerHTML = iconSvg(el.dataset.variant || currentVariant, Number(el.dataset.size));
+    });
+    document.querySelectorAll('.variant').forEach((c) => c.classList.toggle('on', c.dataset.v === currentVariant));
+  }
+  document.querySelectorAll('.variant').forEach((c) => c.addEventListener('click', () => { currentVariant = c.dataset.v; drawAppIcons(); }));
+  drawAppIcons();
+
+  function isDark() {
+    const t = document.documentElement.dataset.theme;
+    return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  function syncThemeIcon() {
+    document.querySelectorAll('.theme-ico').forEach((el) => { el.dataset.i = isDark() ? 'sun' : 'moon'; });
+    drawIcons();
+  }
+  function toggleTheme() {
+    document.documentElement.dataset.theme = isDark() ? 'light' : 'dark';
+    syncThemeIcon();
+  }
+  function fold(header) { header.parentElement.classList.toggle('collapsed'); }
+
+  // Settings: sections
+  document.querySelectorAll('#mnav .nav').forEach((n) => n.addEventListener('click', () => {
+    document.querySelectorAll('#mnav .nav').forEach((x) => x.classList.toggle('on', x === n));
+    document.querySelectorAll('.pane').forEach((p) => p.classList.toggle('on', p.id === 'pane-' + n.dataset.pane));
+  }));
+  // Settings: prompt cards
+  document.querySelectorAll('.ptab').forEach((t) => t.addEventListener('click', () => {
+    document.querySelectorAll('.ptab').forEach((x) => x.classList.toggle('on', x === t));
+  }));
+  // Settings: edit / preview / diff
+  document.querySelectorAll('#emode span').forEach((s) => s.addEventListener('click', () => {
+    document.querySelectorAll('#emode span').forEach((x) => x.classList.toggle('on', x === s));
+    const m = s.dataset.m;
+    document.getElementById('m-edit').style.display = m === 'edit' ? '' : 'none';
+    document.getElementById('m-preview').style.display = m === 'preview' ? '' : 'none';
+    document.getElementById('m-diff').style.display = m === 'diff' ? '' : 'none';
+    document.getElementById('pv-item').style.display = m === 'preview' ? '' : 'none';
+  }));
+
+  syncThemeIcon();
+</script>
+</body>
+</html>
