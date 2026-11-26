@@ -45,6 +45,7 @@ import { ContentBlock } from './ContentBlock';
 import { KeywordBadges } from './KeywordBadges';
 import { PageBreadcrumbs } from './PageBreadcrumbs';
 import { ReaderPanels } from './panels/ReaderPanels';
+import { SentimentTags } from './panels/sentiment/Sentiment';
 
 interface ItemReaderProps {
   item: SavedItem;
@@ -151,6 +152,7 @@ export function ItemReader({
           active={activeKeywords}
           onToggle={onToggleKeyword}
           size="sm"
+          afterChannel={<SentimentTags item={item} size="sm" />}
           after={isAiGeneratedTags(item) ? undefined : <AiTagsButton item={item} busy={aiTagging} />}
         />
 

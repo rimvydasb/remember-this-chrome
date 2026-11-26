@@ -1,5 +1,5 @@
 // Generates the extension icons (public/icons/icon-<size>.png) without external tools.
-// Design: indigo-violet rounded square with a white bookmark that holds a "play" triangle.
+// Design: navy square (slightly rounded corners) with a silver bookmark that holds a navy star.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { deflateSync } from 'node:zlib';
@@ -8,12 +8,14 @@ const SIZES = [16, 32, 48, 128];
 const OUT_DIR = resolve(import.meta.dirname, '..', 'public', 'icons');
 const SAMPLES = 4;
 
-const FROM = [76, 110, 245]; // #4c6ef5
-const TO = [132, 94, 247]; // #845ef7
+const FROM = [16, 42, 94]; // #102a5e navy
+const TO = [10, 25, 61]; // #0a193d deep navy
+const SILVER_FROM = [236, 240, 245]; // #ecf0f5
+const SILVER_TO = [160, 170, 184]; // #a0aab8
 
 // Shapes in a 0..1 coordinate space.
 function insideRoundedSquare(x, y) {
-  const r = 0.22;
+  const r = 0.08;
   const cx = Math.min(Math.max(x, r), 1 - r);
   const cy = Math.min(Math.max(y, r), 1 - r);
   return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
@@ -36,18 +38,22 @@ const BOOKMARK = [
   [0.5, 0.66],
   [0.3, 0.82],
 ];
-const PLAY = [
-  [0.44, 0.31],
-  [0.6, 0.41],
-  [0.44, 0.51],
-];
+// Five-pointed star centred in the bookmark's body.
+const STAR = Array.from({ length: 10 }, (_, i) => {
+  const radius = i % 2 === 0 ? 0.135 : 0.057;
+  const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+  return [0.5 + radius * Math.cos(angle), 0.425 + radius * Math.sin(angle)];
+});
 
 function pixelColor(x, y) {
   if (!insideRoundedSquare(x, y)) return null;
   const t = Math.min(1, Math.max(0, (x + y) / 2));
   const background = FROM.map((c, i) => c + (TO[i] - c) * t);
-  if (insidePolygon(x, y, PLAY)) return background;
-  if (insidePolygon(x, y, BOOKMARK)) return [255, 255, 255];
+  if (insidePolygon(x, y, STAR)) return background;
+  if (insidePolygon(x, y, BOOKMARK)) {
+    const u = Math.min(1, Math.max(0, (y - 0.2) / 0.62));
+    return SILVER_FROM.map((c, i) => c + (SILVER_TO[i] - c) * u);
+  }
   return background;
 }
 

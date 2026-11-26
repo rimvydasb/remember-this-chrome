@@ -2,6 +2,7 @@ import * as storage from '../shared/storage';
 import { QuestionPipeline } from './questions/QuestionPipeline';
 import type { ItemStore } from './ports';
 import { RelatedArticlesPipeline } from './related/RelatedArticlesPipeline';
+import { SentimentPipeline } from './sentiment/SentimentPipeline';
 import { SummaryPipeline } from './summary/SummaryPipeline';
 import { TaggingPipeline } from './tagging/TaggingPipeline';
 
@@ -18,6 +19,7 @@ const store: ItemStore = {
  * A new follow-up adds its pipeline here.
  */
 export const summaryPipeline = new SummaryPipeline({ store });
+export const sentimentPipeline = new SentimentPipeline({ store });
 export const questionPipeline = new QuestionPipeline({ store });
 export const taggingPipeline = new TaggingPipeline({ store });
 export const relatedArticlesPipeline = new RelatedArticlesPipeline({ store });

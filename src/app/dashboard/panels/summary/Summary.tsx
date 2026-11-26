@@ -50,7 +50,7 @@ export function Summary({ item }: { item: SavedItem }) {
         </Stack>
       ) : (
         <Stack align="center" gap="xs" py="md" className="rt-summary-empty">
-          <ThemeIcon variant="light" color="violet" size={40} radius="xl">
+          <ThemeIcon variant="light" color="navy" size={40} radius="xl">
             <IconSparkles size={20} />
           </ThemeIcon>
           <Text size="sm" fw={500}>
@@ -63,7 +63,7 @@ export function Summary({ item }: { item: SavedItem }) {
             mt={4}
             size="xs"
             variant="light"
-            color="violet"
+            color="navy"
             leftSection={<IconSparkles size={15} />}
             loading={generating}
             disabled={!canGenerate}

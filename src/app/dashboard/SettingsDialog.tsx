@@ -409,7 +409,7 @@ function PromptEditor({ icon, label, kind, value, defaultValue, expected, onChan
                 component="button"
                 type="button"
                 variant={used?.has(field.name) ? 'filled' : 'light'}
-                color="violet"
+                color="navy"
                 radius="sm"
                 className="rt-prompt-field"
                 onClick={() => insert(field.snippet)}

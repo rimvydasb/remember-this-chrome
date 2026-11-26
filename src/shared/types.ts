@@ -36,9 +36,14 @@ export interface ItemMeta {
 }
 
 /** Kinds of follow-up work done on a saved item. */
-export type FollowUpType = 'llm-summary' | 'user-question' | 'related-articles';
+export type FollowUpType = 'llm-summary' | 'llm-sentiment' | 'user-question' | 'related-articles';
 
-export const FOLLOW_UP_TYPES: readonly FollowUpType[] = ['llm-summary', 'user-question', 'related-articles'];
+export const FOLLOW_UP_TYPES: readonly FollowUpType[] = [
+  'llm-summary',
+  'llm-sentiment',
+  'user-question',
+  'related-articles',
+];
 
 /** Phase II state of fetching a related article. Phase I leaves it unset. */
 export type RelatedArticleFetchState = 'pending' | 'done' | 'failed';
@@ -62,8 +67,10 @@ export interface RelatedArticle {
 }
 
 /**
- * A result of follow-up work on a saved item: an LLM summary of the transcript, a question of
- * the user with the LLM answer, or the articles that a web search for the item found.
+ * A result of follow-up work on a saved item: an LLM summary of the transcript, the LLM sentiment
+ * of the content (`generatedContent` holds 1 to 3 comma-separated labels of the vocabulary in
+ * `shared/sentiment.ts`), a question of the user with the LLM answer, or the articles that a web
+ * search for the item found.
  */
 export interface FollowUp {
   id: string;

@@ -2,6 +2,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CATALOGS_KEY } from '../../../shared/catalogs';
+import { createFollowUp } from '../../../shared/followUpRecords';
 import type { SavedItem } from '../../../shared/types';
 import { installDashboardEnvironment, makeItem, renderApp } from '../../test/render';
 import { App } from '../App';
@@ -50,6 +51,18 @@ describe('item reader', () => {
     vi.unstubAllGlobals();
     download.downloadTextFile.mockReset();
     localStorage.clear();
+  });
+
+  it('shows the sentiment tags among the keyword tags, right after the channel', async () => {
+    const item = VIDEO();
+    item.aiTags = { tags: ['sleep science'], createdAt: '2026-03-04T10:00:00.000Z' };
+    item.followUps = [createFollowUp('llm-sentiment', { generatedContent: 'informative, optimistic' })];
+    open([item], 'video');
+    await heading('Sleep and memory');
+
+    const row = (await screen.findAllByText('informative'))[0]!.closest('[data-mood]')!.parentElement!;
+    const labels = Array.from(row.children, (child) => child.textContent);
+    expect(labels.slice(0, 4)).toEqual(['Neuro Lab', 'informative', 'optimistic', 'sleep science']);
   });
 
   it('shows the title, details and text of a video', async () => {

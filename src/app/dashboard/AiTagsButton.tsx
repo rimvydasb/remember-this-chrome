@@ -23,9 +23,9 @@ export function AiTagsButton({ item, busy = false }: AiTagsButtonProps) {
       tt="none"
       fw={500}
       variant="outline"
-      color="violet"
+      color="navy"
       className="rt-keyword"
-      leftSection={working ? <Loader size={10} color="violet" /> : <IconSparkles size={12} />}
+      leftSection={working ? <Loader size={10} color="navy" /> : <IconSparkles size={12} />}
       title="These tags come from keyword extraction. Ask the LLM for better ones."
       aria-busy={working}
       disabled={!ready || working}

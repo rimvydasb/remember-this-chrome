@@ -40,8 +40,8 @@ body {
 }
 
 .rt-item[data-selected] {
-  background: light-dark(var(--mantine-color-indigo-0), rgba(76, 110, 245, 0.14));
-  border-left-color: var(--mantine-color-indigo-6);
+  background: light-dark(var(--mantine-color-navy-0), rgba(106, 135, 192, 0.14));
+  border-left-color: light-dark(var(--mantine-color-navy-7), var(--mantine-color-navy-3));
 }
 
 .rt-main-inner {
@@ -213,8 +213,8 @@ body {
   width: 26px;
   height: 26px;
   border-radius: var(--mantine-radius-sm);
-  color: var(--mantine-color-indigo-6);
-  background: light-dark(var(--mantine-color-indigo-0), rgba(76, 110, 245, 0.15));
+  color: light-dark(var(--mantine-color-navy-7), var(--mantine-color-navy-3));
+  background: light-dark(var(--mantine-color-navy-0), rgba(106, 135, 192, 0.15));
   flex-shrink: 0;
 }
 
@@ -238,21 +238,21 @@ body {
 }
 
 .rt-follow-up-card {
-  border: 1px solid light-dark(var(--mantine-color-violet-1), rgba(121, 80, 242, 0.25));
-  background: light-dark(var(--mantine-color-violet-0), rgba(121, 80, 242, 0.06));
+  border: 1px solid light-dark(var(--mantine-color-silver-2), rgba(174, 183, 196, 0.25));
+  background: light-dark(var(--mantine-color-silver-0), rgba(174, 183, 196, 0.06));
 }
 
 /* A question and its answer in the Questions block. */
 .rt-question {
   border: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
-  border-left: 3px solid var(--mantine-color-violet-5);
+  border-left: 3px solid light-dark(var(--mantine-color-silver-5), var(--mantine-color-silver-6));
   border-radius: var(--mantine-radius-md);
   overflow: hidden;
 }
 
 .rt-question-head {
   padding: 8px 8px 8px 14px;
-  background: light-dark(var(--mantine-color-violet-0), rgba(121, 80, 242, 0.08));
+  background: light-dark(var(--mantine-color-silver-0), rgba(174, 183, 196, 0.08));
 }
 
 .rt-question-text {
@@ -419,8 +419,8 @@ body {
 }
 
 .rt-catalog-card[data-dropping] {
-  border-color: var(--mantine-color-indigo-5);
-  box-shadow: 0 0 0 3px light-dark(var(--mantine-color-indigo-1), rgba(76, 110, 245, 0.3));
+  border-color: light-dark(var(--mantine-color-navy-6), var(--mantine-color-navy-3));
+  box-shadow: 0 0 0 3px light-dark(var(--mantine-color-navy-1), rgba(106, 135, 192, 0.3));
   transform: translateY(-2px);
 }
 
@@ -433,7 +433,7 @@ body {
   font-weight: 600;
   font-size: var(--mantine-font-size-sm);
   color: var(--mantine-color-white);
-  background: rgba(76, 110, 245, 0.72);
+  background: rgba(106, 135, 192, 0.72);
   pointer-events: none;
 }
 
@@ -453,8 +453,8 @@ body {
 }
 
 .rt-catalog-new:hover {
-  color: var(--mantine-color-indigo-6);
-  border-color: var(--mantine-color-indigo-4);
+  color: light-dark(var(--mantine-color-navy-7), var(--mantine-color-navy-3));
+  border-color: light-dark(var(--mantine-color-navy-5), var(--mantine-color-navy-3));
 }
 
 /* Up to four thumbnails of a catalog in a 16:9 tile. */

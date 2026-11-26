@@ -13,6 +13,7 @@ Remember This is a Chrome extension (Manifest V3) that saves YouTube transcripts
 - **Love and forget:** mark an item as _loved_ (a favorite) or _forgotten_ (hidden from the normal library view). Both have filters. Only forgotten items can be deleted permanently, which protects against accidental deletion.
 - **Video details:** channel, description, chapters, links from the description, view count and duration are saved with the transcript and shown in the reader.
 - **AI summary (optional):** generate a summary of a transcript, rendered as Markdown, with a local LLM. Copy, regenerate, or delete it. Regenerating replaces the earlier summary.
+- **AI sentiment (optional):** tag the author's sentiment with 1 to 3 labels from a fixed vocabulary (`src/shared/sentiment.ts`): market (bullish, cautiously bullish, short term bullish, neutral, short term bearish, cautiously bearish, bearish, uncertain), news, opinion, review and tone. Each tag shows the icon of its kind and a color by mood, from green (positive) to red (negative). The tags show in the Sentiment panel and in the reader header.
 - **Related articles (optional):** the **Find related articles** button in the reader asks the local LLM for 3 to 5 search queries about the video or page, runs them on Google one at a time, and saves up to 15 links (title, site, snippet, and the queries that found each one). Each search is kept with its date and queries; delete the ones you do not need. Without a reachable LLM, the title and the top tags are the queries. The articles themselves are not fetched yet (Phase II).
 - **AI tags (optional):** while the dashboard is open, a local LLM can generate tags for items in the background, one at a time (the open item first, then newest first). Until then, items show keyword-extraction tags.
 - **Markdown export** for one item, the selected items, or all transcripts.
@@ -72,7 +73,7 @@ npm run build        # type-check + production build into dist/
 | `src/content/youtubeExtractor.ts` | Function injected into the YouTube tab (MAIN world) that reads the transcript. |
 | `src/shared/` | Pure logic: transcript cleanup, storage, search, import/export, Markdown, prompt model, Google result page fetch and parser (`googleSearch.ts`). Unit-tested. |
 | `src/llm/` | Transport to the OpenAI-compatible LLM server: client, address, host permission. |
-| `src/followups/` | Follow-up pipelines on a saved item (`summary/`, `questions/`, `tagging/`, `related/`), the `FollowUpPipeline` contract, and `services.ts` that wires them to the library. No UI. |
+| `src/followups/` | Follow-up pipelines on a saved item (`summary/`, `sentiment/`, `questions/`, `tagging/`, `related/`), the `FollowUpPipeline` contract, and `services.ts` that wires them to the library. No UI. |
 | `src/app/popup/` | Toolbar popup (React + Mantine). |
 | `src/app/dashboard/` | Library dashboard (React + Mantine). Reader sections are panels in `panels/`, listed in `panels/registry.tsx`. |
 

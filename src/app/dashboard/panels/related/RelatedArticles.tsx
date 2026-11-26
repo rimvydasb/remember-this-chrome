@@ -109,8 +109,8 @@ export function RelatedArticles({ item }: { item: SavedItem }) {
             <Button
               size="xs"
               variant="outline"
-              color="violet"
-              leftSection={progress ? <Loader size={12} color="violet" /> : <IconWorldSearch size={15} />}
+              color="navy"
+              leftSection={progress ? <Loader size={12} color="navy" /> : <IconWorldSearch size={15} />}
               aria-busy={Boolean(progress)}
               disabled={!canSearch}
               onClick={() => void find()}
