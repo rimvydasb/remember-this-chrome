@@ -412,8 +412,8 @@ a.mantine-Anchor-root {
   flex-shrink: 0;
   width: var(--w-side);
   display: flex;
-  align-items: center;
-  padding: 0 var(--s-2);
+  align-items: stretch;
+  padding: 0;
   border-right: 1px solid var(--line);
   background-color: var(--panel);
   background-image: repeating-linear-gradient(
@@ -441,9 +441,11 @@ a.mantine-Anchor-root {
   padding: 0 var(--s-2);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--s-2);
-  height: var(--h-md);
-  border-radius: var(--r-2);
+  flex: 1;
+  height: 100%;
+  border-radius: 0;
   font-weight: 600;
   font-size: var(--fs-lg);
   line-height: var(--lh-md);
@@ -458,8 +460,6 @@ a.mantine-Anchor-root {
 
 .rt-app[data-side-collapsed] .rt-home-link {
   padding: 0;
-  width: var(--h-md);
-  justify-content: center;
 }
 
 .rt-search {
