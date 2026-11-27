@@ -19,7 +19,8 @@
     "depcruise:baseline": "depcruise-baseline . --config .dependency-cruiser.cjs",
     "test:e2e": "playwright test",
     "release:manual": "npm run build && node scripts/release-manual.mjs",
-    "release:auto": "echo Not implemented"
+    "release:auto": "echo Not implemented",
+    "store-assets": "node scripts/store-assets.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",

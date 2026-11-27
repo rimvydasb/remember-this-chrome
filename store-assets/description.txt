@@ -1,0 +1,38 @@
+Remember This saves YouTube transcripts into a private, searchable library on your computer. Find any idea from any video you have watched, and get summaries and answers from a local AI that you control.
+
+SAVE IN ONE CLICK
+• Click the toolbar button, or press Alt+Shift+S, while a YouTube video is open.
+• The transcript is read inside your own logged-in YouTube tab, so it works for videos that your account can watch (for example YouTube Premium or channel memberships).
+• Text is cleaned for reading: no timestamps, no broken lines, joined into proper paragraphs.
+• Video details are saved with it: channel, description, chapters, links, view count and duration.
+
+FIND ANYTHING
+• Instant full-text search across every transcript. Use "quotes" for exact phrases. Matches are highlighted in the reader.
+• Filters for saved date, channel, topic and sentiment, with live counts.
+• Every item gets keywords automatically, ranked locally. Click any keyword to filter by it.
+
+STAY ORGANIZED
+• Catalogs: group videos into catalogs such as Coding, Market News or Games. Drag items onto a catalog card to move them.
+• Love the items you want to keep. Forget the ones you do not need: they are hidden, and only forgotten items can be deleted permanently, so you never lose something by accident.
+• Light and dark themes.
+
+OPTIONAL AI, ON YOUR TERMS
+Connect your own OpenAI-compatible model server: Ollama, LM Studio, or a bridge to your own Claude CLI. The extension has no AI service of its own. Nothing is sent to any AI unless you set a server up, and then the transcript goes only to the address you entered.
+• Summary: a main idea and key points, in Markdown.
+• Sentiment: the author's tone (for example optimistic, critical, cautiously bullish) as colored tags.
+• Questions: ask about a video and get an answer based on its transcript only.
+• Tags: topics generated in the background.
+• Related articles: finds 3 to 5 search queries about a video and saves links to matching articles. This is the one feature that contacts a third party (Google search); you start it yourself, and it only runs when you press the button.
+
+YOUR DATA STAYS WITH YOU
+• Everything is stored in your browser's local storage on your computer.
+• No account, no telemetry, no analytics, no ads, no servers of ours.
+• Network requests go to youtube.com (from the YouTube tab, to read captions) and, only if you use AI features, to the model server you configure.
+• Export your library as JSON to sync between computers (for example through iCloud Drive) or as Markdown to use in other tools. Import merges safely: the newer copy wins and nothing is deleted.
+
+HOW TO GET STARTED
+1. Open a YouTube video and click the Remember This button (or press Alt+Shift+S).
+2. Open your library from the popup's Open library button.
+3. Optional: open Settings → AI server and choose Ollama, LM Studio or the Claude CLI bridge.
+
+Open source. Questions, bugs and ideas: https://github.com/rimvydasb/remember-this-chrome/issues
