@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Remember This",
+  "name": "Remember This: YouTube Transcript Library",
   "version": "0.1.0",
   "description": "Capture YouTube transcripts into a private, searchable library on your computer.",
   "minimum_chrome_version": "130",
