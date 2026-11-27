@@ -51,6 +51,28 @@ type TestState =
   | { status: 'ok'; models: string[]; latencyMs: number; baseUrl: string }
   | { status: 'error'; message: string };
 
+const CONNECTION_TYPES = [
+  {
+    name: 'Ollama',
+    where: 'This computer',
+    text: 'Runs models locally. Default port 11434.',
+    url: 'http://127.0.0.1:11434',
+  },
+  {
+    name: 'LM Studio',
+    where: 'This or another computer',
+    text: 'Developer → Start server. Default port 1234. Use the LAN address of the computer that runs it.',
+    url: 'http://192.168.1.188:1234',
+  },
+  {
+    name: 'Claude CLI bridge',
+    where: 'This computer',
+    text: 'Serves your logged-in claude CLI. Start it with node bridge/server.mjs. Port 3456.',
+    url: 'http://127.0.0.1:3456',
+    href: 'https://github.com/rimvydasb/remember-this-chrome/tree/main/bridge',
+  },
+];
+
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   { id: 'server', label: 'AI server', icon: <IconServer /> },
   { id: 'prompts', label: 'Prompts', icon: <IconSparkles /> },
@@ -288,12 +310,48 @@ function ServerPane({
     <>
       <PaneHead
         title="AI server"
-        description="Summaries, sentiment, answers and tags use a local LLM through an OpenAI-compatible API (for example LM Studio). The transcript is sent only to this server."
+        description="Summaries, sentiment, answers and tags use a local LLM through an OpenAI-compatible API. The transcript is sent only to this server."
       />
       <div className="rt-form">
+        <div>
+          <label className="rt-form-label">Connection types</label>
+          <div className="rt-conns">
+            {CONNECTION_TYPES.map((conn) => (
+              <div key={conn.name} className="rt-conn">
+                <div className="rt-conn-head">
+                  <b>{conn.name}</b>
+                  <span className="rt-conn-tag">{conn.where}</span>
+                </div>
+                <p>
+                  {conn.text}
+                  {conn.href && (
+                    <>
+                      {' '}
+                      <a href={conn.href} target="_blank" rel="noreferrer">
+                        More information
+                      </a>
+                      .
+                    </>
+                  )}
+                </p>
+                <div className="rt-conn-addr">
+                  <code>{conn.url}</code>
+                  <Button
+                    variant="default"
+                    size="compact-sm"
+                    onClick={() => update({ baseUrl: conn.url })}
+                    disabled={draft.baseUrl === conn.url}
+                  >
+                    Use
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         <TextInput
           label="Server address"
-          description="LM Studio: Developer → Start server. Use the address of the computer that runs it."
+          description="Click Use on a connection above, or type your own address, then click Test & list."
           placeholder={DEFAULT_SETTINGS.llm.baseUrl}
           value={draft.baseUrl}
           classNames={{ input: 'rt-mono-input' }}

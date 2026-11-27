@@ -2702,3 +2702,59 @@ button.rt-chip {
 .rt-follow-up + .rt-generating {
   justify-items: start;
 }
+
+.rt-conns {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.rt-conn {
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--panel);
+}
+
+.rt-conn-head {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+  font-size: var(--fs-md);
+}
+
+.rt-conn-tag {
+  padding: 0 var(--s-2);
+  border-radius: var(--r-1);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-sm);
+}
+
+.rt-conn p {
+  margin: var(--s-1) 0 var(--s-2);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.rt-conn-addr {
+  display: flex;
+  gap: var(--s-1);
+  align-items: center;
+}
+
+.rt-conn-addr code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: all;
+}
+
+.rt-conn p a {
+  color: var(--accent);
+}
